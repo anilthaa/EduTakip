@@ -1,0 +1,77 @@
+﻿@page "/admin/dersler"
+<div class="d-flex justify-content-between mb-4">
+	<h4>Dersler</h4>
+	<RadzenButton Text="Yeni Ders Ekle" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@YeniDers" />
+</div>
+<RadzenCard>
+	<RadzenDataGrid TItem="ItemDers" Data="@dersler" AllowPaging="true" PageSize="10">
+		<Columns>
+			<RadzenDataGridColumn TItem="ItemDers" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adı" />
+			<RadzenDataGridColumn TItem="ItemDers" Title="Öğretmen">
+				<Template Context="item">
+					@item.Ogretmen?.Kullanici?.Adi @item.Ogretmen?.Kullanici?.Soyadi
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemDers" Title="İşlemler">
+				<Template Context="item">
+					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditDers(item))" Style="margin-right: 10px;" />
+					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
+
+@code {
+	List<ItemDers> dersler = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		dersler = await DbContext.Dersler
+			.Include(d => d.Ogretmen)
+			.ThenInclude(o => o.Kullanici)
+			.OrderBy(x => x.Adi)
+			.ToListAsync();
+	}
+
+	async Task YeniDers()
+	{
+		var result = await DialogService.OpenAsync<DersTnm>("Yeni Ders", new Dictionary<string, object>(),
+
+			new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+			await Listele();
+	}
+
+	async Task EditDers(ItemDers ders)
+	{
+		var result = await DialogService.OpenAsync<DersTnm>("Ders Düzenle", new Dictionary<string, object>()
+		{
+			{ "DersId", ders.ID }
+		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+			await Listele();
+	}
+
+	async Task DeleteBirim(ItemDers item)
+	{
+		bool? result = await DialogService.Confirm($"'{item.Adi}' birimini silmek istediğinize emin misiniz?", "Birim Silme Onayı", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		if (result == true)
+		{
+			item.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+			item.DelDate = DateTime.UtcNow;
+			DbContext.Dersler.Update(item);
+			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Birim başarıyla silindi.");
+			await DbContext.SaveChangesAsync();
+			await Listele();
+			StateHasChanged();
+		}
+	}
+}

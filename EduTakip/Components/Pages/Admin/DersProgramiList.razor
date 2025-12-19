@@ -1,0 +1,107 @@
+﻿@page "/admin/ders-programlari"
+
+<div class="d-flex justify-content-between mb-4">
+	<h4>Ders Programları</h4>
+	<RadzenButton Text="Yeni Ders Programı" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@Yeni" />
+</div>
+<RadzenCard>
+	<RadzenDataGrid TItem="ItemDersProgrami" Data="@list" ColumnWidth="200px">
+		<Columns>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
+				<Template Context="item">
+					@GetGunAdi(item.Gun)
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
+				<Template Context="item">
+					@item.BaslangicSaati - @item.BitisSaati
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="İşlemler">
+				<Template Context="item">
+					<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditDersProg(item.ID))" Style="margin-right: 10px;" />
+					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteDersProg(item))" />
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
+
+@code {
+	List<ItemDersProgrami> list = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	private string GetGunAdi(DayOfWeek gun)
+	{
+		return gun switch
+		{
+			DayOfWeek.Monday => "Pazartesi",
+			DayOfWeek.Tuesday => "Salı",
+			DayOfWeek.Wednesday => "Çarşamba",
+			DayOfWeek.Thursday => "Perşembe",
+			DayOfWeek.Friday => "Cuma",
+			DayOfWeek.Saturday => "Cumartesi",
+			DayOfWeek.Sunday => "Pazar",
+			_ => gun.ToString()
+		};
+	}
+
+	async Task Listele()
+	{
+		list = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.ToListAsync();
+	}
+
+	async Task Yeni()
+	{
+		var result = await DialogService.OpenAsync<DersProgramiTnm>(
+			"Ders Programı",
+			null,
+			new DialogOptions() { Width = "600px", Height = "500px" });
+		
+		if (result == true)
+		{
+			await Listele();
+		}
+	}
+
+	async Task EditDersProg(int id)
+	{
+		var result = await DialogService.OpenAsync<DersProgramiTnm>("Ders Programı Düzenle", new Dictionary<string, object>()
+		{
+			{ "Id", id }
+		}, new DialogOptions() { Width = "600px", Height = "500px" });
+		if (result == true)
+		{
+			await Listele();
+		}
+	}
+
+	async Task DeleteDersProg(ItemDersProgrami item)
+	{
+		bool? result = await DialogService.Confirm("Seçili ders programını silmek istediğinize emin misiniz?", "Ders Programı Sil", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		if (result == true)
+		{
+			try
+			{
+				item.DelDate = DateTime.UtcNow;
+				item.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+				DbContext.DersProgramlari.Update(item);
+				await DbContext.SaveChangesAsync();
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ders programı başarıyla silindi.");
+				await Listele();
+			}
+			catch (Exception ex)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Ders programı silinirken bir hata oluştu: {ex.Message}");
+			}
+		}
+	}
+}

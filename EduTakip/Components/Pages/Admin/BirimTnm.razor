@@ -1,0 +1,86 @@
+﻿@if (model != null)
+{
+	<RadzenTemplateForm Data="@model" TItem="ItemBirim" Submit="@Kaydet">
+		<RadzenFieldset Text="Birim Bilgileri">
+			<div class="mb-3">
+				<RadzenLabel Text="Birim Adı" Component="BirimAdi" />
+				<RadzenTextBox @bind-Value="model.Adi" Name="BirimAdi" Style="width:100%" />
+				<RadzenRequiredValidator Component="BirimAdi" Text="Birim Adı zorunludur." Style="color:red" />
+			</div>
+
+			<RadzenCheckBox @bind-Value="model.Aktif" Name="Aktif" />
+			<RadzenLabel Text="Aktif" Component="Aktif" Style="margin-left:10px;" />
+		</RadzenFieldset>
+
+		<div class="mt-3 text-center">
+			<RadzenButton Text="Kaydet"  Type="Submit" Style="margin-right:10px; background-color:green" />
+			<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+		</div>
+	</RadzenTemplateForm>
+}
+
+@code {
+	[Parameter] public int? BirimId { get; set; }
+	ItemBirim? model;
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			if (BirimId.HasValue && BirimId.Value > 0)
+			{
+				model = await DbContext.Birimler
+					.FirstOrDefaultAsync(x => x.ID == BirimId.Value);
+
+				if (model == null)
+				{
+					NotificationService.Notify(NotificationSeverity.Error, "Hata", "Birim bulunamadı veya silinmiş.");
+					DialogService.Close(false);
+					return;
+				}
+			}
+			else
+			{
+				model = new ItemBirim()
+				{
+					Adi = string.Empty,
+					Aktif = true,
+					ID = 0,
+					CreUser = 0,
+					CreDate = DateTime.UtcNow
+				};
+			}
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			DialogService.Close(false);
+		}
+	}
+	async Task Kaydet(ItemBirim item)
+	{
+		try
+		{
+			if (item.ID==0)
+			{
+				item.CreDate = DateTime.UtcNow;
+				item.CreUser = 1; // Varsayılan kullanıcı ID
+				DbContext.Birimler.Add(item);
+			}
+			else
+			{
+				item.UpdDate = DateTime.UtcNow;
+				item.UpdUser = 1; // Varsayılan kullanıcı ID
+				DbContext.Birimler.Update(item);
+			}
+			await DbContext.SaveChangesAsync();
+			NotificationService.Notify(NotificationSeverity.Success,"Başarılı","Kayıt kaydedildi.");
+			DialogService.Close(true);
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error,"Hata",$"Kayıt kaydedilirken bir hata oluştu: {ex.Message}");
+		}
+	}
+}

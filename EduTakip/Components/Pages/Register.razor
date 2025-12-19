@@ -1,0 +1,139 @@
+@page "/register"
+@rendermode InteractiveServer
+@layout EmptyLayout
+@inject IAuthService AuthService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+<PageTitle>Kayıt Ol</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Kayıt Ol</h2>
+            <p>Yeni hesap oluşturun</p>
+        </div>
+
+        <RadzenForm Data="@registerModel" Submit="@OnRegister" class="auth-form">
+            <RadzenFieldset Text="Kayıt Bilgileri" class="w-100">
+                <RadzenStack Gap="1.5rem">
+                    <RadzenFormField Text="Ad" class="w-100">
+                        <RadzenTextBox Value="@registerModel.Adi" ValueChanged="@((string value) => registerModel = registerModel with { Adi = value })" Placeholder="Adınızı girin" class="w-100" />
+                        <RadzenFormFieldValidator />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Soyad" class="w-100">
+                        <RadzenTextBox Value="@registerModel.Soyadi" ValueChanged="@((string value) => registerModel = registerModel with { Soyadi = value })" Placeholder="Soyadınızı girin" class="w-100" />
+                        <RadzenFormFieldValidator />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="E-posta" class="w-100">
+                        <RadzenTextBox Value="@registerModel.EPosta" ValueChanged="@((string value) => registerModel = registerModel with { EPosta = value })" Placeholder="ornek@email.com" class="w-100" />
+                        <RadzenFormFieldValidator />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Şifre" class="w-100">
+                        <RadzenPassword Value="@registerModel.Sifre" ValueChanged="@((string value) => registerModel = registerModel with { Sifre = value })" Placeholder="En az 6 karakter" class="w-100" />
+                        <RadzenFormFieldValidator />
+                    </RadzenFormField>
+
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
+                        <RadzenButton ButtonType="ButtonType.Submit" 
+                                     Text="Kayıt Ol" 
+                                     Icon="person_add" 
+                                     IsBusy="@isLoading"
+                                     ButtonStyle="ButtonStyle.Primary" 
+                                     class="w-100" />
+                    </RadzenStack>
+
+                    <div class="text-center w-100">
+                        <span>Zaten hesabınız var mı? </span>
+                        <RadzenLink Path="/login" Text="Giriş Yap" />
+                    </div>
+                </RadzenStack>
+            </RadzenFieldset>
+        </RadzenForm>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerModel = new("", "", "", "", 1);
+    private bool isLoading = false;
+    private bool isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthStateService.InitializeAsync();
+            
+            if (AuthStateService.IsAuthenticated)
+            {
+                Navigation.NavigateTo("/home");
+                return;
+            }
+            
+            isInitialized = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnRegister(RegisterRequest args)
+    {
+        if (isLoading) return;
+
+        isLoading = true;
+        try
+        {
+            // Varsayılan kullanıcı tipi ID = 1 kullanılıyor
+            var request = new RegisterRequest(
+                args.Adi,
+                args.Soyadi,
+                args.EPosta,
+                args.Sifre,
+                1 // Varsayılan kullanıcı tipi
+            );
+
+            var result = await AuthService.RegisterAsync(request);
+            
+            if (result != null)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Başarılı",
+                    Detail = "Kayıt başarıyla oluşturuldu. Lütfen giriş yapın.",
+                    Duration = 4000
+                });
+                
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Hata",
+                    Detail = "Kayıt oluşturulamadı. E-posta zaten kullanılıyor olabilir.",
+                    Duration = 4000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Hata",
+                Detail = $"Bir hata oluştu: {ex.Message}",
+                Duration = 4000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+

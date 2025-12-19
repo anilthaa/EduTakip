@@ -1,0 +1,135 @@
+@page "/"
+@page "/login"
+@rendermode InteractiveServer
+@layout EmptyLayout
+@inject IAuthService AuthService
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+@inject NotificationService NotificationService
+
+<PageTitle>Giriş Yap</PageTitle>    
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2>Giriş Yap</h2>
+            <p>Hesabınıza giriş yapın</p>
+        </div>
+
+        <RadzenForm Data="@loginModel" Submit="@OnLogin" class="auth-form">
+            <RadzenFieldset Text="Giriş Bilgileri" class="w-100">
+                <RadzenStack Gap="1.5rem">
+                    <RadzenFormField Text="E-posta" class="w-100">
+                        <RadzenTextBox Value="@loginModel.EPosta" ValueChanged="@((string value) => loginModel = loginModel with { EPosta = value })" Placeholder="ornek@email.com" class="w-100" />
+                        <RadzenFormFieldValidator />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Şifre" class="w-100">
+                        <RadzenPassword Value="@loginModel.Sifre" ValueChanged="@((string value) => loginModel = loginModel with { Sifre = value })" Placeholder="Şifrenizi girin" class="w-100" />
+                        <RadzenFormFieldValidator />
+                    </RadzenFormField>
+
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
+                        <RadzenButton ButtonType="ButtonType.Submit" 
+                                     Text="Giriş Yap" 
+                                     Icon="login" 
+                                     IsBusy="@isLoading"
+                                     ButtonStyle="ButtonStyle.Primary" 
+                                     class="w-100" />
+                    </RadzenStack>
+
+                    <div class="text-center w-100">
+                        <span>Hesabınız yok mu? </span>
+                        <RadzenLink Path="/register" Text="Kayıt Ol" />
+                    </div>
+                </RadzenStack>
+            </RadzenFieldset>
+        </RadzenForm>
+    </div>
+</div>
+
+@code {
+    private LoginRequest loginModel = new("", "");
+    private bool isLoading = false;
+    private bool isInitialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AuthStateService.InitializeAsync();
+            
+            if (AuthStateService.IsAuthenticated)
+            {
+                Navigation.NavigateTo("/home");
+            }
+            
+            isInitialized = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnLogin(LoginRequest args)
+    {
+        if (isLoading) return;
+
+        isLoading = true;
+        try
+        {
+            var response = await AuthService.LoginAsync(args);
+            
+            if (response != null && !string.IsNullOrEmpty(response.Token))
+            {
+                var success = await AuthStateService.LoginAsync(response.Token, response.Kullanici);
+                
+                if (success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Başarılı",
+                        Detail = "Giriş yapıldı",
+                        Duration = 3000
+                    });
+                    
+                    Navigation.NavigateTo("/home");
+                }
+                else
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Hata",
+                        Detail = "Giriş yapılamadı",
+                        Duration = 4000
+                    });
+                }
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Hata",
+                    Detail = "E-posta veya şifre hatalı",
+                    Duration = 4000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Hata",
+                Detail = $"Bir hata oluştu: {ex.Message}",
+                Duration = 4000
+            });
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
+

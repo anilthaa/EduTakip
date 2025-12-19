@@ -1,0 +1,90 @@
+﻿<RadzenTemplateForm Data="@model" TItem="ItemDers" Submit="@Kaydet">
+	<RadzenFieldset Text="Ders Bilgileri">
+		<div class="mb-3">
+			<RadzenLabel Text="Ders Adı" />
+			<RadzenTextBox @bind-Value="model.Adi" Name="Adi" Style="width:100%" />
+			<RadzenRequiredValidator Component="Adi" Text="Birim Adı zorunludur." Style="color:red" />
+		</div>
+		<div class="mb-3">
+			<RadzenLabel Text="Açıklama" />
+			<RadzenTextArea @bind-Value="model.Aciklama" Style="width:100%" />
+		</div>
+		<div class="mb-3">
+			<RadzenLabel Text="Öğretmen" />
+			<RadzenDropDown Name="Ogretmen" Data="@ogretmenler" TextProperty="Kullanici.Adi" ValueProperty="ID" @bind-Value="model.Ogretmen_ID" Style="width:100%"></RadzenDropDown>
+			<RadzenRequiredValidator Component="Ogretmen" Text="Zorunlu Alan"></RadzenRequiredValidator>
+		</div>
+	</RadzenFieldset>
+
+	<div class="mt-3 text-center">
+		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
+		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+	</div>
+</RadzenTemplateForm>
+
+@code {
+	[Parameter] public int? DersId { get; set; }
+	ItemDers? model=new();
+	List<ItemOgretmen> ogretmenler = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			ogretmenler = await DbContext.Ogretmenler
+				.Include(o => o.Kullanici)
+				.OrderBy(o => o.Kullanici.Adi)
+				.ToListAsync();
+			if (DersId.HasValue && DersId.Value > 0)
+			{
+				model = await DbContext.Dersler
+					.FirstOrDefaultAsync(x => x.ID == DersId.Value);
+				if (model == null)
+				{
+					NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ders bulunamadı veya silinmiş.");
+					DialogService.Close(false);
+					return;
+				}
+			}
+			else
+			{
+				model = new ItemDers();
+			}
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			DialogService.Close(false);
+		}
+	}
+
+	async Task Kaydet()
+	{
+		try
+		{
+			if (model != null)
+			{
+				if (model.ID == 0)
+				{
+					model.CreDate = DateTime.UtcNow;
+					model.CreUser = 0;
+					DbContext.Dersler.Add(model);
+				}
+				else
+				{
+					model.UpdDate = DateTime.UtcNow;
+					model.UpdUser = 0;
+					DbContext.Dersler.Update(model);
+				}
+				await DbContext.SaveChangesAsync();
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ders başarıyla kaydedildi.");
+				DialogService.Close(true);
+			}
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+		}
+	}
+}

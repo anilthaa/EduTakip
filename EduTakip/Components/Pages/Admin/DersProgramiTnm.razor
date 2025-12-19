@@ -1,0 +1,141 @@
+﻿<RadzenTemplateForm TItem="ItemDersProgrami" Data="@model" Submit="@Kaydet">
+	<RadzenFieldset Text="Ders Programı Bilgileri">
+		<div class="row">
+			<div class="col-12 mb-3">
+				<RadzenLabel Text="Ders"></RadzenLabel>
+				<RadzenDropDown Data="@dersler" TextProperty="Adi" ValueProperty="ID" @bind-Value="model.Ders_ID" Style="width:100%"></RadzenDropDown>
+			</div>
+			<div class="col-12 mb-3">
+				<RadzenLabel Text="Gün"></RadzenLabel>
+				<RadzenDropDown Data="@gunler" TextProperty="Adi" ValueProperty="Deger" @bind-Value="model.Gun" Style="width:100%"></RadzenDropDown>
+			</div>
+			<div class="col-6 mb-3">
+				<RadzenLabel Text="Başlangıç Saati"></RadzenLabel>
+				<RadzenTimeSpanPicker @bind-Value="model.BaslangicSaati" Style="width:100%"></RadzenTimeSpanPicker>
+			</div>
+			<div class="col-6 mb-3">
+				<RadzenLabel Text="Bitiş Saati"></RadzenLabel>
+				<RadzenTimeSpanPicker @bind-Value="model.BitisSaati" Style="width:100%"></RadzenTimeSpanPicker>
+			</div>
+			<div class="col-12 mb-3">
+				<RadzenLabel Text="Sınıf"></RadzenLabel>
+				<RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="Adi" @bind-Value="model.Sinif" Style="width:100%"></RadzenDropDown>
+			</div>
+			<div class="col-12 mb-3">
+				<RadzenCheckBox @bind-Value="model.Aktif"></RadzenCheckBox>
+				<RadzenLabel Text="Aktif" Style="margin-left:10px;"></RadzenLabel>
+			</div>
+			<div class="col-12 text-center">
+				<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
+				<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+			</div>
+		</div>
+	</RadzenFieldset>
+</RadzenTemplateForm>
+
+@code {
+	[Parameter] public int? Id { get; set; }
+
+	ItemDersProgrami model = new();
+	List<ItemDers> dersler = new();
+	List<ItemSinif> siniflar = new();
+	List<GunItem> gunler = new();
+
+	TimeSpan baslangicSaati;
+	TimeSpan bitisSaati;
+
+	public class GunItem
+	{
+		public DayOfWeek Deger { get; set; }
+		public string Adi { get; set; } = string.Empty;
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		gunler = new List<GunItem>
+		{
+			new GunItem { Deger = DayOfWeek.Monday, Adi = "Pazartesi" },
+			new GunItem { Deger = DayOfWeek.Tuesday, Adi = "Salı" },
+			new GunItem { Deger = DayOfWeek.Wednesday, Adi = "Çarşamba" },
+			new GunItem { Deger = DayOfWeek.Thursday, Adi = "Perşembe" },
+			new GunItem { Deger = DayOfWeek.Friday, Adi = "Cuma" },
+			new GunItem { Deger = DayOfWeek.Saturday, Adi = "Cumartesi" },
+			new GunItem { Deger = DayOfWeek.Sunday, Adi = "Pazar" }
+		};
+		dersler = await DbContext.Dersler
+			.OrderBy(d => d.Adi)
+			.ToListAsync();
+		
+		siniflar = await DbContext.Siniflar
+			.Where(s => s.Aktif)
+			.OrderBy(s => s.Adi)
+			.ToListAsync();
+		if (Id.HasValue && Id.Value > 0)
+		{
+			model = await DbContext.DersProgramlari
+				.FirstOrDefaultAsync(x => x.ID == Id.Value);
+			
+			if (model == null)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ders programı bulunamadı.");
+				DialogService.Close(false);
+				return;
+			}
+			
+			baslangicSaati = model.BaslangicSaati;
+			bitisSaati = model.BitisSaati;
+		}
+		else
+		{
+			model.Aktif = true;
+			baslangicSaati = new TimeSpan(9, 0, 0);
+			bitisSaati = new TimeSpan(10, 0, 0);
+		}
+		StateHasChanged();
+	}
+
+	async Task Kaydet(ItemDersProgrami item)
+	{
+		try
+		{
+			if (baslangicSaati >= bitisSaati)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Başlangıç saati bitiş saatinden büyük veya eşit olamaz.");
+				return;
+			}
+			
+			item.BaslangicSaati = baslangicSaati;
+			item.BitisSaati = bitisSaati;
+
+			int ogretmenId=await DbContext.Dersler.Where(x => x.ID == item.Ders_ID).Select(x => x.Ogretmen_ID).FirstOrDefaultAsync();
+
+			bool cakismavar=await DbContext.DersProgramlari.AnyAsync(x => x.ID == item.ID && x.DelDate == default && x.Gun == item.Gun && x.Ders.Ogretmen_ID ==ogretmenId && (model.BaslangicSaati<x.BitisSaati && model.BitisSaati > x.BaslangicSaati));
+
+			if (cakismavar)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Seçilen öğretmenin aynı gün ve saat aralığında başka bir dersi bulunmaktadır.");
+				return;
+			}
+			
+			if (Id.HasValue && Id.Value > 0)
+			{
+				item.UpdDate = DateTime.UtcNow;
+				item.UpdUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+				DbContext.DersProgramlari.Update(item);
+			}
+			else
+			{
+				item.CreDate = DateTime.UtcNow;
+				item.CreUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+				await DbContext.DersProgramlari.AddAsync(item);
+			}
+			await DbContext.SaveChangesAsync();
+			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ders programı kaydedildi.");
+			DialogService.Close(true);
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+		}
+	}
+}

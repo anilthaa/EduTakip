@@ -1,0 +1,103 @@
+@page "/admin/siniflar"
+@inject IToastService ToastService
+
+<div class="d-flex justify-content-between mb-4">
+	<h4>Sınıflar</h4>
+	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@YeniSinif" />
+</div>
+<RadzenCard>
+	<RadzenDataGrid TItem="ItemSinif" Data="@siniflar" AllowPaging="true" PageSize="10">
+		<Columns>
+			<RadzenDataGridColumn TItem="ItemSinif" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemSinif" Property="Adi" Title="Sınıf Adı" />
+			<RadzenDataGridColumn TItem="ItemSinif" Title="Aktif">
+				<Template Context="item">
+					<span 
+						class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
+						@onclick="@(() => ToggleAktif(item))">
+						@(item.Aktif ? "Aktif" : "Pasif")
+					</span>
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemSinif" Title="İşlemler">
+				<Template Context="item">
+					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditSinif(item))" Style="margin-right: 10px;" />
+					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteSinif(item))" />
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
+
+@code {
+	List<ItemSinif> siniflar = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		siniflar = await DbContext.Siniflar
+			.OrderBy(x => x.Adi)
+			.ToListAsync();
+	}
+
+	async Task YeniSinif()
+	{
+		var result = await DialogService.OpenAsync<SinifTnm>("Yeni Sınıf Ekle", new Dictionary<string, object>()
+		{
+			{ "SinifId", 0 }
+		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+		{
+			await Listele();
+			StateHasChanged();
+		}
+	}
+
+	async Task EditSinif(ItemSinif sinif)
+	{
+		var result = await DialogService.OpenAsync<SinifTnm>("Sınıf Düzenle", new Dictionary<string, object>()
+		{
+			{ "SinifId", sinif.ID }
+		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+		{
+			await Listele();
+			StateHasChanged();
+		}
+	}
+
+	async Task ToggleAktif(ItemSinif sinif)
+	{
+		var yeniDurum = !sinif.Aktif;
+		sinif.Aktif = yeniDurum;
+		sinif.UpdDate = DateTime.UtcNow;
+		sinif.UpdUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+		DbContext.Siniflar.Update(sinif);
+		await DbContext.SaveChangesAsync();
+		await Listele();
+		ToastService.ShowSuccess("Başarılı", $"Sınıf {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
+		StateHasChanged();
+	}
+
+	async Task DeleteSinif(ItemSinif sinif)
+	{
+		bool? result = await DialogService.Confirm($"'{sinif.Adi}' sınıfını silmek istediğinize emin misiniz?", "Sınıf Silme Onayı", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		if (result == true)
+		{
+			sinif.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+			sinif.DelDate = DateTime.UtcNow;
+			sinif.Aktif = false; // Soft delete yapıldığında aktifliği de pasif yap
+			DbContext.Siniflar.Update(sinif);
+			await DbContext.SaveChangesAsync();
+			await Listele();
+			ToastService.ShowSuccess("Başarılı", "Sınıf silindi.");
+			StateHasChanged();
+		}
+	}
+}
+
