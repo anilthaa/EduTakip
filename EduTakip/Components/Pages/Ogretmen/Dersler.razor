@@ -1,5 +1,30 @@
-﻿<h3>Dersler</h3>
+﻿@page "/ogretmen/dersler"
+
+<h3>Derslerim</h3>
+
+<RadzenDataGrid Data="@list" TItem="ItemDers" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+	<Columns>
+		<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adi"></RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="ItemDers" Property="Aciklama" Title="Açıklama"></RadzenDataGridColumn>
+
+		<RadzenDataGridColumn TItem="ItemDers" Title="Öğrenci Sayısı">
+			<Template Context="x">
+				@x.Katilimcilar?.Count()
+			</Template>
+		</RadzenDataGridColumn>
+	</Columns>
+</RadzenDataGrid>
 
 @code {
+	List<ItemDers> list;
 
+	int ogretmenId = 1; //Simdilik
+
+	protected override async Task OnInitializedAsync()
+	{
+		list = await DbContext.Dersler
+			.Include(x => x.Katilimcilar)
+			.Where(x => x.Ogretmen_ID == ogretmenId && x.DelDate == null)
+			.ToListAsync();
+	}
 }

@@ -1,0 +1,34 @@
+﻿@page "/ogretmen/dersprogrami"
+
+<h3>Ders Programım</h3>
+
+
+<RadzenDataGrid Data="@list" TItem="ItemDersProgrami" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+	<Columns>
+		<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Gun" Title="Gün"></RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
+			<Template Context="x">
+				@x.BaslangicSaati - @x.BitisSaati
+			</Template>
+		</RadzenDataGridColumn>
+
+		<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif" Title="Sınıf"></RadzenDataGridColumn>
+	</Columns>
+</RadzenDataGrid>
+@code {
+
+	List<ItemDersProgrami> list;
+
+	int ogretmenId = 1; //Simdilik
+
+	protected override async Task OnInitializedAsync()
+	{
+		list = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == null && x.Aktif)
+			.OrderBy(x => x.Gun)
+			.ThenBy(x => x.BaslangicSaati)
+			.ToListAsync();
+	}
+}
