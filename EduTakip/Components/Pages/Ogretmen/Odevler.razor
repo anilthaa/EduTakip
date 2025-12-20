@@ -1,5 +1,83 @@
-﻿<h3>Odevler</h3>
+﻿@page "/ogretmen/odevler"
+
+<h3>Ödevlerim</h3>
+
+ <RadzenButton Text="Yeni Ödev" Icon="add" Style="margin-bottom:10px;" Click="yeniOdev">
+ </RadzenButton>
+
+
+<RadzenDataGrid Data="@list" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+	<Columns>
+		<RadzenDataGridColumn TItem="ItemOdev" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="ItemOdev" Property="Baslik" Title="Baslik"></RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="ItemOdev" Property="SonTeslimTarihi" Title="Son Teslim"></RadzenDataGridColumn>
+
+
+		<RadzenDataGridColumn TItem="ItemOdev" Title="Islemler">
+			<Template Context="item">
+				<RadzenButton Text="Düzenle" Icon="edit" Style="margin-right:10px;" Click="@(args => duzenleOdev(item))"></RadzenButton>
+				<RadzenButton Text="Sil" Icon="delete" Style="margin-left:10px;" Click="@(args=>silOdev(item))"></RadzenButton>
+				<RadzenButton Text="Teslimler" Icon="folder_open" Style="margin-left:10px;" Click="@(()=> GitTeslimlere(item.ID))"></RadzenButton>
+			</Template>
+		</RadzenDataGridColumn>
+	</Columns>
+</RadzenDataGrid>
 
 @code {
 
+	List<ItemOdev> list;
+
+	int ogretmenId = 1; //Simdilik
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		list = await DbContext.Odevler
+			.Include(x => x.Ders)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == null)
+			.OrderByDescending(x=>x.VerilisTarihi)
+			.ToListAsync();
+	}
+
+	async Task yeniOdev()
+	{
+		var result = await DialogService.OpenAsync<OdevTnm>("Yeni Odev", new Dictionary<string, object>(),
+
+			new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+			await Listele();
+	}
+
+	async Task duzenleOdev(ItemOdev item)
+	{
+		var result= await DialogService.OpenAsync<OdevTnm>("Ödev Düzenle", new Dictionary<string, object>()
+		{
+			{ "OdevId", item.ID }
+		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+			await Listele();
+	}
+
+	async Task silOdev(ItemOdev item)
+	{
+		bool? result = await DialogService.Confirm("Ödevi silmek istediğinize emin misiniz?", "Onay",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		if (result == true)
+		{
+			item.DelDate = DateTime.Now;
+			item.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+			DbContext.Odevler.Update(item);
+			await DbContext.SaveChangesAsync();
+			await Listele();
+		}
+	}
+
+	void GitTeslimlere(int odevId)
+	{
+		NavigationManager.NavigateTo($"/ogretmen/odev-teslimleri/{odevId}");
+	}
 }

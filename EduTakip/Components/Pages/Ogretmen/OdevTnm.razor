@@ -1,0 +1,76 @@
+﻿<RadzenTemplateForm Data="@model" TItem="ItemOdev" Submit="@Kaydet">
+	<RadzenDropDown Data="@dersler" TextProperty="Adi" ValueProperty="ID" @bind-Value="model.Ders_ID" Placeholder="Ders Seciniz" Style="width:100%"></RadzenDropDown>
+	<RadzenTextBox @bind-Value="model.Baslik" Placeholder="Odev Basligi" Style="width:100%; margin-top:10px"></RadzenTextBox>
+	<RadzenTextArea @bind-Value="model.Aciklama" Placeholder="Aciklama" Style="width:100%; margin-top:10px"></RadzenTextArea>
+	<RadzenDatePicker @bind-Value="model.SonTeslimTarihi" DateFormat="dd.MM.yyyy" Style="margin-top:10px" Placeholder="Son Teslim Tarihi"></RadzenDatePicker>
+	<div class="mt-3 text-center">
+		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
+		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+	</div>
+</RadzenTemplateForm>
+
+@code {
+	ItemOdev model = new();
+	List<ItemDers> dersler = new();
+	[Parameter] public int? OdevId { get; set; }
+	int ogretmenId = 1; //Simdilik
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			dersler = await DbContext.Dersler
+				.Where(x => x.Ogretmen_ID == ogretmenId)
+				.ToListAsync();
+
+			if (OdevId.HasValue)
+			{
+				model = await DbContext.Odevler
+					.FirstOrDefaultAsync(x => x.ID == OdevId.Value);
+				if (model == null)
+				{
+					NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ödev bulunamadı veya silinmiş.");
+					DialogService.Close(false);
+					return;
+				}
+			}
+			else
+			{
+				model.VerilisTarihi = DateTime.UtcNow;
+			}
+
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			DialogService.Close(false);
+		}
+	}
+
+	async Task Kaydet()
+	{
+		try
+		{
+			if (model.Ders_ID==0)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Lütfen bir ders seçiniz.");
+				return;
+			}
+			if(OdevId==null)
+			{
+				DbContext.Odevler.Add(model);
+			}
+			else
+			{
+				DbContext.Odevler.Update(model);
+			}
+			await DbContext.SaveChangesAsync();
+			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ödev başarıyla kaydedildi.");
+			DialogService.Close(true);
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+		}
+	}
+}
