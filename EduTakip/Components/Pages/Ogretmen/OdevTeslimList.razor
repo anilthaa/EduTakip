@@ -1,0 +1,70 @@
+﻿@page "/ogretmen/odev-teslimleri/{OdevId:int}"
+
+<RadzenCard>
+	<h4>Odev Teslimleri</h4>
+
+	<RadzenDataGrid Data="@teslimler" TItem="ItemOdevTeslim" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+		<Columns>
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ogrenci">
+				<Template Context="item">
+					@item.Ogrenci.Adi @item.Ogrenci.Soyadi
+				</Template>
+				
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Property="TeslimTarihi" Title="Teslim Tarihi"></RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Dosya">
+				<Template Context="item">
+					@if (!string.IsNullOrEmpty(item.DosyaYolu))
+					{
+						<a href="@item.DosyaYolu" target="_blank">Indir</a>
+					}
+				</Template>	
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Not">
+				<Template Context="item">
+					@item.Not
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Islem">
+				<Template Context="item">
+					<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => NotVer(item))"></RadzenButton>
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+		</RadzenDataGrid>	
+</RadzenCard>
+@code {
+	[Parameter] public int OdevId { get; set; }
+
+	List<ItemOdevTeslim> teslimler = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		teslimler = await DbContext.OdevTeslimler
+			.Include(x => x.Ogrenci)
+			.Where(x => x.Odev_ID == OdevId && x.DelDate == null)
+			.ToListAsync();
+	}
+
+	async Task NotVer(ItemOdevTeslim teslim)
+	{
+		var result = await DialogService.OpenAsync<OdevNotTnm>("Not Ver", new Dictionary<string, object>()
+		{
+			{ "OdevTeslimId", teslim.ID }
+		}, new DialogOptions() { Width = "400px", Height = "300px" });
+		if (result == true)
+		{
+			await Listele();
+			StateHasChanged();
+		}
+	}
+}

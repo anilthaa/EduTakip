@@ -1,0 +1,48 @@
+﻿<RadzenTemplateForm Data="@model" TItem="ItemOdevTeslim" Submit="@Kaydet">
+	<RadzenNumeric @bind-Value="model.Not" Min="0" Max="100" Placeholder="Not" Style="width:100%"></RadzenNumeric>
+	<RadzenTextArea @bind-Value="model.OgretmenYorumu" Placeholder="Ogretmen Yorumu" Style="width:100%; margin-top:10px"></RadzenTextArea>
+	<div class="mt-3 text-center">
+		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
+		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+	</div>
+</RadzenTemplateForm>
+@code {
+
+	ItemOdevTeslim model = new();
+	[Parameter] public int OdevTeslimId { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		try
+		{
+			model = await DbContext.OdevTeslimler
+				.FirstOrDefaultAsync(x => x.ID == OdevTeslimId);
+			if (model == null)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ödev teslimi bulunamadı veya silinmiş.");
+				DialogService.Close(false);
+				return;
+			}
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			DialogService.Close(false);
+		}
+	}
+
+	async Task Kaydet()
+	{
+		try
+		{
+			DbContext.OdevTeslimler.Update(model);
+			await DbContext.SaveChangesAsync();
+			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Not başarıyla kaydedildi.");
+			DialogService.Close(true);
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+		}
+	}
+}
