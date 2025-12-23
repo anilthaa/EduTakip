@@ -58,3 +58,54 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.stat-card {
+    color: white;
+    border-radius:12px;
+    padding:20px;
+    transition:0.2s;
+}
+.stat-card:hover
+{
+    transform:translateY(-3px);
+    transition:0.2s;
+}
+
+.rz-column-title {
+    font-weight: 600;
+}
+
+.stat-content
+{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.stat-icon {
+    font-size: 40px;
+    opacity: 0.85;
+}
+
+.stat-card h6 {
+    margin:0;
+    font-weight:500;
+
+}
+
+.stat-card h2
+{
+    margin:0;
+    font-size:32px;
+    font-weight:bold;
+}
+
+.blue{background:linear-gradient(135deg, #2196f3, #21cbf3);}
+.green{background:linear-gradient(135deg, #4caf50, #81c784);}
+.orange {
+    background: linear-gradient(135deg, #ff9800, #ffb74d);
+}
+.purple
+{
+    background:linear-gradient(135deg, #9c27b0, #ba68c8);
+}

@@ -1,5 +1,145 @@
-﻿<h3>Dashboard</h3>
+﻿@page "/ogretmen/dashboard"
+
+<RadzenRow Gap="20px" class="mb-4">
+	<RadzenColumn Size="3">
+		<RadzenCard class="stat-card blue">
+			<div class="stat-content">
+				<div>
+					<h6>Dersler</h6>
+					<h2>@dersSayisi</h2>
+				</div>
+				<RadzenIcon Icon="menu_book" class="stat-icon"></RadzenIcon>
+			</div>
+		</RadzenCard>
+		
+	</RadzenColumn>
+
+	<RadzenColumn Size="3">
+		<RadzenCard class="stat-card green">
+			<div class="stat-content">
+				<div>
+					<h6>Odevler</h6>
+					<h2>@odevSayisi</h2>
+				</div>
+				<RadzenIcon Icon="assignment" class="stat-icon"></RadzenIcon>
+			</div>
+		</RadzenCard>
+	</RadzenColumn>
+
+	<RadzenColumn Size="3">
+		<RadzenCard class="stat-card orange">
+			<div class="stat-content">
+				<div>
+					<h6>Bekleyen</h6>
+					<h2>@bekleyenTeslim</h2>
+				</div>
+				<RadzenIcon Icon="hourglass_empty" class="stat-icon" />
+			</div>
+		</RadzenCard>
+	</RadzenColumn>
+
+	<RadzenColumn Size="3">
+		<RadzenCard class="stat-card purple">
+			<div class="stat-content">
+				<div>
+					<h6>Öğrenci</h6>
+					<h2>@ogrenciSayisi</h2>
+				</div>
+				<RadzenIcon Icon="groups" class="stat-icon" />
+			</div>
+		</RadzenCard>
+	</RadzenColumn>
+</RadzenRow>
+
+<RadzenCard class="mt-4">
+	<h5><RadzenIcon Icon="event"></RadzenIcon>Bugünkü Dersler</h5>
+	@if	(bugunkuDersler.Any())
+	{
+		<RadzenDataGrid Data="@bugunkuDersler" TItem="ItemDersProgrami">
+			<Columns>
+				<RadzenDataGridColumn Property="Ders.Adi" Title="Ders Adı"></RadzenDataGridColumn>
+				<RadzenDataGridColumn Property="BaslangicSaati" Title="Başlangıç Saati"></RadzenDataGridColumn>
+				<RadzenDataGridColumn Property="BitisSaati" Title="Bitiş Saati"></RadzenDataGridColumn>
+				<RadzenDataGridColumn Property="Sinif" Title="Sinif"></RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+	else
+	{
+		<p class="text-muted">Bugün Dersiniz Yok</p>
+	}
+
+	
+</RadzenCard>
+
+<RadzenCard class="mt-4">
+	<h5><RadzenIcon Icon="warning"></RadzenIcon>Not Bekleyen Teslimler</h5>
+	@if (bekleyenTeslimler.Any())
+	{
+		<RadzenDataGrid Data="@bekleyenTeslimler" TItem="ItemOdevTeslim">
+			<Columns>
+				<RadzenDataGridColumn Title="Öğrenci">
+					<Template Context="item">
+						@item.Ogrenci.Adi @item.Ogrenci.Soyadi
+					</Template>
+				</RadzenDataGridColumn>
+
+				<RadzenDataGridColumn Property="Odev.Baslik" Title="Ödev"></RadzenDataGridColumn>
+				<RadzenDataGridColumn Title="İşlem">
+					<Template Context="item">
+						<RadzenButton Text="Not Ver" Size="ButtonSize.Small" Click="@(() => GitTeslimlere(item.Odev_ID))"></RadzenButton>
+					</Template>
+				</RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+	else
+	{
+		<p class="text-muted">Bekleyen Teslim Yok</p>
+	}
+
+</RadzenCard>
 
 @code {
+	List<ItemOdevTeslim> bekleyenTeslimler = new();
+	List<ItemDersProgrami> bugunkuDersler = new();
+	int ogretmenId=1;
 
+	int dersSayisi;
+	int odevSayisi;
+	int bekleyenTeslim;
+	int ogrenciSayisi;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		dersSayisi = await DbContext.Dersler.CountAsync(x => x.Ogretmen_ID == ogretmenId && x.DelDate == default);
+		odevSayisi = await DbContext.Odevler.CountAsync(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == default);
+		bekleyenTeslim = await DbContext.OdevTeslimler.CountAsync(x => x.Odev.Ders.Ogretmen_ID == ogretmenId && x.Not == null && x.DelDate == default);
+		ogrenciSayisi = await DbContext.DersKatilimcilar
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == default)
+			.Select(x => x.Ogrenci_ID)
+			.Distinct()
+			.CountAsync();
+
+		var bugun = DateTime.Today.DayOfWeek;
+		bugunkuDersler = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.Gun == bugun && x.DelDate == default)
+			.OrderBy(x => x.BaslangicSaati)
+			.ToListAsync();
+
+		bekleyenTeslimler = await DbContext.OdevTeslimler.Include(x=> x.Ogrenci).Include(x => x.Odev)
+			.Where(x => x.Odev.Ders.Ogretmen_ID == ogretmenId && x.Not == null && x.DelDate == default)
+			.Take(5)
+			.ToListAsync();
+	}
+	void GitTeslimlere(int odevId)
+	{
+		NavigationManager.NavigateTo($"/ogretmen/odev-teslimleri/{odevId}");
+	}
 }
