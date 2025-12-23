@@ -1,0 +1,30 @@
+﻿@* @page "/admin/kullanicilar"
+<div class="d-flex justify-content-between mb-4">
+	<h4>Kullanıcılar</h4>
+	<RadzenButton Text="Yeni Kullanıcı Ekle" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@YeniKullanici" />
+</div>
+<RadzenCard>
+	<RadzenDataGrid TItem="ItemKullanici" Data="@kullanicilar" AllowPaging="true" PageSize="10">
+		<Columns>
+			<RadzenDataGridColumn TItem="ItemDers" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adı" />
+			<RadzenDataGridColumn TItem="ItemDers" Title="Öğretmen">
+				<Template Context="item">
+					@item.Ogretmen?.Kullanici?.Adi @item.Ogretmen?.Kullanici?.Soyadi
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemDers" Title="İşlemler">
+				<Template Context="item">
+					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditDers(item))" Style="margin-right: 10px;" />
+					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
+
+@code {
+
+}
+ *@
