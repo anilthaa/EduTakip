@@ -1,8 +1,372 @@
 ﻿@page "/home"
+@rendermode InteractiveServer
+@inject AuthStateService AuthStateService
+@inject NavigationManager NavigationManager
+@inject EduTakipDBContext DbContext
 
-<PageTitle>Ana Sayfa</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-<div class="container mt-4">
-    <h1>Hoş Geldiniz!</h1>
-    <p>EduTakip sistemine başarıyla giriş yaptınız.</p>
-</div>
+@if (AuthStateService.CurrentUser == null)
+{
+    <div class="container mt-4">
+        <p>Yükleniyor...</p>
+    </div>
+}
+else
+{
+    var kullaniciTip = AuthStateService.CurrentUser.KullaniciTip?.ToLower() ?? "";
+    
+    @if (kullaniciTip.Contains("admin"))
+    {
+        @* Admin Dashboard *@
+        <h3>Admin Dashboard</h3>
+        <RadzenRow Gap="20px" Style="margin-top:20px">
+            <RadzenColumn Size="3">
+                <RadzenCard Style="border-left:4px solid green">
+                    <h4>Toplam Ders</h4>
+                    <h2>@toplamDers</h2>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard Style="border-left:4px solid red">
+                    <h4>Toplam Öğretmen</h4>
+                    <h2>@toplamOgretmen</h2>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard Style="border-left:4px solid yellow">
+                    <h4>Toplam Öğrenci</h4>
+                    <h2>@toplamOgrenci</h2>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard>
+                    <h4>Bugünkü Ders</h4>
+                    <h2>@bugunkuDers</h2>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+    }
+    else if (kullaniciTip.Contains("öğrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
+    {
+        @* Öğrenci Dashboard *@
+        <RadzenRow Gap="20px" Style="margin-bottom:15px;">
+            <RadzenColumn Size="3">
+                <RadzenCard Style="background:#f44336; color:white;">
+                    <h5>Bekleyen Ödevler</h5>
+                    <h2>@bekleyenOdevSayisi</h2>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard Style="background:#ff9800; color:white;">
+                    <h5>Yaklaşan Teslimler</h5>
+                    <h2>@yaklasanTeslimSayisi</h2>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard Style="background:#2196f3; color:white;">
+                    <h5>Bugünkü Dersler</h5>
+                    <h2>@bugunkuDersSayisi</h2>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard Style="background:#4caf50; color:white;">
+                    <h5>Not Ortalaması</h5>
+                    <h2>@ortalamaNot.ToString("F2")</h2>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        <RadzenRow Gap="20px">
+            <RadzenColumn Size="6">
+                <RadzenCard>
+                    <h4>Bugünkü Ders Programı</h4>
+                    <RadzenDataGrid TItem="ItemDersProgrami" Data="@bugunkuDersler" AllowPaging="true" PageSize="5">
+                        <Columns>
+                            <RadzenDataGridColumn Title="Ders">
+                                <Template Context="item">
+                                    @item.Ders.Adi
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn Title="Saat">
+                                <Template Context="item">
+                                    @item.BaslangicSaati.ToString(@"hh\:mm") - @item.BitisSaati.ToString(@"hh\:mm")
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="6">
+                <RadzenCard>
+                    <h4>Son Ödevler</h4>
+                    <RadzenDataGrid TItem="ItemOdev" Data="@sonOdevler" AllowPaging="true" PageSize="5">
+                        <Columns>
+                            <RadzenDataGridColumn Title="Ödev Adı" Property="Baslik"></RadzenDataGridColumn>
+                            <RadzenDataGridColumn Property="SonTeslimTarihi" Title="Teslim Tarihi"></RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+    }
+    else if (kullaniciTip.Contains("öğretmen") || kullaniciTip.Contains("ogretmen") || kullaniciTip.Contains("teacher"))
+    {
+        @* Öğretmen Dashboard *@
+        <RadzenRow Gap="20px" class="mb-4">
+            <RadzenColumn Size="3">
+                <RadzenCard class="stat-card blue">
+                    <div class="stat-content">
+                        <div>
+                            <h6>Dersler</h6>
+                            <h2>@dersSayisi</h2>
+                        </div>
+                        <RadzenIcon Icon="menu_book" class="stat-icon"></RadzenIcon>
+                    </div>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard class="stat-card green">
+                    <div class="stat-content">
+                        <div>
+                            <h6>Odevler</h6>
+                            <h2>@odevSayisi</h2>
+                        </div>
+                        <RadzenIcon Icon="assignment" class="stat-icon"></RadzenIcon>
+                    </div>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard class="stat-card orange">
+                    <div class="stat-content">
+                        <div>
+                            <h6>Bekleyen</h6>
+                            <h2>@bekleyenTeslim</h2>
+                        </div>
+                        <RadzenIcon Icon="hourglass_empty" class="stat-icon" />
+                    </div>
+                </RadzenCard>
+            </RadzenColumn>
+
+            <RadzenColumn Size="3">
+                <RadzenCard class="stat-card purple">
+                    <div class="stat-content">
+                        <div>
+                            <h6>Öğrenci</h6>
+                            <h2>@ogrenciSayisi</h2>
+                        </div>
+                        <RadzenIcon Icon="groups" class="stat-icon" />
+                    </div>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        <RadzenCard class="mt-4">
+            <h5><RadzenIcon Icon="event"></RadzenIcon>Bugünkü Dersler</h5>
+            @if (bugunkuDersler.Any())
+            {
+                <RadzenDataGrid Data="@bugunkuDersler" TItem="ItemDersProgrami">
+                    <Columns>
+                        <RadzenDataGridColumn Property="Ders.Adi" Title="Ders Adı"></RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="BaslangicSaati" Title="Başlangıç Saati"></RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="BitisSaati" Title="Bitiş Saati"></RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="Sinif" Title="Sinif"></RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            }
+            else
+            {
+                <p class="text-muted">Bugün Dersiniz Yok</p>
+            }
+        </RadzenCard>
+
+        <RadzenCard class="mt-4">
+            <h5><RadzenIcon Icon="warning"></RadzenIcon>Not Bekleyen Teslimler</h5>
+            @if (bekleyenTeslimler.Any())
+            {
+                <RadzenDataGrid Data="@bekleyenTeslimler" TItem="ItemOdevTeslim">
+                    <Columns>
+                        <RadzenDataGridColumn Title="Öğrenci">
+                            <Template Context="item">
+                                @item.Ogrenci.Adi @item.Ogrenci.Soyadi
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn Property="Odev.Baslik" Title="Ödev"></RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="İşlem">
+                            <Template Context="item">
+                                <RadzenButton Text="Not Ver" Size="ButtonSize.Small" Click="@(() => GitTeslimlere(item.Odev_ID))"></RadzenButton>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            }
+            else
+            {
+                <p class="text-muted">Bekleyen Teslim Yok</p>
+            }
+        </RadzenCard>
+    }
+    else
+    {
+        @* Varsayılan Dashboard *@
+        <div class="container mt-4">
+            <h1>Hoş Geldiniz, @AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi!</h1>
+            <p>EduTakip sistemine başarıyla giriş yaptınız.</p>
+        </div>
+    }
+}
+
+@code {
+    // Admin için
+    int toplamDers;
+    int toplamOgretmen;
+    int toplamOgrenci;
+    int bugunkuDers;
+
+    // Öğrenci için
+    int bekleyenOdevSayisi;
+    int yaklasanTeslimSayisi;
+    int bugunkuDersSayisi;
+    decimal ortalamaNot;
+    List<ItemDersProgrami> bugunkuDersler = new();
+    List<ItemOdev> sonOdevler = new();
+    int? ogrenciId;
+
+    // Öğretmen için
+    List<ItemOdevTeslim> bekleyenTeslimler = new();
+    List<ItemDersProgrami> bugunkuDerslerOgretmen = new();
+    int? ogretmenId;
+    int dersSayisi;
+    int odevSayisi;
+    int bekleyenTeslim;
+    int ogrenciSayisi;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateService.CurrentUser == null)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        await Yukle();
+    }
+
+    async Task Yukle()
+    {
+        if (AuthStateService.CurrentUser == null) return;
+
+        var kullaniciTip = AuthStateService.CurrentUser.KullaniciTip?.ToLower() ?? "";
+
+        if (kullaniciTip.Contains("admin"))
+        {
+            await YukleAdmin();
+        }
+        else if (kullaniciTip.Contains("öğrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
+        {
+            await YukleOgrenci();
+        }
+        else if (kullaniciTip.Contains("öğretmen") || kullaniciTip.Contains("ogretmen") || kullaniciTip.Contains("teacher"))
+        {
+            await YukleOgretmen();
+        }
+    }
+
+    async Task YukleAdmin()
+    {
+        toplamDers = await DbContext.Dersler.CountAsync(x => x.DelDate == null);
+        toplamOgretmen = await DbContext.Ogretmenler.CountAsync(x => x.DelDate == null);
+        toplamOgrenci = await DbContext.Ogrenciler.CountAsync(x => x.DelDate == null);
+        var bugun = DateTime.Today.DayOfWeek;
+        bugunkuDers = await DbContext.DersProgramlari
+            .CountAsync(x => x.DelDate == null && x.Gun == bugun && x.Aktif);
+    }
+
+    async Task YukleOgrenci()
+    {
+        // Öğrenci ID'sini bul
+        ogrenciId = await DbContext.Ogrenciler
+            .Where(x => x.Kullanici_ID == AuthStateService.CurrentUser!.ID && x.DelDate == null)
+            .Select(x => x.ID)
+            .FirstOrDefaultAsync();
+
+        if (!ogrenciId.HasValue) return;
+
+        var bugun = DateTime.Today;
+        var gun = bugun.DayOfWeek;
+
+        bekleyenOdevSayisi = await DbContext.Odevler
+            .Where(x => !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == ogrenciId.Value) && x.DelDate == null)
+            .CountAsync();
+
+        yaklasanTeslimSayisi = await DbContext.Odevler
+            .Where(x => x.DelDate == null && x.SonTeslimTarihi >= bugun && x.SonTeslimTarihi <= bugun.AddDays(3))
+            .CountAsync();
+
+        bugunkuDersler = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Where(x => x.Gun == gun && x.DelDate == null)
+            .OrderBy(x => x.BaslangicSaati)
+            .ToListAsync();
+
+        bugunkuDersSayisi = bugunkuDersler.Count;
+
+        ortalamaNot = await DbContext.OdevTeslimler
+            .Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null && x.Not != null)
+            .AverageAsync(x => (decimal?)x.Not) ?? 0;
+
+        sonOdevler = await DbContext.Odevler
+            .OrderByDescending(x => x.CreDate)
+            .Take(5)
+            .ToListAsync();
+    }
+
+    async Task YukleOgretmen()
+    {
+        // Öğretmen ID'sini bul
+        ogretmenId = await DbContext.Ogretmenler
+            .Where(x => x.Kullanici_ID == AuthStateService.CurrentUser!.ID && x.DelDate == null)
+            .Select(x => x.ID)
+            .FirstOrDefaultAsync();
+
+        if (!ogretmenId.HasValue) return;
+
+        dersSayisi = await DbContext.Dersler.CountAsync(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null);
+        odevSayisi = await DbContext.Odevler.CountAsync(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null);
+        bekleyenTeslim = await DbContext.OdevTeslimler.CountAsync(x => x.Odev.Ders.Ogretmen_ID == ogretmenId.Value && x.Not == null && x.DelDate == null);
+        ogrenciSayisi = await DbContext.DersKatilimcilar
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
+            .Select(x => x.Ogrenci_ID)
+            .Distinct()
+            .CountAsync();
+
+        var bugun = DateTime.Today.DayOfWeek;
+        bugunkuDerslerOgretmen = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.Gun == bugun && x.DelDate == null)
+            .OrderBy(x => x.BaslangicSaati)
+            .ToListAsync();
+
+        bekleyenTeslimler = await DbContext.OdevTeslimler
+            .Include(x => x.Ogrenci)
+            .Include(x => x.Odev)
+                .ThenInclude(o => o.Ders)
+            .Where(x => x.Odev.Ders.Ogretmen_ID == ogretmenId.Value && x.Not == null && x.DelDate == null)
+            .Take(5)
+            .ToListAsync();
+    }
+
+    void GitTeslimlere(int odevId)
+    {
+        NavigationManager.NavigateTo($"/ogretmen/odev-teslimleri/{odevId}");
+    }
+}

@@ -1,5 +1,85 @@
-﻿
+﻿@page "/admin/kullanicilar"
+@using System.Threading.Tasks
+@attribute [Authorize(Roles = "Admin")]
+<h4>Kullanıcı Listesi</h4>
 
+<RadzenButton Text="Yeni Kullanıcı Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
+
+<RadzenCard>
+	<RadzenDataGrid Data="@kullanicilar" TItem="ItemKullanici" AllowPaging="true" PageSize="10">
+		<Columns>
+			<RadzenDataGridColumn Property="Adi" Title="Ad"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="Soyadi" Title="Soyad"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="EPosta" Title="E-Posta"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Title="Tip">
+				<Template Context="item">
+					@(item.KullaniciTip?.Adi ?? "")
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn Title="Durum">
+				<Template Context="item">
+					<RadzenBadge Text="@(item.Aktif ? "Aktif" : "Pasif")" Style="@(item.Aktif ? "background:green" : "background:red")"></RadzenBadge>
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn Title="İşlemler">
+				<Template Context="item">
+					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => duzenleKullanici(item))"></RadzenButton>
+					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => silKullanici(item))"></RadzenButton>
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
 @code {
+	List<ItemKullanici> kullanicilar = new();
 
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		kullanicilar = await DbContext.Kullanicilar
+			.Include(k => k.KullaniciTip)
+			.Where(k => k.DelDate==null)
+			.ToListAsync();
+	}
+	async Task yeniKullanici()
+	{
+		var result=await DialogService.OpenAsync<KullaniciTnm>("Yeni Kullanıcı",
+			new Dictionary<string, object>(),
+			new DialogOptions() { Width = "600px", Height = "400px" });
+
+		if (result == true)
+		{
+			await Listele();
+		}
+	}
+
+	async Task duzenleKullanici(ItemKullanici kullanici)
+	{
+		var result = await DialogService.OpenAsync<KullaniciTnm>("Kullanıcı Düzenle",
+			new Dictionary<string, object>() { { "KullaniciId", kullanici.ID } },
+			new DialogOptions() { Width = "600px", Height = "400px" });
+		if (result == true)
+		{
+			await Listele();
+		}
+	}
+
+	async Task silKullanici(ItemKullanici kullanici)
+	{
+		bool? result = await DialogService.Confirm("Kullanıcıyı silmek istediğinize emin misiniz?", "Onay",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		if (result == true)
+		{
+			kullanici.DelDate = DateTime.Now;
+			kullanici.DelUser = 1;
+			DbContext.Kullanicilar.Update(kullanici);
+			await DbContext.SaveChangesAsync();
+			await Listele();
+		}
+	}
 }

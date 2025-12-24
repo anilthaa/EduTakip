@@ -44,6 +44,10 @@ namespace EduTakip.Models
                 .IsUnique();
 
             modelBuilder.Entity<ItemKullanici>()
+                .HasIndex(x => x.EPosta)
+                .IsUnique();
+
+            modelBuilder.Entity<ItemKullanici>()
                 .HasOne(x => x.KullaniciTip)
                 .WithMany()
                 .HasForeignKey(x => x.KullaniciTip_ID)
@@ -54,6 +58,12 @@ namespace EduTakip.Models
                 .HasOne(x => x.Kullanici)
                 .WithMany()
                 .HasForeignKey(x => x.Kullanici_ID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ItemOgrenci>()
+                .HasOne(x => x.Sinif)
+                .WithMany()
+                .HasForeignKey(x => x.Sinif_ID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ItemOgrenci>()

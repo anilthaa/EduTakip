@@ -1,6 +1,18 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@rendermode InteractiveServer
+@inject AuthStateService AuthStateService
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">EduTakip</a>
+        <a class="navbar-brand" href="/home">EduTakip</a>
+        @if (AuthStateService.CurrentUser != null)
+        {
+            <div style="margin-left: auto; color: white; display: flex; align-items: center; gap: 10px;">
+                <span>@AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi</span>
+                <RadzenButton Text="Çıkış" Icon="logout" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" 
+                             Click="@Logout" />
+            </div>
+        }
     </div>
 </div>
 
@@ -8,23 +20,103 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
+        @* Herkes için Anasayfa *@
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+            <NavLink class="nav-link" href="/home" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Anasayfa
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+        @* Admin menüleri *@
+        @if (IsAdmin)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/birimler" Match="NavLinkMatch.All">
+                    <span class="bi bi-building" aria-hidden="true"></span> Birim Listesi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/siniflar" Match="NavLinkMatch.All">
+                    <span class="bi bi-people" aria-hidden="true"></span> Sınıf Listesi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/dersler" Match="NavLinkMatch.All">
+                    <span class="bi bi-book" aria-hidden="true"></span> Ders Listesi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/ders-programlari" Match="NavLinkMatch.All">
+                    <span class="bi bi-calendar" aria-hidden="true"></span> Ders Programı Listesi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/kullanicilar" Match="NavLinkMatch.All">
+                    <span class="bi bi-person" aria-hidden="true"></span> Kullanıcı Listesi
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/admin/kullanici-tipleri" Match="NavLinkMatch.All">
+                    <span class="bi bi-person-badge" aria-hidden="true"></span> Kullanıcı Tip Listesi
+                </NavLink>
+            </div>
+        }
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+        @* Öğrenci menüleri *@
+        @if (IsOgrenci)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogrenci/dersler" Match="NavLinkMatch.All">
+                    <span class="bi bi-book" aria-hidden="true"></span> Derslerim
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogrenci/notlarim" Match="NavLinkMatch.All">
+                    <span class="bi bi-clipboard-check" aria-hidden="true"></span> Notlarım
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogrenci/odevlerim" Match="NavLinkMatch.All">
+                    <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Ödevlerim
+                </NavLink>
+            </div>
+        }
+
+        @* Öğretmen menüleri *@
+        @if (IsOgretmen)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogretmen/dersler" Match="NavLinkMatch.All">
+                    <span class="bi bi-book" aria-hidden="true"></span> Derslerim
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogretmen/dersprogrami" Match="NavLinkMatch.All">
+                    <span class="bi bi-calendar" aria-hidden="true"></span> Ders Programım
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogretmen/odevler" Match="NavLinkMatch.All">
+                    <span class="bi bi-file-earmark-text" aria-hidden="true"></span> Ödevlerim
+                </NavLink>
+            </div>
+        }
     </nav>
 </div>
 
+@code {
+    private bool IsAdmin => GetUserType().Contains("admin");
+    private bool IsOgrenci => GetUserType().Contains("öğrenci") || GetUserType().Contains("ogrenci") || GetUserType().Contains("student");
+    private bool IsOgretmen => GetUserType().Contains("öğretmen") || GetUserType().Contains("ogretmen") || GetUserType().Contains("teacher");
+
+    private string GetUserType()
+    {
+        return AuthStateService.CurrentUser?.KullaniciTip?.ToLower() ?? "";
+    }
+
+    private async Task Logout()
+    {
+        await AuthStateService.LogoutAsync();
+        Navigation.NavigateTo("/login", true);
+    }
+}

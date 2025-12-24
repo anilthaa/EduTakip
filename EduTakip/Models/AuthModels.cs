@@ -7,7 +7,10 @@ namespace EduTakip.Models
         [property: Required] string Soyadi,
         [property: Required, EmailAddress] string EPosta,
         [property: Required, MinLength(6)] string Sifre,
-        [property: Required] int KullaniciTip_ID);
+        int? KullaniciTip_ID = null,
+        int? Sinif_ID = null,
+        string OgrenciNo = null,
+        int? Birim_ID = null);
 
     public record LoginRequest(
         [property: Required, EmailAddress] string EPosta,

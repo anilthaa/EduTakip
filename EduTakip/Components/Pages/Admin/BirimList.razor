@@ -1,24 +1,24 @@
 ﻿@page "/admin/birimler"
-@inject IToastService ToastService
-
-<div class="d-flex justify-content-between mb-4">
-	<h4>Birimler</h4>
-	<RadzenButton Text="Yeni Birim Ekle" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@YeniBirim" />
-</div>
-<RadzenCard>
+@attribute [Authorize(Roles ="Admin")]
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Birimler</h3>
+	<RadzenButton Text="Yeni Birim Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:15px; border-radius:10px;" Click="@YeniBirim" />
+	@if (birimler==null || !birimler.Any())
+	{
+		<p>Henüz birim eklenmemiş.</p>	
+	}
 	<RadzenDataGrid TItem="ItemBirim" Data="@birimler" AllowPaging="true" PageSize="10">
 		<Columns>
-		<RadzenDataGridColumn TItem="ItemBirim" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-		<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adı" />
-		<RadzenDataGridColumn TItem="ItemBirim" Title="Aktif">
-			<Template Context="item">
-				<span 
-					class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
-					@onclick="@(() => ToggleAktif(item))">
-					@(item.Aktif ? "Aktif" : "Pasif")
-				</span>
-			</Template>
-		</RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemBirim" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adı" />
+			<RadzenDataGridColumn TItem="ItemBirim" Title="Aktif">
+				<Template Context="item">
+					<span class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
+						  @onclick="@(() => ToggleAktif(item))">
+						@(item.Aktif ? "Aktif" : "Pasif")
+					</span>
+				</Template>
+			</RadzenDataGridColumn>
 
 			<RadzenDataGridColumn TItem="ItemBirim" Title="İşlemler">
 				<Template Context="item">
@@ -40,8 +40,9 @@
 
 	async Task Listele()
 	{
+		
 		birimler = await DbContext.Birimler
-			.OrderBy(x=>x.Adi)
+			.OrderBy(x => x.Adi)
 			.ToListAsync();
 	}
 	async Task YeniBirim()
@@ -49,7 +50,7 @@
 		var result = await DialogService.OpenAsync<BirimTnm>("Yeni Birim Ekle", new Dictionary<string, object>()
 		{
 			{ "BirimId", 0 }
-		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		}, new DialogOptions() { Width = "600px" });
 		if (result == true)
 		{
 			await Listele();
@@ -62,7 +63,7 @@
 		var result = await DialogService.OpenAsync<BirimTnm>("Birim Düzenle", new Dictionary<string, object>()
 		{
 			{ "BirimId", birim.ID }
-		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		}, new DialogOptions() { Width = "600px" });
 		if (result == true)
 		{
 			await Listele();
@@ -79,7 +80,7 @@
 		DbContext.Birimler.Update(birim);
 		await DbContext.SaveChangesAsync();
 		await Listele();
-		ToastService.ShowSuccess("Başarılı", $"Birim {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
+		NotificationService.Notify(NotificationSeverity.Success,"Başarılı", $"Birim {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
 		StateHasChanged();
 	}
 
@@ -94,7 +95,7 @@
 			DbContext.Birimler.Update(birim);
 			await DbContext.SaveChangesAsync();
 			await Listele();
-			ToastService.ShowSuccess("Başarılı", "Birim silindi.");
+			NotificationService.Notify(NotificationSeverity.Success,"Başarılı", "Birim silindi.");
 			StateHasChanged();
 		}
 	}

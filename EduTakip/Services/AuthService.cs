@@ -36,11 +36,17 @@ namespace EduTakip.Services
                     return await response.Content.ReadFromJsonAsync<AuthResponse>();
                 }
                 
-                return null;
+                // Hata durumunda response body'yi oku
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Giriş başarısız: {errorMessage}");
             }
-            catch
+            catch (HttpRequestException)
             {
-                return null;
+                throw; // HttpRequestException'ı tekrar fırlat
+            }
+            catch (Exception ex)
+            {
+                throw new HttpRequestException($"Giriş sırasında bir hata oluştu: {ex.Message}", ex);
             }
         }
 
@@ -55,11 +61,17 @@ namespace EduTakip.Services
                     return await response.Content.ReadFromJsonAsync<AuthUserDto>();
                 }
                 
-                return null;
+                // Hata durumunda response body'yi oku
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Kayıt başarısız: {errorMessage}");
             }
-            catch
+            catch (HttpRequestException)
             {
-                return null;
+                throw; // HttpRequestException'ı tekrar fırlat
+            }
+            catch (Exception ex)
+            {
+                throw new HttpRequestException($"Kayıt sırasında bir hata oluştu: {ex.Message}", ex);
             }
         }
 

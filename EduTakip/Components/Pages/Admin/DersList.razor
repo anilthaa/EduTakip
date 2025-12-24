@@ -1,13 +1,18 @@
 ﻿@page "/admin/dersler"
-<div class="d-flex justify-content-between mb-4">
+@attribute [Authorize(Roles = "Admin")]
 	<h4>Dersler</h4>
-	<RadzenButton Text="Yeni Ders Ekle" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@YeniDers" />
-</div>
+	<RadzenButton Text="Yeni Ders Ekle" Icon="add" Style="margin-bottom:15px;border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniDers" />
 <RadzenCard>
+	
 	<RadzenDataGrid TItem="ItemDers" Data="@dersler" AllowPaging="true" PageSize="10">
 		<Columns>
+			@if (dersler == null || !dersler.Any())
+			{
+				<p>Henüz ders eklenmemiş.</p>
+			}
 			<RadzenDataGridColumn TItem="ItemDers" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
 			<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adı" />
+			<RadzenDataGridColumn TItem="ItemDers" Property="Aciklama" Title="Açıklama" />
 			<RadzenDataGridColumn TItem="ItemDers" Title="Öğretmen">
 				<Template Context="item">
 					@item.Ogretmen?.Kullanici?.Adi @item.Ogretmen?.Kullanici?.Soyadi
@@ -45,7 +50,7 @@
 	{
 		var result = await DialogService.OpenAsync<DersTnm>("Yeni Ders", new Dictionary<string, object>(),
 
-			new DialogOptions() { Width = "600px", Height = "400px" });
+			new DialogOptions() { Width = "600px"});
 		if (result == true)
 			await Listele();
 	}
@@ -55,7 +60,7 @@
 		var result = await DialogService.OpenAsync<DersTnm>("Ders Düzenle", new Dictionary<string, object>()
 		{
 			{ "DersId", ders.ID }
-		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		}, new DialogOptions() { Width = "600px" });
 		if (result == true)
 			await Listele();
 	}

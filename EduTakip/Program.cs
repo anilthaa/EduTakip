@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using EduTakip.Components;
 using EduTakip.Models;
@@ -52,7 +53,26 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.FromMinutes(1),
         ValidIssuer = jwtSection["Issuer"],
         ValidAudience = jwtSection["Audience"],
-        IssuerSigningKey = signingKey
+        IssuerSigningKey = signingKey,
+        RoleClaimType = ClaimTypes.Role,
+        NameClaimType = ClaimTypes.Name
+    };
+    
+    // JWT token'dan role claim'ini map et
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            var roleClaim = context.Principal?.FindFirst(ClaimTypes.Role);
+            if (roleClaim != null && context.Principal?.Identity is ClaimsIdentity identity)
+            {
+                if (!identity.HasClaim(ClaimTypes.Role, roleClaim.Value))
+                {
+                    identity.AddClaim(new Claim(ClaimTypes.Role, roleClaim.Value));
+                }
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -101,8 +121,14 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
 {
     var email = request.EPosta.Trim().ToLowerInvariant();
 
+    // Kullanıcı tipi validasyonu
+    if (!request.KullaniciTip_ID.HasValue || request.KullaniciTip_ID.Value <= 0)
+    {
+        return Results.BadRequest("Kullanıcı tipi seçilmelidir.");
+    }
+
     // Kullanıcı tipi belirtilmemişse veya geçersizse, ilk aktif kullanıcı tipini kullan
-    var userType = await db.KullaniciTipleri.FindAsync(request.KullaniciTip_ID);
+    var userType = await db.KullaniciTipleri.FindAsync(request.KullaniciTip_ID.Value);
     if (userType is null || !userType.Aktif)
     {
         userType = await db.KullaniciTipleri.FirstOrDefaultAsync(x => x.Aktif);
@@ -123,7 +149,7 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
         Adi = request.Adi.Trim(),
         Soyadi = request.Soyadi.Trim(),
         EPosta = email,
-        KullaniciTip_ID = request.KullaniciTip_ID,
+        KullaniciTip_ID = request.KullaniciTip_ID.Value,
         KullaniciTip = userType,
         Sifre = hasher.Hash(request.Sifre),
         Aktif = true,
@@ -132,6 +158,62 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     };
 
     db.Kullanicilar.Add(user);
+    await db.SaveChangesAsync(); // Önce kullanıcıyı kaydet ki ID'si oluşsun
+
+    // Kullanıcı tipine göre öğrenci veya öğretmen kaydı oluştur
+    var userTypeName = userType.Adi.ToLower();
+    
+    if (userTypeName.Contains("öğrenci") || userTypeName.Contains("ogrenci") || userTypeName.Contains("student"))
+    {
+        if (!request.Sinif_ID.HasValue || string.IsNullOrWhiteSpace(request.OgrenciNo))
+        {
+            // Kullanıcıyı geri sil
+            db.Kullanicilar.Remove(user);
+            await db.SaveChangesAsync();
+            return Results.BadRequest("Öğrenci için sınıf ve öğrenci numarası gereklidir.");
+        }
+
+        // Öğrenci numarası kontrolü
+        var ogrenciNoExists = await db.Ogrenciler.AnyAsync(x => x.OgrenciNo == request.OgrenciNo.Trim());
+        if (ogrenciNoExists)
+        {
+            db.Kullanicilar.Remove(user);
+            await db.SaveChangesAsync();
+            return Results.Conflict("Bu öğrenci numarası zaten kayıtlı.");
+        }
+
+        var ogrenci = new ItemOgrenci
+        {
+            Kullanici_ID = user.ID,
+            OgrenciNo = request.OgrenciNo.Trim(),
+            Sinif_ID = request.Sinif_ID.Value,
+            CreUser = 0,
+            CreDate = DateTime.UtcNow
+        };
+
+        db.Ogrenciler.Add(ogrenci);
+    }
+    else if (userTypeName.Contains("öğretmen") || userTypeName.Contains("ogretmen") || userTypeName.Contains("teacher"))
+    {
+        if (!request.Birim_ID.HasValue)
+        {
+            // Kullanıcıyı geri sil
+            db.Kullanicilar.Remove(user);
+            await db.SaveChangesAsync();
+            return Results.BadRequest("Öğretmen için birim gereklidir.");
+        }
+
+        var ogretmen = new ItemOgretmen
+        {
+            Kullanici_ID = user.ID,
+            Birim_ID = request.Birim_ID.Value,
+            CreUser = 0,
+            CreDate = DateTime.UtcNow
+        };
+
+        db.Ogretmenler.Add(ogretmen);
+    }
+
     await db.SaveChangesAsync();
 
     var dto = new AuthUserDto(user.ID, user.Adi, user.Soyadi, user.EPosta, user.KullaniciTip.Adi);
@@ -165,5 +247,47 @@ authGroup.MapGet("/user-types", async (EduTakipDBContext db) =>
         .ToListAsync();
     return Results.Ok(types);
 });
+
+// Seed Data - Admin kullanıcı tipi ve admin kullanıcısı
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<EduTakipDBContext>();
+    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    
+    // Admin kullanıcı tipini kontrol et ve ekle
+    var adminTip = await db.KullaniciTipleri.FirstOrDefaultAsync(x => x.Adi.ToLower() == "admin");
+    if (adminTip == null)
+    {
+        adminTip = new ItemKullaniciTip
+        {
+            Adi = "Admin",
+            Aktif = true,
+            CreUser = 0,
+            CreDate = DateTime.UtcNow
+        };
+        db.KullaniciTipleri.Add(adminTip);
+        await db.SaveChangesAsync();
+    }
+    
+    // Admin kullanıcısını kontrol et ve ekle
+    var adminUser = await db.Kullanicilar.FirstOrDefaultAsync(x => x.EPosta.ToLower() == "admin@edutakip.com");
+    if (adminUser == null)
+    {
+        adminUser = new ItemKullanici
+        {
+            Adi = "Admin",
+            Soyadi = "User",
+            EPosta = "admin@edutakip.com",
+            KullaniciTip_ID = adminTip.ID,
+            KullaniciTip = adminTip,
+            Sifre = hasher.Hash("Admin123!"), // Varsayılan şifre: Admin123!
+            Aktif = true,
+            CreUser = 0,
+            CreDate = DateTime.UtcNow
+        };
+        db.Kullanicilar.Add(adminUser);
+        await db.SaveChangesAsync();
+    }
+}
 
 app.Run();

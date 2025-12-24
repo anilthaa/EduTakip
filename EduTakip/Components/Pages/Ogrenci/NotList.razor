@@ -1,0 +1,67 @@
+﻿@page "/ogrenci/notlarim"
+@attribute [Authorize(Roles ="Öğrenci")]
+<RadzenCard>
+	<h3>Notlarım</h3>
+
+	<RadzenDataGrid Data="@notlar" TItem="ItemOdevTeslim" PageSize="10" AllowPaging="true">
+		<Columns>
+			<RadzenDataGridColumn Title="Ders">
+				<Template Context="item">
+					@item.Odev.Ders.Adi
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn Title="Ödev">
+				<Template Context="item">
+					@item.Odev.Baslik
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn Title="Not">
+				<Template Context="item">
+					@if (item.Not.HasValue)
+					{
+						<span style="font-weight:bold; color:green">
+							@item.Not
+						</span>
+					}
+					else
+					{
+						<span style="color:orange;">Değerlendiriliyor</span>
+					}
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn Title="Öğretmen Yorumu">
+				<Template Context="item">
+					@if (!string.IsNullOrEmpty(item.OgretmenYorumu))
+					{
+						@item.OgretmenYorumu
+					}
+					else
+					{
+						<span style="color:gray;">Yorum Yok</span>
+					}
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
+
+@code {
+	int ogrenciId = 1;
+	List<ItemOdevTeslim> notlar = new();
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+	async Task Listele()
+	{
+		notlar = await DbContext.OdevTeslimler
+			.Include(x => x.Odev)
+			.ThenInclude(x => x.Ders)
+			.Where(x => x.Ogrenci_ID == ogrenciId && x.DelDate == null)
+			.OrderByDescending(x => x.TeslimTarihi)
+			.ToListAsync();
+	}
+}
