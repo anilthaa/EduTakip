@@ -5,6 +5,7 @@
 @inject AuthStateService AuthStateService
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
+@inject EduTakipDBContext DbContext
 
 <PageTitle>Kayıt Ol</PageTitle>
 
@@ -15,7 +16,7 @@
             <p>Yeni hesap oluşturun</p>
         </div>
 
-        <RadzenForm Data="@registerModel" Submit="@OnRegister" class="auth-form">
+        <RadzenForm Data="@registerModel" class="auth-form">
             <RadzenFieldset Text="Kayıt Bilgileri" class="w-100">
                 <RadzenStack Gap="1.5rem">
                     <RadzenFormField Text="Ad" class="w-100">
@@ -38,12 +39,54 @@
                         <RadzenFormFieldValidator />
                     </RadzenFormField>
 
+                    <RadzenFormField Text="Kullanıcı Tipi" class="w-100">
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" class="w-100">
+                            <div style="display: flex; align-items: center; cursor: pointer;" @onclick="@(() => OnUserTypeChanged("ogrenci"))">
+                                <RadzenRadioButton Name="userType" Value="@("ogrenci")" Checked="@(selectedUserType == "ogrenci")" Change="@((bool? value) => { if (value == true) OnUserTypeChanged("ogrenci"); })" />
+                                <RadzenLabel Text="Öğrenci" Style="margin-left: 5px;" />
+                            </div>
+                            
+                            <div style="display: flex; align-items: center; cursor: pointer;" @onclick="@(() => OnUserTypeChanged("ogretmen"))">
+                                <RadzenRadioButton Name="userType" Value="@("ogretmen")" Checked="@(selectedUserType == "ogretmen")" Change="@((bool? value) => { if (value == true) OnUserTypeChanged("ogretmen"); })" />
+                                <RadzenLabel Text="Öğretmen" Style="margin-left: 5px;" />
+                            </div>
+                        </RadzenStack>
+                    </RadzenFormField>
+
+                    @if (selectedUserType == "ogrenci")
+                    {
+                        <RadzenFormField Text="Sınıf" class="w-100">
+                            <RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="ID" 
+                                           Value="@registerModel.Sinif_ID" 
+                                           ValueChanged="@((int? value) => registerModel = registerModel with { Sinif_ID = value })" 
+                                           Placeholder="Sınıf seçin" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
+
+                        <RadzenFormField Text="Öğrenci No" class="w-100">
+                            <RadzenTextBox Value="@registerModel.OgrenciNo" ValueChanged="@((string value) => registerModel = registerModel with { OgrenciNo = value })" Placeholder="Öğrenci numaranızı girin" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
+                    }
+
+                    @if (selectedUserType == "ogretmen")
+                    {
+                        <RadzenFormField Text="Birim" class="w-100">
+                            <RadzenDropDown Data="@birimler" TextProperty="Adi" ValueProperty="ID" 
+                                           Value="@registerModel.Birim_ID" 
+                                           ValueChanged="@((int? value) => registerModel = registerModel with { Birim_ID = value })" 
+                                           Placeholder="Birim seçin" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
+                    }
+
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
-                        <RadzenButton ButtonType="ButtonType.Submit" 
+                        <RadzenButton ButtonType="ButtonType.Button" 
                                      Text="Kayıt Ol" 
                                      Icon="person_add" 
                                      IsBusy="@isLoading"
                                      ButtonStyle="ButtonStyle.Primary" 
+                                     Click="@(() => OnRegisterButtonClick())"
                                      class="w-100" />
                     </RadzenStack>
 
@@ -58,9 +101,13 @@
 </div>
 
 @code {
-    private RegisterRequest registerModel = new("", "", "", "", 1);
+    private RegisterRequest registerModel = new("", "", "", "", null);
     private bool isLoading = false;
     private bool isInitialized = false;
+    private string selectedUserType = "";
+    private List<ItemSinif> siniflar = new();
+    private List<ItemBirim> birimler = new();
+    private List<ItemKullaniciTip> kullaniciTipleri = new();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -74,25 +121,174 @@
                 return;
             }
             
+            // Kullanıcı tiplerini, sınıfları ve birimleri yükle
+            kullaniciTipleri = await DbContext.KullaniciTipleri
+                .Where(kt => kt.Aktif && kt.DelDate == null)
+                .ToListAsync();
+            
+            siniflar = await DbContext.Siniflar
+                .Where(s => s.Aktif && s.DelDate == null)
+                .OrderBy(s => s.Adi)
+                .ToListAsync();
+            
+            birimler = await DbContext.Birimler
+                .Where(b => b.Aktif && b.DelDate == null)
+                .OrderBy(b => b.Adi)
+                .ToListAsync();
+            
             isInitialized = true;
             StateHasChanged();
         }
+    }
+
+    private void OnUserTypeChanged(string userType)
+    {
+        selectedUserType = userType;
+        
+        // Kullanıcı tipi ID'sini ayarla - Türkçe karakterleri normalize et
+        var normalizedUserType = userType.ToLower()
+            .Replace("ö", "o")
+            .Replace("ğ", "g")
+            .Replace("ü", "u")
+            .Replace("ş", "s")
+            .Replace("ı", "i")
+            .Replace("ç", "c");
+        
+        var kullaniciTip = kullaniciTipleri.FirstOrDefault(kt => 
+        {
+            var normalizedAdi = kt.Adi.ToLower()
+                .Replace("ö", "o")
+                .Replace("ğ", "g")
+                .Replace("ü", "u")
+                .Replace("ş", "s")
+                .Replace("ı", "i")
+                .Replace("ç", "c");
+            return normalizedAdi.Contains(normalizedUserType) || normalizedUserType.Contains(normalizedAdi);
+        });
+        
+        if (kullaniciTip != null)
+        {
+            registerModel = registerModel with { KullaniciTip_ID = kullaniciTip.ID };
+        }
+        
+        // Diğer tipin alanlarını temizle
+        if (userType == "ogrenci")
+        {
+            registerModel = registerModel with { Birim_ID = null };
+        }
+        else if (userType == "ogretmen")
+        {
+            registerModel = registerModel with { Sinif_ID = null, OgrenciNo = null };
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task OnRegisterButtonClick()
+    {
+        // Form validasyonunu manuel kontrol et ve OnRegister'ı çağır
+        await OnRegister(registerModel);
     }
 
     private async Task OnRegister(RegisterRequest args)
     {
         if (isLoading) return;
 
+        // registerModel'i args ile senkronize et
+        registerModel = registerModel with 
+        { 
+            Adi = args.Adi,
+            Soyadi = args.Soyadi,
+            EPosta = args.EPosta,
+            Sifre = args.Sifre
+        };
+
+        // Validasyon
+        if (string.IsNullOrEmpty(selectedUserType))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen kullanıcı tipi seçin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        // Kullanıcı tipi ID kontrolü - registerModel'den al
+        if (!registerModel.KullaniciTip_ID.HasValue || registerModel.KullaniciTip_ID.Value <= 0)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Geçerli bir kullanıcı tipi seçin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        if (selectedUserType == "ogrenci")
+        {
+            if (!registerModel.Sinif_ID.HasValue || string.IsNullOrWhiteSpace(registerModel.OgrenciNo))
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Uyarı",
+                    Detail = "Lütfen sınıf ve öğrenci numarası bilgilerini girin.",
+                    Duration = 4000
+                });
+                return;
+            }
+        }
+        else if (selectedUserType == "ogretmen")
+        {
+            if (!registerModel.Birim_ID.HasValue)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Uyarı",
+                    Detail = "Lütfen birim bilgisini girin.",
+                    Duration = 4000
+                });
+                return;
+            }
+        }
+
+        // Temel alan validasyonu
+        if (string.IsNullOrWhiteSpace(registerModel.Adi) || 
+            string.IsNullOrWhiteSpace(registerModel.Soyadi) || 
+            string.IsNullOrWhiteSpace(registerModel.EPosta) || 
+            string.IsNullOrWhiteSpace(registerModel.Sifre) || 
+            registerModel.Sifre.Length < 6)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen tüm zorunlu alanları doldurun ve şifrenin en az 6 karakter olduğundan emin olun.",
+                Duration = 4000
+            });
+            return;
+        }
+
         isLoading = true;
+        StateHasChanged();
+        
         try
         {
-            // Varsayılan kullanıcı tipi ID = 1 kullanılıyor
             var request = new RegisterRequest(
-                args.Adi,
-                args.Soyadi,
-                args.EPosta,
-                args.Sifre,
-                1 // Varsayılan kullanıcı tipi
+                registerModel.Adi,
+                registerModel.Soyadi,
+                registerModel.EPosta,
+                registerModel.Sifre,
+                registerModel.KullaniciTip_ID,
+                registerModel.Sinif_ID,
+                registerModel.OgrenciNo,
+                registerModel.Birim_ID
             );
 
             var result = await AuthService.RegisterAsync(request);
@@ -103,11 +299,60 @@
                 {
                     Severity = NotificationSeverity.Success,
                     Summary = "Başarılı",
-                    Detail = "Kayıt başarıyla oluşturuldu. Lütfen giriş yapın.",
-                    Duration = 4000
+                    Detail = "Kayıt başarıyla oluşturuldu. Giriş yapılıyor...",
+                    Duration = 2000
                 });
                 
-                Navigation.NavigateTo("/login");
+                // Kayıt sonrası otomatik giriş yap
+                await Task.Delay(500);
+                
+                var loginRequest = new LoginRequest(registerModel.EPosta, registerModel.Sifre);
+                var loginResponse = await AuthService.LoginAsync(loginRequest);
+                
+                if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.Token))
+                {
+                    var success = await AuthStateService.LoginAsync(loginResponse.Token, loginResponse.Kullanici);
+                    
+                    if (success)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Success,
+                            Summary = "Başarılı",
+                            Detail = "Giriş yapıldı",
+                            Duration = 2000
+                        });
+                        
+                        await Task.Delay(500);
+                        Navigation.NavigateTo("/home");
+                    }
+                    else
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Warning,
+                            Summary = "Uyarı",
+                            Detail = "Kayıt başarılı ancak otomatik giriş yapılamadı. Lütfen manuel olarak giriş yapın.",
+                            Duration = 4000
+                        });
+                        
+                        await Task.Delay(500);
+                        Navigation.NavigateTo("/login");
+                    }
+                }
+                else
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Warning,
+                        Summary = "Uyarı",
+                        Detail = "Kayıt başarılı ancak otomatik giriş yapılamadı. Lütfen manuel olarak giriş yapın.",
+                        Duration = 4000
+                    });
+                    
+                    await Task.Delay(500);
+                    Navigation.NavigateTo("/login");
+                }
             }
             else
             {
@@ -115,10 +360,20 @@
                 {
                     Severity = NotificationSeverity.Error,
                     Summary = "Hata",
-                    Detail = "Kayıt oluşturulamadı. E-posta zaten kullanılıyor olabilir.",
+                    Detail = "Kayıt oluşturulamadı. Lütfen tekrar deneyin.",
                     Duration = 4000
                 });
             }
+        }
+        catch (HttpRequestException ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Hata",
+                Detail = ex.Message,
+                Duration = 5000
+            });
         }
         catch (Exception ex)
         {
@@ -127,12 +382,13 @@
                 Severity = NotificationSeverity.Error,
                 Summary = "Hata",
                 Detail = $"Bir hata oluştu: {ex.Message}",
-                Duration = 4000
+                Duration = 5000
             });
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 }

@@ -16,7 +16,7 @@
             <p>Hesabınıza giriş yapın</p>
         </div>
 
-        <RadzenForm Data="@loginModel" Submit="@OnLogin" class="auth-form">
+        <RadzenForm Data="@loginModel" class="auth-form">
             <RadzenFieldset Text="Giriş Bilgileri" class="w-100">
                 <RadzenStack Gap="1.5rem">
                     <RadzenFormField Text="E-posta" class="w-100">
@@ -30,11 +30,12 @@
                     </RadzenFormField>
 
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
-                        <RadzenButton ButtonType="ButtonType.Submit" 
+                        <RadzenButton ButtonType="ButtonType.Button" 
                                      Text="Giriş Yap" 
                                      Icon="login" 
                                      IsBusy="@isLoading"
                                      ButtonStyle="ButtonStyle.Primary" 
+                                     Click="@(() => OnLoginButtonClick())"
                                      class="w-100" />
                     </RadzenStack>
 
@@ -58,22 +59,38 @@
         if (firstRender)
         {
             await AuthStateService.InitializeAsync();
-            
-            if (AuthStateService.IsAuthenticated)
-            {
-                Navigation.NavigateTo("/home");
-            }
-            
+            // Otomatik giriş yapılmıyor, kullanıcı manuel olarak giriş yapmalı
             isInitialized = true;
             StateHasChanged();
         }
+    }
+
+    private async Task OnLoginButtonClick()
+    {
+        // Form validasyonunu manuel kontrol et ve OnLogin'ı çağır
+        await OnLogin(loginModel);
     }
 
     private async Task OnLogin(LoginRequest args)
     {
         if (isLoading) return;
 
+        // Temel validasyon
+        if (string.IsNullOrWhiteSpace(args.EPosta) || string.IsNullOrWhiteSpace(args.Sifre))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen e-posta ve şifre alanlarını doldurun.",
+                Duration = 4000
+            });
+            return;
+        }
+
         isLoading = true;
+        StateHasChanged();
+        
         try
         {
             var response = await AuthService.LoginAsync(args);
@@ -89,9 +106,10 @@
                         Severity = NotificationSeverity.Success,
                         Summary = "Başarılı",
                         Detail = "Giriş yapıldı",
-                        Duration = 3000
+                        Duration = 2000
                     });
                     
+                    await Task.Delay(500);
                     Navigation.NavigateTo("/home");
                 }
                 else
@@ -116,6 +134,16 @@
                 });
             }
         }
+        catch (HttpRequestException ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Hata",
+                Detail = ex.Message,
+                Duration = 5000
+            });
+        }
         catch (Exception ex)
         {
             NotificationService.Notify(new NotificationMessage
@@ -123,12 +151,13 @@
                 Severity = NotificationSeverity.Error,
                 Summary = "Hata",
                 Detail = $"Bir hata oluştu: {ex.Message}",
-                Duration = 4000
+                Duration = 5000
             });
         }
         finally
         {
             isLoading = false;
+            StateHasChanged();
         }
     }
 }

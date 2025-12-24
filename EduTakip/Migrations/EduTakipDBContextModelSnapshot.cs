@@ -473,9 +473,8 @@ namespace EduTakip.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Sinif")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Sinif_ID")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdDate")
                         .HasColumnType("datetime2");
@@ -489,6 +488,8 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("OgrenciNo")
                         .IsUnique();
+
+                    b.HasIndex("Sinif_ID");
 
                     b.ToTable("Ogrenciler");
                 });
@@ -681,7 +682,15 @@ namespace EduTakip.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("EduTakip.Models.ItemSinif", "Sinif")
+                        .WithMany()
+                        .HasForeignKey("Sinif_ID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Kullanici");
+
+                    b.Navigation("Sinif");
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemOgretmen", b =>

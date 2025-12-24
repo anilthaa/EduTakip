@@ -24,24 +24,12 @@ namespace EduTakip.Services
         public AuthUserDto? CurrentUser => _currentUser;
         public bool IsAuthenticated => _currentUser != null && !string.IsNullOrEmpty(_token);
 
-        public async Task InitializeAsync()
+        public Task InitializeAsync()
         {
-            _token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
-            var userJson = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authUser");
-
-            if (!string.IsNullOrEmpty(_token) && !string.IsNullOrEmpty(userJson))
-            {
-                try
-                {
-                    _currentUser = JsonSerializer.Deserialize<AuthUserDto>(userJson);
-                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-                    NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-                }
-                catch
-                {
-                    await LogoutAsync();
-                }
-            }
+            // Token localStorage'da dursun ama otomatik giriş yapma
+            // Kullanıcı her seferinde manuel olarak giriş yapmalı
+            // Token sadece manuel giriş yapıldığında kullanılacak
+            return Task.CompletedTask;
         }
 
         public async Task<bool> LoginAsync(string token, AuthUserDto user)
@@ -51,6 +39,7 @@ namespace EduTakip.Services
                 _token = token;
                 _currentUser = user;
 
+                // Token localStorage'da saklanır ama otomatik giriş yapılmaz
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authToken", token);
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "authUser", JsonSerializer.Serialize(user));
 
@@ -70,6 +59,7 @@ namespace EduTakip.Services
             _token = null;
             _currentUser = null;
 
+            // localStorage'dan temizle
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
             await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authUser");
 
@@ -89,8 +79,27 @@ namespace EduTakip.Services
                 new Claim(ClaimTypes.NameIdentifier, _currentUser.ID.ToString()),
                 new Claim(ClaimTypes.Email, _currentUser.EPosta),
                 new Claim(ClaimTypes.Name, $"{_currentUser.Adi} {_currentUser.Soyadi}"),
-                new Claim(ClaimTypes.Role, _currentUser.KullaniciTip)
+                new Claim(ClaimTypes.Role, _currentUser.KullaniciTip ?? string.Empty)
             };
+
+            // JWT token'dan role claim'ini de oku (eğer varsa)
+            if (!string.IsNullOrEmpty(_token))
+            {
+                try
+                {
+                    var handler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+                    var jsonToken = handler.ReadJwtToken(_token);
+                    var roleClaim = jsonToken.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
+                    if (roleClaim != null && !claims.Any(c => c.Type == ClaimTypes.Role && c.Value == roleClaim.Value))
+                    {
+                        claims.Add(new Claim(ClaimTypes.Role, roleClaim.Value));
+                    }
+                }
+                catch
+                {
+                    // Token parse edilemezse devam et
+                }
+            }
 
             var identity = new ClaimsIdentity(claims, "jwt");
             var principal = new ClaimsPrincipal(identity);

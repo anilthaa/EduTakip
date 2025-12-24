@@ -16,7 +16,10 @@
 @using Radzen
 @using Radzen.Blazor
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
 @inject EduTakipDBContext DbContext
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 @inject NavigationManager NavigationManager
+@inject AuthStateService AuthStateService
+

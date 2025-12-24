@@ -1,5 +1,88 @@
-﻿<h3>Odevler</h3>
+﻿@page "/ogrenci/odevlerim"
+@attribute [Authorize(Roles ="Öğrenci")]
+<RadzenCard>
+		<h4>Ödevlerim</h4>
+	<RadzenDataGrid Data="@odevlerim" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+		<Columns>
+			<RadzenDataGridColumn Title="Ders">
+				<Template Context="item">
+					@item.Ders.Adi
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="Baslik" Title="Başlık"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="SonTeslimTarihi" Title="Son Teslim Tarihi"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Title="Durum">
+				<Template Context="item">
+					@if (TeslimEdildi(item.ID))
+					{
+						<span style="color:green;">Teslim Edildi</span>
+					}
+					else
+					{
+						<span style="color:red;">Teslim Edilmedi</span>
+					}
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn Title="İşlem">
+				<Template Context="item">
+					@if (!TeslimEdildi(item.ID))
+					{
+						<RadzenButton Text="Ödevi Teslim Et" Icon="upload_file" Click="@(() => OdevTeslimEt(item.ID))"></RadzenButton>
+					}
+					else
+					{
+						<RadzenButton Text="Detay" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(()=>TeslimDetay(item.ID))"></RadzenButton>
+					}
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+	</RadzenDataGrid>
+</RadzenCard>
 
 @code {
+	int ogrenciId = 1;
 
+	List<ItemOdev> odevlerim = new();
+	List<ItemOdevTeslim> odevTeslimler = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		odevlerim = await DbContext.Odevler
+			.Include(x => x.Ders)
+			.OrderByDescending(x => x.SonTeslimTarihi)
+			.ToListAsync();
+		odevTeslimler = await DbContext.OdevTeslimler
+			.Where(x => x.Ogrenci_ID == ogrenciId && x.DelDate == null)
+			.ToListAsync();
+	}
+
+	bool TeslimEdildi(int odevId)
+	{
+		return odevTeslimler.Any(x => x.Odev_ID == odevId);
+	}
+
+	async Task OdevTeslimEt(int odevId)
+	{
+		var result = await DialogService.OpenAsync<OdevTeslimTnm>("Ödevi Teslim Et",
+			new Dictionary<string, object>()
+			{
+				{ "OdevId", odevId },
+			},
+			new DialogOptions() { Width = "600px"});
+		if (result == true)
+		{
+			await Listele();
+			StateHasChanged();
+		}
+	}
+	void TeslimDetay(int odevId)
+	{
+		//
+	}
 }

@@ -1,8 +1,8 @@
 ﻿@page "/ogretmen/odevler"
-
+@attribute [Authorize(Roles ="Öğretmen")]
 <h3>Ödevlerim</h3>
 
- <RadzenButton Text="Yeni Ödev" Icon="add" Style="margin-bottom:10px;" Click="yeniOdev">
+ <RadzenButton Text="Yeni Ödev" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:10px; border-radius:10px;" Click="yeniOdev">
  </RadzenButton>
 
 

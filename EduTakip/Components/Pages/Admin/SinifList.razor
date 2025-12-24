@@ -1,10 +1,9 @@
 @page "/admin/siniflar"
+@attribute [Authorize(Roles = "Admin")]
 @inject IToastService ToastService
 
-<div class="d-flex justify-content-between mb-4">
 	<h4>Sınıflar</h4>
-	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add_circle_outline" ButtonStyle="ButtonStyle.Primary" Click="@YeniSinif" />
-</div>
+	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniSinif" />
 <RadzenCard>
 	<RadzenDataGrid TItem="ItemSinif" Data="@siniflar" AllowPaging="true" PageSize="10">
 		<Columns>
@@ -22,8 +21,8 @@
 
 			<RadzenDataGridColumn TItem="ItemSinif" Title="İşlemler">
 				<Template Context="item">
-					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditSinif(item))" Style="margin-right: 10px;" />
-					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteSinif(item))" />
+					<RadzenButton Icon="edit"  Size="ButtonSize.Small" Click="@(() => EditSinif(item))" Style="margin-right: 10px; background-color:green;" />
+					<RadzenButton Icon="delete"  Size="ButtonSize.Small" Click="@(() => DeleteSinif(item))" Style="background-color:red;" />
 				</Template>
 			</RadzenDataGridColumn>
 		</Columns>
@@ -50,7 +49,7 @@
 		var result = await DialogService.OpenAsync<SinifTnm>("Yeni Sınıf Ekle", new Dictionary<string, object>()
 		{
 			{ "SinifId", 0 }
-		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		}, new DialogOptions() { Width = "600px"});
 		if (result == true)
 		{
 			await Listele();
@@ -63,7 +62,7 @@
 		var result = await DialogService.OpenAsync<SinifTnm>("Sınıf Düzenle", new Dictionary<string, object>()
 		{
 			{ "SinifId", sinif.ID }
-		}, new DialogOptions() { Width = "600px", Height = "400px" });
+		}, new DialogOptions() { Width = "600px"});
 		if (result == true)
 		{
 			await Listele();
@@ -78,9 +77,10 @@
 		sinif.UpdDate = DateTime.UtcNow;
 		sinif.UpdUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
 		DbContext.Siniflar.Update(sinif);
+
 		await DbContext.SaveChangesAsync();
 		await Listele();
-		ToastService.ShowSuccess("Başarılı", $"Sınıf {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
+		NotificationService.Notify(NotificationSeverity.Success,"Başarılı", $"Sınıf durumu {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
 		StateHasChanged();
 	}
 

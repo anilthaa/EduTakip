@@ -1,5 +1,56 @@
-﻿<h3>KullaniciTnm</h3>
+﻿<RadzenTemplateForm Data="@model" TItem="ItemKullanici" Submit="@Kaydet">
+	<RadzenTextBox @bind-Value="model.Adi" Placeholder="Ad" Style="width:100%"></RadzenTextBox>
+	<RadzenTextBox @bind-Value="model.Soyadi" Placeholder="Soyad" Style="width:100%; margin-top:10px;"></RadzenTextBox>
+	<RadzenTextBox @bind-Value="model.EPosta" Placeholder="E-Posta" Style="width:100%; margin-top:10px;"></RadzenTextBox>
+
+	<RadzenDropDown @bind-Value="model.KullaniciTip_ID" Data="@kullaniciTipleri" TextProperty="Adi" ValueProperty="ID" Placeholder="Kullanıcı Tipi" Style="width:100%; margin-top:10px;"></RadzenDropDown>
+	<div style="display:flex; align-items:center; margin-bottom:15px; margin-top:10px">
+		<RadzenCheckBox @bind-Value="model.Aktif"></RadzenCheckBox>
+		<span class="rz-ml-2">Aktif</span>
+	</div>
+	
+
+	<div class="mt-3 text-center">
+		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
+		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+	</div>
+</RadzenTemplateForm>
 
 @code {
+	[Parameter] public int? KullaniciId { get; set; }
+	ItemKullanici model = new();
+	List<ItemKullaniciTip> kullaniciTipleri = new();
 
+	protected override async Task OnInitializedAsync()
+	{
+		kullaniciTipleri = await DbContext.KullaniciTipleri
+			.Where(kt => kt.DelDate == null)
+			.ToListAsync();
+		if (KullaniciId!=null)
+		{
+			model = await DbContext.Kullanicilar
+				.FirstOrDefaultAsync(k => k.ID == KullaniciId);
+			if (model == null)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Kullanıcı bulunamadı veya silinmiş.");
+				DialogService.Close(false);
+			}
+		}
+	}
+
+	async Task Kaydet()
+	{
+		if (model.ID==0)
+		{
+			model.CreUser = 1;
+			model.CreDate = DateTime.UtcNow;
+			DbContext.Kullanicilar.Add(model);
+		}
+		else
+		{
+			model.UpdUser = 1;
+			model.UpdDate = DateTime.UtcNow;
+			DbContext.Kullanicilar.Update(model);
+		}
+	}
 }

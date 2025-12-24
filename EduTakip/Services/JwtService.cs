@@ -31,7 +31,7 @@ namespace EduTakip.Services
                 new Claim(JwtRegisteredClaimNames.Sub, user.ID.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.EPosta),
                 new Claim("name", $"{user.Adi} {user.Soyadi}".Trim()),
-                new Claim("role", user.KullaniciTip?.Adi ?? string.Empty)
+                new Claim(ClaimTypes.Role, user.KullaniciTip?.Adi ?? string.Empty)
             };
 
             var expires = DateTime.UtcNow.AddMinutes(_options.ExpiryMinutes);

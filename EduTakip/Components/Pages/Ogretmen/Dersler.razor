@@ -1,5 +1,5 @@
 ﻿@page "/ogretmen/dersler"
-
+@attribute [Authorize(Roles ="Öğretmen")]
 <h3>Derslerim</h3>
 
 <RadzenDataGrid Data="@list" TItem="ItemDers" ColumnWidth="200px" AllowPaging="true" PageSize="10">
