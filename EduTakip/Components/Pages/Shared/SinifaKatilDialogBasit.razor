@@ -1,0 +1,88 @@
+@inject EduTakipDBContext DbContext
+@inject IToastService ToastService
+@inject DialogService DialogService
+
+<RadzenStack Gap="1.5rem">
+    <RadzenLabel Text="Katılmak istediğiniz sınıfı seçin:" />
+    
+    <RadzenDataGrid Data="@siniflar" TItem="ItemSinif" AllowPaging="true" PageSize="10" 
+                   Style="max-height: 400px;">
+        <Columns>
+            <RadzenDataGridColumn Title="Sınıf Adı" Property="Adi"></RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Durum">
+                <Template Context="item">
+                    <RadzenBadge Text="@(item.Aktif ? "Aktif" : "Pasif")" 
+                               Style="@(item.Aktif ? "background-color: #28a745; color: white;" : "background-color: #dc3545; color: white;")">
+                    </RadzenBadge>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="İşlem">
+                <Template Context="item">
+                    <RadzenButton Text="Katıl" Icon="add" Size="ButtonSize.Small" 
+                                 ButtonStyle="ButtonStyle.Success" 
+                                 Click="@(() => OnSinifSecildi(item))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="İptal" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public int KullaniciId { get; set; }
+    [Parameter] public string KullaniciTip { get; set; } = "";
+
+    private List<ItemSinif> siniflar = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await YukleSiniflar();
+    }
+
+    async Task YukleSiniflar()
+    {
+        // Kullanıcının zaten katıldığı sınıfları al
+        var katildigiSiniflar = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == KullaniciId && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
+            .ToListAsync();
+
+        // Katılmadığı aktif sınıfları göster
+        siniflar = await DbContext.Siniflar
+            .Where(s => s.Aktif && s.DelDate == null && !katildigiSiniflar.Contains(s.ID))
+            .OrderBy(s => s.Adi)
+            .ToListAsync();
+    }
+
+    async Task OnSinifSecildi(ItemSinif sinif)
+    {
+        if (sinif == null) return;
+
+        try
+        {
+            // ItemSinifKullanici kaydı oluştur
+            var yeniKayit = new ItemSinifKullanici
+            {
+                CreDate = DateTime.UtcNow,
+                CreUser = KullaniciId,
+                Sinif_ID = sinif.ID,
+                Kullanici_ID = KullaniciId,
+                Tip = KullaniciTip
+            };
+
+            DbContext.SinifKullanicilar.Add(yeniKayit);
+            await DbContext.SaveChangesAsync();
+
+            ToastService.ShowSuccess("Başarılı", $"{sinif.Adi} sınıfına başarıyla katıldınız.");
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError("Hata", $"Sınıfa katılırken bir hata oluştu: {ex.Message}");
+        }
+    }
+}
+

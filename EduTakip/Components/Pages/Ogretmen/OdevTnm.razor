@@ -10,29 +10,85 @@
 </RadzenTemplateForm>
 
 @code {
+
 	ItemOdev model = new();
 	List<ItemDers> dersler = new();
 	[Parameter] public int? OdevId { get; set; }
-	int ogretmenId = 1; //Simdilik
+	[Parameter] public int SinifId { get; set; }
+	int ogretmenId;
 
 	protected override async Task OnInitializedAsync()
 	{
 		try
 		{
-			dersler = await DbContext.Dersler
-				.Where(x => x.Ogretmen_ID == ogretmenId)
-				.ToListAsync();
+			var currentUser = AuthStateService.CurrentUser;
+			if (currentUser == null)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Kullanıcı bilgisi bulunamadı.");
+				DialogService.Close(false);
+				return;
+			}
+
+			ogretmenId=await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == currentUser.ID && x.DelDate==null)
+			.Select(x => x.ID)
+			.FirstAsync();
+
+			// SinifId gönderilmişse, o sınıfın adını al ve o sınıfta programlanmış dersleri göster
+			// SinifId gönderilmemişse (0), öğretmenin tüm derslerini göster
+			if (SinifId > 0)
+			{
+				// Sınıf adını al
+				var sinifAdi = await DbContext.Siniflar
+					.Where(s => s.ID == SinifId && s.DelDate == null)
+					.Select(s => s.Adi)
+					.FirstOrDefaultAsync();
+
+				if (!string.IsNullOrEmpty(sinifAdi))
+				{
+					// Bu sınıfta programlanmış dersleri getir
+					var sinifDersleri = await DbContext.DersProgramlari
+						.Where(dp => dp.Sinif == sinifAdi && dp.DelDate == null && dp.Aktif)
+						.Select(dp => dp.Ders_ID)
+						.Distinct()
+						.ToListAsync();
+
+					dersler = await DbContext.Dersler
+						.Where(x => x.Ogretmen_ID == ogretmenId && 
+								   x.DelDate == null && 
+								   sinifDersleri.Contains(x.ID))
+						.OrderBy(x => x.Adi)
+						.ToListAsync();
+				}
+				else
+				{
+					// Sınıf bulunamadıysa, öğretmenin tüm derslerini göster
+					dersler = await DbContext.Dersler
+						.Where(x => x.Ogretmen_ID == ogretmenId && x.DelDate == null)
+						.OrderBy(x => x.Adi)
+						.ToListAsync();
+				}
+			}
+			else
+			{
+				// SinifId gönderilmemişse, öğretmenin tüm derslerini göster
+				dersler = await DbContext.Dersler
+					.Where(x => x.Ogretmen_ID == ogretmenId && x.DelDate == null)
+					.OrderBy(x => x.Adi)
+					.ToListAsync();
+			}
 
 			if (OdevId.HasValue)
 			{
-				model = await DbContext.Odevler
+				var odev = await DbContext.Odevler
 					.FirstOrDefaultAsync(x => x.ID == OdevId.Value);
-				if (model == null)
+				if (odev == null)
 				{
 					NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ödev bulunamadı veya silinmiş.");
 					DialogService.Close(false);
 					return;
 				}
+				model = odev;
 			}
 			else
 			{

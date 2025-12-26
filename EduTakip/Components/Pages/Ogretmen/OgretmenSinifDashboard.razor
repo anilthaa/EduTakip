@@ -1,0 +1,79 @@
+﻿@page "/ogretmen/sinif/{sinifId:int}"
+@using System.Threading.Tasks
+@attribute [Authorize(Roles ="Öğretmen")]
+
+<h3>@detay?.SinifAdi</h3>
+
+<RadzenRow Gap="1rem" class="mb-3">
+	<RadzenColumn Size="12" SizeMD="4">
+		<RadzenCard>
+			<h6>Öğrenci Sayısı</h6>
+			<h2>@detay?.OgrenciSayisi</h2>
+
+			<RadzenButton Text="Öğrencileri Gör" Icon="group" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" Click="@(()=>Ogrenciler())"></RadzenButton>
+		</RadzenCard>
+	</RadzenColumn>
+
+	<RadzenColumn Size="12" SizeMD="4">
+		<RadzenCard>
+			<h6>Ödevler</h6>
+			<h2>@detay?.OdevSayisi</h2>
+
+			<RadzenButton Text="Ödev Ver" Icon="assignment" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(()=>OdevVer())"></RadzenButton>
+		</RadzenCard>
+	</RadzenColumn>
+
+	<RadzenColumn Size="12" SizeMD="4">
+		<RadzenCard>
+			<h6>Duyurular</h6>
+			<p class="text-muted">Henüz Yok</p>
+		</RadzenCard>
+	</RadzenColumn>
+</RadzenRow>
+@code {
+	[Parameter] public int sinifId { get; set; }
+	SinifDashboardOgretmenDto detay;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		detay = await DbContext.Siniflar
+			.Where(s => s.ID == sinifId && s.DelDate == null)
+			.Select(s => new SinifDashboardOgretmenDto
+				{
+					SinifId = s.ID,
+					SinifAdi = s.Adi,
+					OgrenciSayisi = DbContext.SinifKullanicilar
+					.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && o.DelDate == null),
+
+				OdevSayisi = DbContext.Odevler.Count(x=>x.ID==s.ID && x.DelDate==null)
+				}).FirstOrDefaultAsync();
+
+	}
+	void Ogrenciler()
+	{
+		NavigationManager.NavigateTo($"/ogretmen/sinif-ogrencileri/{sinifId}");
+	}
+	async Task OdevVer()
+	{
+		var result = await DialogService.OpenAsync<OdevTnm>("Yeni Ödev Ver",
+		new Dictionary<string, object>
+			{
+			{"SinifId", sinifId }
+			},
+		new DialogOptions
+			{
+				Width = "600px",
+			});
+
+		if (result == true)
+		{
+			await Yukle();
+			StateHasChanged();
+		}
+	}
+}

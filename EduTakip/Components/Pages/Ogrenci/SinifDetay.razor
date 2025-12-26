@@ -1,0 +1,52 @@
+﻿@page "/ogrenci/sinif/{sinifId:int}"
+@attribute [Authorize(Roles ="Öğrenci")]
+
+<h3>@detay?.SinifAdi</h3>
+
+<RadzenRow Gap="1rem">
+	<RadzenColumn Size="12" SizeMD="6">
+		<RadzenCard>
+			<h5>Sınıf Bilgileri</h5>
+
+			<p>
+				<b>Öğretmen:</b> @detay?.OgretmenAdSoyad <br />
+				<b>Öğrenci Sayısı:</b> @detay?.OgrenciSayisi
+			</p>
+		</RadzenCard>
+	</RadzenColumn>
+
+	<RadzenColumn Size="12" SizeMD="6">
+		<RadzenCard>
+			<h5>Yaklaşan Ödevler</h5>
+			<p class="text-muted">Henüz Ödev Yok</p>
+		</RadzenCard>
+	</RadzenColumn>
+</RadzenRow>
+@code {
+	[Parameter] public int sinifId { get; set; }
+	SinifDetayDto detay;
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		detay = await DbContext.Siniflar
+			.Where(s => s.ID == sinifId && s.DelDate == null)
+			.Select(s => new SinifDetayDto
+				{
+					SinifId = s.ID,
+					SinifAdi = s.Adi,
+
+					OgretmenAdSoyad = DbContext.SinifKullanicilar
+					.Where(o => o.Sinif_ID == s.ID && o.Tip == "Öğretmen" && o.DelDate == null)
+					.Select(o => o.Kullanici.Adi + " " + o.Kullanici.Soyadi)
+					.FirstOrDefault() ?? "-",
+
+					OgrenciSayisi = DbContext.SinifKullanicilar
+					.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && o.DelDate == null)
+				}).FirstOrDefaultAsync();
+	}
+}

@@ -2,59 +2,59 @@
 @attribute [Authorize(Roles ="Öğretmen,Öğrenci")]
 <PageTitle>Sınıflar</PageTitle>
 
-<RadzenCard>
-	<RadzenStack Gap="1rem">
+<RadzenStack Gap="1.5rem">
+	<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
 		<h4>Sınıflar</h4>
-
-		<RadzenLabel Text="@AciklamaMetni"></RadzenLabel>
-		<RadzenDataGrid Data="@siniflar" TItem="ItemSinif" AllowPaging="true" PageSize="10" ColumnWidth="200px">
-			<Columns>
-				<RadzenDataGridColumn Property="Adi" Title="Sınıf Adı"></RadzenDataGridColumn>
-				<RadzenDataGridColumn Title="Durum">
-					<Template Context="item">
-						@if (KatilmisMi(item.ID))
-						{
-							<span class="badge bg-success">Katıldınız</span>
-						}
-						else
-						{
-							<span class="badge bg-secondary">Katılmadınız</span>
-						}
-					</Template>
-				</RadzenDataGridColumn>
-
-				<RadzenDataGridColumn Title="İşlemler">
-					<Template Context="item">
-						@if (!KatilmisMi(item.ID))
-						{
-							<RadzenButton Icon="login" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Click="@(args => Katil(item.ID))" />
-						}
-						else
-						{
-							<RadzenButton Icon="logout" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => Ayril(item.ID))" />
-
-							@if(isOgretmen)
-							{
-								<RadzenButton Icon="group" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Info" Style="margin-left:5px;" Click="@(()=>Ogrenciler(item.ID))"></RadzenButton>
-							}
-						}
-					</Template>
-				</RadzenDataGridColumn>	
-			</Columns>
-		</RadzenDataGrid>
+		<RadzenButton Text="Sınıfa Katıl" Icon="add" ButtonStyle="ButtonStyle.Success" 
+					 Size="ButtonSize.Medium" Click="@SinifaKatilDialogAc" />
 	</RadzenStack>
-</RadzenCard>
+
+	@if (katildigimSiniflar.Any())
+	{
+		<RadzenRow Gap="1rem">
+			@foreach (var sinif in katildigimSiniflar)
+			{
+				<RadzenColumn Size="12" SizeMD="6" SizeLG="6">
+					<RadzenCard Style="height: 100%;">
+						<RadzenStack Gap="1rem">
+							<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+								<h5 style="margin: 0;">@sinif.Sinif.Adi</h5>
+								<RadzenBadge Text="Katıldınız" Style="background-color: #28a745; color: white;"></RadzenBadge>
+							</RadzenStack>
+							
+							<RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+								<RadzenButton Icon="dashboard" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Text="Sınıfa Git" Click="@(()=>SinifaGit(sinif.Sinif_ID))"></RadzenButton>
+								<RadzenButton Icon="logout" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" 
+										   Text="Sınıftan Ayrıl" Click="@(() => Ayril(sinif.Sinif_ID))" />
+								
+								@if(isOgretmen)
+								{
+									<RadzenButton Icon="group" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Info" 
+											   Text="Öğrenciler" Click="@(()=>Ogrenciler(sinif.Sinif_ID))"></RadzenButton>
+								}
+							</RadzenStack>
+						</RadzenStack>
+					</RadzenCard>
+				</RadzenColumn>
+			}
+		</RadzenRow>
+	}
+	else
+	{
+		<RadzenCard>
+			<RadzenStack Gap="1rem" AlignItems="AlignItems.Center">
+				<RadzenIcon Icon="class" Style="font-size: 48px; color: #ccc;"></RadzenIcon>
+				<p style="color: #666; text-align: center;">Henüz hiçbir sınıfa katılmadınız. Üstteki "Sınıfa Katıl" butonuna tıklayarak sınıflara katılabilirsiniz.</p>
+			</RadzenStack>
+		</RadzenCard>
+	}
+</RadzenStack>
 @code {
-	List<ItemSinif> siniflar = new();
-	List<ItemSinifKullanici> kullaniciSiniflari = new();
+	List<ItemSinifKullanici> katildigimSiniflar = new();
 	int kullaniciId;
 	string tip = "";
 	bool isOgretmen => tip=="Öğretmen";
 	bool isOgrenci => tip == "Öğrenci";
-
-	string AciklamaMetni=>isOgretmen
-	? "Dahil olduğunuz sınıfları ve sınıftaki öğrencileri buradan yönetebilirsiniz."
-		: "Katılmak istediğiniz sınıfları buradan seçebilirsiniz.";
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -72,62 +72,73 @@
 
 	async Task Yukle()
 	{
-		siniflar = await DbContext.Siniflar
-			.Where(x => x.DelDate == null && x.Aktif)
-			.OrderBy(x => x.Adi)
-			.ToListAsync();
-		kullaniciSiniflari = await DbContext.SinifKullanicilar
+		katildigimSiniflar = await DbContext.SinifKullanicilar
+			.Include(x => x.Sinif)
 			.Where(x => x.Kullanici_ID == kullaniciId && x.DelDate == null)
+			.OrderBy(x => x.Sinif.Adi)
 			.ToListAsync();
 	}
 
-	bool KatilmisMi(int sinifId)
+	async Task SinifaKatilDialogAc()
 	{
-		return kullaniciSiniflari.Any(x => x.Sinif_ID == sinifId);
-	}
-	async Task Katil(int sinifId)
-	{
-		if (KatilmisMi(sinifId))
-			return;
-		DbContext.SinifKullanicilar.Add(new ItemSinifKullanici
-		{
-			CreDate = DateTime.Now,
-			CreUser = kullaniciId,
-			Sinif_ID = sinifId,
-			Kullanici_ID = kullaniciId,
-			Tip=tip
-		});
+		var result = await DialogService.OpenAsync<Components.Pages.Shared.SinifaKatilDialogBasit>("Sınıfa Katıl", 
+			new Dictionary<string, object>()
+			{
+				{ "KullaniciId", kullaniciId },
+				{ "KullaniciTip", tip }
+			}, 
+			new DialogOptions() { Width = "600px", Height = "500px" });
 
-		await DbContext.SaveChangesAsync();
-		await Yukle();
-		NotificationService.Notify(new NotificationMessage
+		if (result == true)
 		{
-			Severity = NotificationSeverity.Success,
-			Summary = "Başarılı",
-			Detail = "Sınıfa katıldınız.",
-			Duration = 4000
-		});
+			await Yukle();
+			StateHasChanged();
+		}
 	}
 
 	async Task Ayril(int sinifId)
 	{
-		var kayit = kullaniciSiniflari.FirstOrDefault(x => x.Sinif_ID == sinifId);
+		var kayit = katildigimSiniflar.FirstOrDefault(x => x.Sinif_ID == sinifId);
 		if (kayit == null)
 			return;
-		DbContext.SinifKullanicilar.Remove(kayit);
-		await DbContext.SaveChangesAsync();
-		await Yukle();
-		NotificationService.Notify(new NotificationMessage
+
+		bool? confirm = await DialogService.Confirm(
+			$"'{kayit.Sinif.Adi}' sınıfından ayrılmak istediğinize emin misiniz?", 
+			"Sınıftan Ayrılma Onayı", 
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+
+		if (confirm == true)
 		{
-			Severity = NotificationSeverity.Success,
-			Summary = "Başarılı",
-			Detail = "Sınıftan ayrıldınız.",
-			Duration = 4000
-		});
+			kayit.DelDate = DateTime.UtcNow;
+			kayit.DelUser = kullaniciId;
+			DbContext.SinifKullanicilar.Update(kayit);
+			await DbContext.SaveChangesAsync();
+			await Yukle();
+			NotificationService.Notify(new NotificationMessage
+			{
+				Severity = NotificationSeverity.Success,
+				Summary = "Başarılı",
+				Detail = "Sınıftan ayrıldınız.",
+				Duration = 4000
+			});
+			StateHasChanged();
+		}
 	}
 
 	void Ogrenciler(int sinifId)
 	{
 		NavigationManager.NavigateTo($"/ogretmen/sinif-ogrencileri/{sinifId}");
+	}
+
+	void SinifaGit(int sinifId)
+	{
+		if (isOgretmen)
+		{
+			NavigationManager.NavigateTo($"/ogretmen/sinif/{sinifId}");
+		}
+		else
+		{
+			NavigationManager.NavigateTo($"/ogrenci/sinif/{sinifId}");
+		}
 	}
 }

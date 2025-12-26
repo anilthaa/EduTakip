@@ -11,11 +11,11 @@
 			</div>
 			<div class="col-6 mb-3">
 				<RadzenLabel Text="Başlangıç Saati"></RadzenLabel>
-				<RadzenTimeSpanPicker @bind-Value="model.BaslangicSaati" Style="width:100%"></RadzenTimeSpanPicker>
+				<RadzenDatePicker @bind-Value="baslangicSaati" ShowTime="true" TimeOnly="true" DateFormat="HH:mm" HourFormat="24" Style="width:100%"></RadzenDatePicker>
 			</div>
 			<div class="col-6 mb-3">
 				<RadzenLabel Text="Bitiş Saati"></RadzenLabel>
-				<RadzenTimeSpanPicker @bind-Value="model.BitisSaati" Style="width:100%"></RadzenTimeSpanPicker>
+				<RadzenDatePicker @bind-Value="bitisSaati" ShowTime="true" TimeOnly="true" DateFormat="HH:mm" HourFormat="24" Style="width:100%"></RadzenDatePicker>
 			</div>
 			<div class="col-12 mb-3">
 				<RadzenLabel Text="Sınıf"></RadzenLabel>
@@ -40,9 +40,8 @@
 	List<ItemDers> dersler = new();
 	List<ItemSinif> siniflar = new();
 	List<GunItem> gunler = new();
-
-	TimeSpan baslangicSaati;
-	TimeSpan bitisSaati;
+	DateTime baslangicSaati;
+	DateTime bitisSaati;
 
 	public class GunItem
 	{
@@ -65,7 +64,7 @@
 		dersler = await DbContext.Dersler
 			.OrderBy(d => d.Adi)
 			.ToListAsync();
-		
+
 		siniflar = await DbContext.Siniflar
 			.Where(s => s.Aktif)
 			.OrderBy(s => s.Adi)
@@ -74,22 +73,18 @@
 		{
 			model = await DbContext.DersProgramlari
 				.FirstOrDefaultAsync(x => x.ID == Id.Value);
-			
+
 			if (model == null)
 			{
 				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ders programı bulunamadı.");
 				DialogService.Close(false);
 				return;
 			}
-			
-			baslangicSaati = model.BaslangicSaati;
-			bitisSaati = model.BitisSaati;
+
 		}
 		else
 		{
 			model.Aktif = true;
-			baslangicSaati = new TimeSpan(9, 0, 0);
-			bitisSaati = new TimeSpan(10, 0, 0);
 		}
 		StateHasChanged();
 	}
@@ -103,13 +98,12 @@
 				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Başlangıç saati bitiş saatinden büyük veya eşit olamaz.");
 				return;
 			}
-			
-			item.BaslangicSaati = baslangicSaati;
-			item.BitisSaati = bitisSaati;
+			item.BaslangicSaati = baslangicSaati.TimeOfDay;
+			item.BitisSaati = bitisSaati.TimeOfDay;
 
 			int ogretmenId=await DbContext.Dersler.Where(x => x.ID == item.Ders_ID).Select(x => x.Ogretmen_ID).FirstOrDefaultAsync();
 
-			bool cakismavar=await DbContext.DersProgramlari.AnyAsync(x => x.ID == item.ID && x.DelDate == default && x.Gun == item.Gun && x.Ders.Ogretmen_ID ==ogretmenId && (model.BaslangicSaati<x.BitisSaati && model.BitisSaati > x.BaslangicSaati));
+			bool cakismavar=await DbContext.DersProgramlari.AnyAsync(x => x.ID != item.ID && x.DelDate == default && x.Gun == item.Gun && x.Ders.Ogretmen_ID ==ogretmenId && item.BaslangicSaati<x.BitisSaati && item.BitisSaati>x.BaslangicSaati);
 
 			if (cakismavar)
 			{

@@ -2,7 +2,7 @@
 @attribute [Authorize(Roles ="Öğretmen")]
 <h3>Ödevlerim</h3>
 
- <RadzenButton Text="Yeni Ödev" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:10px; border-radius:10px;" Click="yeniOdev">
+ <RadzenButton Icon="add" Text="Yeni Ödev Ekle" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:10px; border-radius:10px;" Click="yeniOdev" Title="Yeni Ödev">
  </RadzenButton>
 
 
@@ -15,9 +15,9 @@
 
 		<RadzenDataGridColumn TItem="ItemOdev" Title="Islemler">
 			<Template Context="item">
-				<RadzenButton Text="Düzenle" Icon="edit" Style="margin-right:10px;" Click="@(args => duzenleOdev(item))"></RadzenButton>
-				<RadzenButton Text="Sil" Icon="delete" Style="margin-left:10px;" Click="@(args=>silOdev(item))"></RadzenButton>
-				<RadzenButton Text="Teslimler" Icon="folder_open" Style="margin-left:10px;" Click="@(()=> GitTeslimlere(item.ID))"></RadzenButton>
+				<RadzenButton Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Style="margin-right:10px;" Click="@(args => duzenleOdev(item))" Title="Düzenle"></RadzenButton>
+				<RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="margin-right:10px;" Click="@(args=>silOdev(item))" Title="Sil"></RadzenButton>
+				<RadzenButton Icon="folder_open" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(()=> GitTeslimlere(item.ID))" Title="Teslimler"></RadzenButton>
 			</Template>
 		</RadzenDataGridColumn>
 	</Columns>

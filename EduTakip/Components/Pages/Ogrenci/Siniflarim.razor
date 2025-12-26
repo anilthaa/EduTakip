@@ -1,0 +1,52 @@
+﻿@page "/ogrenci/siniflarim"
+@attribute [Authorize(Roles ="Öğrenci")]
+
+<h3>Katıldığım Sınıflar</h3>
+<RadzenRow Gap="1rem">
+	@foreach (var sinif in siniflar)
+	{
+		<RadzenColumn Size="12" SizeMD="6" SizeLG="4">
+			<RadzenCard Style="padding:1rem">
+				<h5>@sinif.SinifAdi</h5>
+				<p style="margin-bottom:10px;">
+					<b>Öğretmen:</b> @sinif.OgretmenAdSoyad <br />
+					<b>Öğrenci Sayısı:</b> @sinif.OgrenciSayisi
+				</p>
+
+				<RadzenButton Text="Sınıfa Git" Icon="school" ButtonStyle="ButtonStyle.Primary" Click="@(()=>SinifaGit(sinif.SinifId))"></RadzenButton>
+			</RadzenCard>
+		</RadzenColumn>
+	}
+</RadzenRow>
+	@code {
+	List<SinifListDto> siniflar = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		var kullaniciId = AuthStateService.CurrentUser.ID;
+		siniflar = await DbContext.SinifKullanicilar
+			.Where(x => x.Kullanici_ID == kullaniciId && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Select(x => new SinifListDto
+				{
+					SinifId = x.Sinif_ID,
+					SinifAdi = x.Sinif.Adi,
+
+					OgretmenAdSoyad = DbContext.SinifKullanicilar
+					.Where(o => o.Sinif_ID == x.Sinif_ID && o.Tip == "Öğretmen" && o.DelDate == null)
+					.Select(o => o.Kullanici.Adi + " " + o.Kullanici.Soyadi)
+					.FirstOrDefault() ?? "-",
+
+					OgrenciSayisi = DbContext.SinifKullanicilar
+					.Count(o => o.Sinif_ID == x.Sinif_ID && o.Tip == "Öğrenci" && o.DelDate == null)
+				}).ToListAsync();
+	}
+	void SinifaGit(int sinifId)
+	{
+		NavigationManager.NavigateTo($"/ogrenci/sinif/{sinifId}");
+	}
+}

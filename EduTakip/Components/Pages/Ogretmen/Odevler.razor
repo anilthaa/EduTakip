@@ -1,0 +1,65 @@
+﻿@page "/ogretmen/sinif/{sinifId:int}/odevler"
+@attribute [Authorize(Roles ="Öğretmen")]
+
+<h3>Sınıf Ödevleri</h3>
+
+<RadzenButton Text="Yeni Ödev Ver" Icon="add" ButtonStyle="ButtonStyle.Primary" class="mb-3" Click="@YeniOdev"></RadzenButton>
+
+<RadzenDataGrid Data="@odevler" TItem="SinifOdevListDto" AllowPaging="true" PageSize="10">
+	<Columns>
+		<RadzenDataGridColumn Property="Baslik" Title="Ödev Başlığı"></RadzenDataGridColumn>
+		<RadzenDataGridColumn Title="Son Teslim">
+			<Template Context="item">
+				@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
+			</Template>
+		</RadzenDataGridColumn>
+
+		<RadzenDataGridColumn Title="Teslim Durumu">
+			<Template Context="item">
+				<RadzenBadge Text="@($"{item.TeslimEden}/{item.ToplamOgrenci}")" Style="background-color:17a2b8; color:white"></RadzenBadge>
+			</Template>
+		</RadzenDataGridColumn>
+
+		<RadzenDataGridColumn Title="İşlem">
+			<Template Context="item">
+				<RadzenButton Icon="visibility" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Info" Click="@(()=>Teslimler(item.OdevId))"></RadzenButton>
+			</Template>
+		</RadzenDataGridColumn>
+	</Columns>
+</RadzenDataGrid>
+@code {
+	[Parameter] public int sinifId { get; set; }
+	List<SinifOdevListDto> odevler = new();
+	protected override async Task OnInitializedAsync()
+	{
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		int toplamOgrenci = await DbContext.SinifKullanicilar
+			.CountAsync(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && x.DelDate == null);
+		odevler = await DbContext.Odevler
+			.Where(o => o.ID == sinifId && o.DelDate == null)
+			.Select(o => new SinifOdevListDto
+			{
+				OdevId = o.ID,
+				Baslik = o.Baslik,
+				SonTeslimTarihi = o.SonTeslimTarihi,
+				ToplamOgrenci = toplamOgrenci,
+				TeslimEden = DbContext.OdevTeslimler.Count(t => t.Odev_ID == o.ID && t.DelDate == null)
+			})
+			.OrderByDescending(o => o.SonTeslimTarihi)
+			.ToListAsync();
+	}
+
+	void YeniOdev()
+	{
+		NavigationManager.NavigateTo($"/ogretmen/sinif/{sinifId}/odev-ekle");
+	}
+
+	void Teslimler(int odevId)
+	{
+		NavigationManager.NavigateTo($"/ogretmen/odev-teslimleri/{odevId}");
+	}
+}

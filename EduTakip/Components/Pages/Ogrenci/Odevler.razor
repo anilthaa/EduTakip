@@ -28,11 +28,11 @@
 				<Template Context="item">
 					@if (!TeslimEdildi(item.ID))
 					{
-						<RadzenButton Text="Ödevi Teslim Et" Icon="upload_file" Click="@(() => OdevTeslimEt(item.ID))"></RadzenButton>
+						<RadzenButton Icon="upload_file" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Click="@(() => OdevTeslimEt(item.ID))"></RadzenButton>
 					}
 					else
 					{
-						<RadzenButton Text="Detay" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(()=>TeslimDetay(item.ID))"></RadzenButton>
+						<RadzenButton Icon="description" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(()=>TeslimDetay(item.ID))"></RadzenButton>
 					}
 				</Template>
 			</RadzenDataGridColumn>
