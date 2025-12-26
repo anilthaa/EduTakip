@@ -1,0 +1,74 @@
+﻿@page "/ogretmen/sinif-ogrencileri/{sinifId:int}"
+@attribute [Authorize(Roles="Öğretmen")]
+
+<h3>Sınıftaki Öğrenciler</h3>
+
+<RadzenDataGrid Data="@ogrenciler" TItem="SinifOgrenciDto" PageSize="10">
+	<Columns>
+		<RadzenDataGridColumn Title="Ad Soyad">
+			<Template Context="item">
+				@item.Ad @item.Soyad
+			</Template>
+		</RadzenDataGridColumn>
+		<RadzenDataGridColumn Title="Öğrenci No" Property="OgrenciNo"></RadzenDataGridColumn>
+
+		<RadzenDataGridColumn Title="İşlem">
+			<Template Context="item">
+				<RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => OgrenciCikar(item.SinifKullaniciId))" />
+			</Template>
+		</RadzenDataGridColumn>
+	</Columns>
+</RadzenDataGrid>
+@code {
+	[Parameter] public int sinifId { get; set; }
+	List<SinifOgrenciDto> ogrenciler = new();
+	protected override async Task OnInitializedAsync()
+	{
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		ogrenciler = await DbContext.SinifKullanicilar
+			.Where(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Join(
+				DbContext.Ogrenciler.Include(o => o.Kullanici),
+				sk => sk.Kullanici_ID,
+				o => o.Kullanici_ID,
+				(sk, o) => new SinifOgrenciDto
+					{
+						SinifKullaniciId = sk.ID,
+						Ad = o.Kullanici.Adi,
+						Soyad = o.Kullanici.Soyadi,
+						OgrenciNo = o.OgrenciNo
+					})
+				.ToListAsync();
+	}
+
+	async Task OgrenciCikar(int sinifOgrenciId)
+	{
+		var ogrenci = await DbContext.SinifKullanicilar.FindAsync(sinifOgrenciId);
+		if (ogrenci != null)
+		{
+			ogrenci.DelDate = DateTime.Now;
+			ogrenci.DelUser = AuthStateService.CurrentUser.ID;
+			await DbContext.SaveChangesAsync();
+			NotificationService.Notify(new NotificationMessage
+			{
+				Severity = NotificationSeverity.Success,
+				Summary = "Başarılı",
+				Detail = "Öğrenci sınıftan çıkarıldı.",
+				Duration = 4000
+			});
+			await Yukle();
+			StateHasChanged();
+		}
+	}
+	public class SinifOgrenciDto
+	{
+		public int SinifKullaniciId { get; set; }
+		public string Ad { get; set; }
+		public string Soyad { get; set; }
+		public string OgrenciNo { get; set; }
+							}
+}

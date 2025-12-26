@@ -16,16 +16,16 @@
             <p>Hesabınıza giriş yapın</p>
         </div>
 
-        <RadzenForm Data="@loginModel" class="auth-form">
+        <RadzenForm class="auth-form">
             <RadzenFieldset Text="Giriş Bilgileri" class="w-100">
                 <RadzenStack Gap="1.5rem">
                     <RadzenFormField Text="E-posta" class="w-100">
-                        <RadzenTextBox Value="@loginModel.EPosta" ValueChanged="@((string value) => loginModel = loginModel with { EPosta = value })" Placeholder="ornek@email.com" class="w-100" />
+                        <RadzenTextBox @bind-Value="email" Placeholder="ornek@email.com" class="w-100" />
                         <RadzenFormFieldValidator />
                     </RadzenFormField>
 
                     <RadzenFormField Text="Şifre" class="w-100">
-                        <RadzenPassword Value="@loginModel.Sifre" ValueChanged="@((string value) => loginModel = loginModel with { Sifre = value })" Placeholder="Şifrenizi girin" class="w-100" />
+                        <RadzenPassword @bind-Value="sifre" Placeholder="Şifrenizi girin" class="w-100" />
                         <RadzenFormFieldValidator />
                     </RadzenFormField>
 
@@ -36,7 +36,8 @@
                                      IsBusy="@isLoading"
                                      ButtonStyle="ButtonStyle.Primary" 
                                      Click="@(() => OnLoginButtonClick())"
-                                     class="w-100" />
+                                     class="w-100"
+                                      Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
                     </RadzenStack>
 
                     <div class="text-center w-100">
@@ -50,7 +51,8 @@
 </div>
 
 @code {
-    private LoginRequest loginModel = new("", "");
+    private string email = "";
+    private string sifre = "";
     private bool isLoading = false;
     private bool isInitialized = false;
 
@@ -68,7 +70,8 @@
     private async Task OnLoginButtonClick()
     {
         // Form validasyonunu manuel kontrol et ve OnLogin'ı çağır
-        await OnLogin(loginModel);
+        var loginRequest = new LoginRequest(email, sifre);
+        await OnLogin(loginRequest);
     }
 
     private async Task OnLogin(LoginRequest args)

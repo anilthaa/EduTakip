@@ -573,6 +573,101 @@ namespace EduTakip.Migrations
                     b.ToTable("Siniflar");
                 });
 
+            modelBuilder.Entity("EduTakip.Models.ItemSinifKullanici", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("CreDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreUser")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DelDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DelUser")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Kullanici_ID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Sinif_ID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Tip")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdUser")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Kullanici_ID");
+
+                    b.HasIndex("Sinif_ID");
+
+                    b.ToTable("SinifKullanicilar");
+                });
+
+            modelBuilder.Entity("EduTakip.Models.ItemSinifOgrenci", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("CreDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreUser")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DelDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DelUser")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("KatilmaTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OgrenciID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Ogrenci_ID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SinifID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Sinif_ID")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UpdUser")
+                        .HasColumnType("int");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("OgrenciID");
+
+                    b.HasIndex("SinifID");
+
+                    b.ToTable("SinifOgrenciler");
+                });
+
             modelBuilder.Entity("EduTakip.Models.ItemDers", b =>
                 {
                     b.HasOne("EduTakip.Models.ItemOgretmen", "Ogretmen")
@@ -710,6 +805,42 @@ namespace EduTakip.Migrations
                     b.Navigation("Birim");
 
                     b.Navigation("Kullanici");
+                });
+
+            modelBuilder.Entity("EduTakip.Models.ItemSinifKullanici", b =>
+                {
+                    b.HasOne("EduTakip.Models.ItemKullanici", "Kullanici")
+                        .WithMany()
+                        .HasForeignKey("Kullanici_ID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("EduTakip.Models.ItemSinif", "Sinif")
+                        .WithMany()
+                        .HasForeignKey("Sinif_ID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Kullanici");
+
+                    b.Navigation("Sinif");
+                });
+
+            modelBuilder.Entity("EduTakip.Models.ItemSinifOgrenci", b =>
+                {
+                    b.HasOne("EduTakip.Models.ItemOgrenci", "Ogrenci")
+                        .WithMany()
+                        .HasForeignKey("OgrenciID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EduTakip.Models.ItemSinif", "Sinif")
+                        .WithMany()
+                        .HasForeignKey("SinifID");
+
+                    b.Navigation("Ogrenci");
+
+                    b.Navigation("Sinif");
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemDers", b =>

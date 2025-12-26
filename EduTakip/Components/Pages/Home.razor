@@ -3,6 +3,7 @@
 @inject AuthStateService AuthStateService
 @inject NavigationManager NavigationManager
 @inject EduTakipDBContext DbContext
+@inject DialogService DialogService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -83,6 +84,14 @@ else
             </RadzenColumn>
         </RadzenRow>
 
+       @*  <RadzenRow Gap="20px" Style="margin-bottom: 20px;">
+            <RadzenColumn Size="12">
+                <RadzenButton Text="Sınıfa Katıl" Icon="group_add" ButtonStyle="ButtonStyle.Success" 
+                             Size="ButtonSize.Large" Click="@GitSinifaKatil" 
+                             Style="width: 100%; padding: 1rem;" />
+            </RadzenColumn>
+        </RadzenRow> *@
+
         <RadzenRow Gap="20px">
             <RadzenColumn Size="6">
                 <RadzenCard>
@@ -157,10 +166,10 @@ else
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard class="stat-card purple">
+                <RadzenCard class="stat-card purple" Style="cursor: pointer;" @onclick="GitOgrenciListesine">
                     <div class="stat-content">
                         <div>
-                            <h6>Öğrenci</h6>
+                            <h6>Sınıflarımdaki Öğrenciler</h6>
                             <h2>@ogrenciSayisi</h2>
                         </div>
                         <RadzenIcon Icon="groups" class="stat-icon" />
@@ -168,6 +177,14 @@ else
                 </RadzenCard>
             </RadzenColumn>
         </RadzenRow>
+
+        @* <RadzenRow Gap="20px" Style="margin-bottom: 20px; margin-top: 20px;">
+            <RadzenColumn Size="12">
+                <RadzenButton Text="Sınıfa Katıl" Icon="group_add" ButtonStyle="ButtonStyle.Success" 
+                             Size="ButtonSize.Large" Click="@GitSinifaKatil" 
+                             Style="width: 100%; padding: 1rem;" />
+            </RadzenColumn>
+        </RadzenRow> *@
 
         <RadzenCard class="mt-4">
             <h5><RadzenIcon Icon="event"></RadzenIcon>Bugünkü Dersler</h5>
@@ -343,10 +360,23 @@ else
         dersSayisi = await DbContext.Dersler.CountAsync(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null);
         odevSayisi = await DbContext.Odevler.CountAsync(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null);
         bekleyenTeslim = await DbContext.OdevTeslimler.CountAsync(x => x.Odev.Ders.Ogretmen_ID == ogretmenId.Value && x.Not == null && x.DelDate == null);
-        ogrenciSayisi = await DbContext.DersKatilimcilar
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
-            .Select(x => x.Ogrenci_ID)
+        // Öğretmenin ders programlarındaki sınıf adlarını bul
+        var ogretmenSinifAdlari = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null && !string.IsNullOrEmpty(x.Sinif))
+            .Select(x => x.Sinif)
             .Distinct()
+            .ToListAsync();
+
+        // Bu sınıf adlarına sahip sınıfların ID'lerini bul
+        var ogretmenSinifIdleri = await DbContext.Siniflar
+            .Where(s => ogretmenSinifAdlari.Contains(s.Adi) && s.DelDate == null)
+            .Select(s => s.ID)
+            .ToListAsync();
+
+        // Bu sınıflardaki öğrencileri say
+        ogrenciSayisi = await DbContext.Ogrenciler
+            .Where(x => x.DelDate == null && ogretmenSinifIdleri.Contains(x.Sinif_ID))
             .CountAsync();
 
         var bugun = DateTime.Today.DayOfWeek;
@@ -369,4 +399,11 @@ else
     {
         NavigationManager.NavigateTo($"/ogretmen/odev-teslimleri/{odevId}");
     }
+
+    void GitOgrenciListesine()
+    {
+        NavigationManager.NavigateTo("/ogretmen/ogrenciler");
+    }
+
+    
 }

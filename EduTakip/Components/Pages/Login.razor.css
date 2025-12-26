@@ -36,6 +36,35 @@
     width: 100%;
 }
 
+/* Input alanlarının tam genişlikte olması için */
+.auth-form ::deep .rz-form-field {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.auth-form ::deep .rz-textbox,
+.auth-form ::deep .rz-password {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+.auth-form ::deep .rz-textbox input,
+.auth-form ::deep .rz-password input {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    padding: 0.5rem 0.75rem !important;
+}
+
+.auth-form ::deep input[type="text"],
+.auth-form ::deep input[type="email"],
+.auth-form ::deep input[type="password"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+}
+
 @media (max-width: 576px) {
     .auth-card {
         padding: 2rem 1.5rem;
