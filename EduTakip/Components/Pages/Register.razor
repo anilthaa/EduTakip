@@ -16,68 +16,47 @@
             <p>Yeni hesap oluşturun</p>
         </div>
 
-        <RadzenForm Data="@registerModel" class="auth-form">
+        <RadzenTabs SelectedIndex="@selectedUserTypeIndex" SelectedIndexChanged="@OnSelectedIndexChanged" class="w-100" Style="margin-bottom: 1.5rem; margin-top: 1rem;">
+            <Tabs>
+                <RadzenTabsItem Text="Öğrenci" />
+                <RadzenTabsItem Text="Öğretmen" />
+            </Tabs>
+        </RadzenTabs>
+
+        <RadzenForm class="auth-form">
             <RadzenFieldset Text="Kayıt Bilgileri" class="w-100">
-                <RadzenStack Gap="1.5rem">
-                    <RadzenFormField Text="Ad" class="w-100">
-                        <RadzenTextBox Value="@registerModel.Adi" ValueChanged="@((string value) => registerModel = registerModel with { Adi = value })" Placeholder="Adınızı girin" class="w-100" />
+                <RadzenStack>
+                        <RadzenLabel Text="Ad"></RadzenLabel>
+                        <RadzenTextBox @bind-Value="adi" Placeholder="Adınızı girin" class="w-100" />
                         <RadzenFormFieldValidator />
-                    </RadzenFormField>
-
-                    <RadzenFormField Text="Soyad" class="w-100">
-                        <RadzenTextBox Value="@registerModel.Soyadi" ValueChanged="@((string value) => registerModel = registerModel with { Soyadi = value })" Placeholder="Soyadınızı girin" class="w-100" />
+                   
+                        <RadzenTextBox @bind-Value="soyadi" Placeholder="Soyadınızı girin" class="w-100" />
                         <RadzenFormFieldValidator />
-                    </RadzenFormField>
-
-                    <RadzenFormField Text="E-posta" class="w-100">
-                        <RadzenTextBox Value="@registerModel.EPosta" ValueChanged="@((string value) => registerModel = registerModel with { EPosta = value })" Placeholder="ornek@email.com" class="w-100" />
+                    
+                        <RadzenTextBox @bind-Value="ePosta" Placeholder="ornek@email.com" class="w-100" />
                         <RadzenFormFieldValidator />
-                    </RadzenFormField>
-
-                    <RadzenFormField Text="Şifre" class="w-100">
-                        <RadzenPassword Value="@registerModel.Sifre" ValueChanged="@((string value) => registerModel = registerModel with { Sifre = value })" Placeholder="En az 6 karakter" class="w-100" />
+                   
+                        <RadzenPassword @bind-Value="sifre" Placeholder="En az 6 karakter" />
                         <RadzenFormFieldValidator />
-                    </RadzenFormField>
-
-                    <RadzenFormField Text="Kullanıcı Tipi" class="w-100">
-                        <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" class="w-100">
-                            <div style="display: flex; align-items: center; cursor: pointer;" @onclick="@(() => OnUserTypeChanged("ogrenci"))">
-                                <RadzenRadioButton Name="userType" Value="@("ogrenci")" Checked="@(selectedUserType == "ogrenci")" Change="@((bool? value) => { if (value == true) OnUserTypeChanged("ogrenci"); })" />
-                                <RadzenLabel Text="Öğrenci" Style="margin-left: 5px;" />
-                            </div>
-                            
-                            <div style="display: flex; align-items: center; cursor: pointer;" @onclick="@(() => OnUserTypeChanged("ogretmen"))">
-                                <RadzenRadioButton Name="userType" Value="@("ogretmen")" Checked="@(selectedUserType == "ogretmen")" Change="@((bool? value) => { if (value == true) OnUserTypeChanged("ogretmen"); })" />
-                                <RadzenLabel Text="Öğretmen" Style="margin-left: 5px;" />
-                            </div>
-                        </RadzenStack>
-                    </RadzenFormField>
+                    
 
                     @if (selectedUserType == "ogrenci")
                     {
-                        <RadzenFormField Text="Sınıf" class="w-100">
                             <RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="ID" 
-                                           Value="@registerModel.Sinif_ID" 
-                                           ValueChanged="@((int? value) => registerModel = registerModel with { Sinif_ID = value })" 
+                                           @bind-Value="sinif_ID" 
                                            Placeholder="Sınıf seçin" class="w-100" />
                             <RadzenFormFieldValidator />
-                        </RadzenFormField>
 
-                        <RadzenFormField Text="Öğrenci No" class="w-100">
-                            <RadzenTextBox Value="@registerModel.OgrenciNo" ValueChanged="@((string value) => registerModel = registerModel with { OgrenciNo = value })" Placeholder="Öğrenci numaranızı girin" class="w-100" />
+                            <RadzenTextBox @bind-Value="ogrenciNo" Placeholder="Öğrenci numaranızı girin" class="w-100" />
                             <RadzenFormFieldValidator />
-                        </RadzenFormField>
                     }
 
                     @if (selectedUserType == "ogretmen")
                     {
-                        <RadzenFormField Text="Birim" class="w-100">
                             <RadzenDropDown Data="@birimler" TextProperty="Adi" ValueProperty="ID" 
-                                           Value="@registerModel.Birim_ID" 
-                                           ValueChanged="@((int? value) => registerModel = registerModel with { Birim_ID = value })" 
+                                           @bind-Value="birim_ID" 
                                            Placeholder="Birim seçin" class="w-100" />
                             <RadzenFormFieldValidator />
-                        </RadzenFormField>
                     }
 
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
@@ -87,7 +66,8 @@
                                      IsBusy="@isLoading"
                                      ButtonStyle="ButtonStyle.Primary" 
                                      Click="@(() => OnRegisterButtonClick())"
-                                     class="w-100" />
+                                     class="w-100"
+                                      Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
                     </RadzenStack>
 
                     <div class="text-center w-100">
@@ -101,10 +81,19 @@
 </div>
 
 @code {
-    private RegisterRequest registerModel = new("", "", "", "", null);
+    private string adi = "";
+    private string soyadi = "";
+    private string ePosta = "";
+    private string sifre = "";
+    private int? kullaniciTip_ID = null;
+    private int? sinif_ID = null;
+    private string ogrenciNo = "";
+    private int? birim_ID = null;
+    
     private bool isLoading = false;
     private bool isInitialized = false;
-    private string selectedUserType = "";
+    private int selectedUserTypeIndex = 0; // Varsayılan olarak Öğrenci seçili
+    private string selectedUserType = "ogrenci";
     private List<ItemSinif> siniflar = new();
     private List<ItemBirim> birimler = new();
     private List<ItemKullaniciTip> kullaniciTipleri = new();
@@ -136,17 +125,34 @@
                 .OrderBy(b => b.Adi)
                 .ToListAsync();
             
+            // Varsayılan kullanıcı tipini ayarla
+            OnUserTypeChanged();
+            
             isInitialized = true;
             StateHasChanged();
         }
     }
 
-    private void OnUserTypeChanged(string userType)
+    private void OnSelectedIndexChanged(int value)
     {
-        selectedUserType = userType;
+        selectedUserTypeIndex = value;
+        OnUserTypeChanged();
+    }
+
+    private void OnUserTypeChanged()
+    {
+        // Index'e göre kullanıcı tipini belirle
+        if (selectedUserTypeIndex == 0)
+        {
+            selectedUserType = "ogrenci";
+        }
+        else if (selectedUserTypeIndex == 1)
+        {
+            selectedUserType = "ogretmen";
+        }
         
         // Kullanıcı tipi ID'sini ayarla - Türkçe karakterleri normalize et
-        var normalizedUserType = userType.ToLower()
+        var normalizedUserType = selectedUserType.ToLower()
             .Replace("ö", "o")
             .Replace("ğ", "g")
             .Replace("ü", "u")
@@ -168,17 +174,18 @@
         
         if (kullaniciTip != null)
         {
-            registerModel = registerModel with { KullaniciTip_ID = kullaniciTip.ID };
+            kullaniciTip_ID = kullaniciTip.ID;
         }
         
         // Diğer tipin alanlarını temizle
-        if (userType == "ogrenci")
+        if (selectedUserType == "ogrenci")
         {
-            registerModel = registerModel with { Birim_ID = null };
+            birim_ID = null;
         }
-        else if (userType == "ogretmen")
+        else if (selectedUserType == "ogretmen")
         {
-            registerModel = registerModel with { Sinif_ID = null, OgrenciNo = null };
+            sinif_ID = null;
+            ogrenciNo = "";
         }
         
         StateHasChanged();
@@ -186,22 +193,7 @@
 
     private async Task OnRegisterButtonClick()
     {
-        // Form validasyonunu manuel kontrol et ve OnRegister'ı çağır
-        await OnRegister(registerModel);
-    }
-
-    private async Task OnRegister(RegisterRequest args)
-    {
         if (isLoading) return;
-
-        // registerModel'i args ile senkronize et
-        registerModel = registerModel with 
-        { 
-            Adi = args.Adi,
-            Soyadi = args.Soyadi,
-            EPosta = args.EPosta,
-            Sifre = args.Sifre
-        };
 
         // Validasyon
         if (string.IsNullOrEmpty(selectedUserType))
@@ -216,8 +208,8 @@
             return;
         }
 
-        // Kullanıcı tipi ID kontrolü - registerModel'den al
-        if (!registerModel.KullaniciTip_ID.HasValue || registerModel.KullaniciTip_ID.Value <= 0)
+        // Kullanıcı tipi ID kontrolü
+        if (!kullaniciTip_ID.HasValue || kullaniciTip_ID.Value <= 0)
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -231,7 +223,7 @@
 
         if (selectedUserType == "ogrenci")
         {
-            if (!registerModel.Sinif_ID.HasValue || string.IsNullOrWhiteSpace(registerModel.OgrenciNo))
+            if (!sinif_ID.HasValue || string.IsNullOrWhiteSpace(ogrenciNo))
             {
                 NotificationService.Notify(new NotificationMessage
                 {
@@ -245,7 +237,7 @@
         }
         else if (selectedUserType == "ogretmen")
         {
-            if (!registerModel.Birim_ID.HasValue)
+            if (!birim_ID.HasValue)
             {
                 NotificationService.Notify(new NotificationMessage
                 {
@@ -259,11 +251,11 @@
         }
 
         // Temel alan validasyonu
-        if (string.IsNullOrWhiteSpace(registerModel.Adi) || 
-            string.IsNullOrWhiteSpace(registerModel.Soyadi) || 
-            string.IsNullOrWhiteSpace(registerModel.EPosta) || 
-            string.IsNullOrWhiteSpace(registerModel.Sifre) || 
-            registerModel.Sifre.Length < 6)
+        if (string.IsNullOrWhiteSpace(adi) || 
+            string.IsNullOrWhiteSpace(soyadi) || 
+            string.IsNullOrWhiteSpace(ePosta) || 
+            string.IsNullOrWhiteSpace(sifre) || 
+            sifre.Length < 6)
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -281,14 +273,14 @@
         try
         {
             var request = new RegisterRequest(
-                registerModel.Adi,
-                registerModel.Soyadi,
-                registerModel.EPosta,
-                registerModel.Sifre,
-                registerModel.KullaniciTip_ID,
-                registerModel.Sinif_ID,
-                registerModel.OgrenciNo,
-                registerModel.Birim_ID
+                adi,
+                soyadi,
+                ePosta,
+                sifre,
+                kullaniciTip_ID,
+                sinif_ID,
+                ogrenciNo,
+                birim_ID
             );
 
             var result = await AuthService.RegisterAsync(request);
@@ -306,7 +298,7 @@
                 // Kayıt sonrası otomatik giriş yap
                 await Task.Delay(500);
                 
-                var loginRequest = new LoginRequest(registerModel.EPosta, registerModel.Sifre);
+                var loginRequest = new LoginRequest(ePosta, sifre);
                 var loginResponse = await AuthService.LoginAsync(loginRequest);
                 
                 if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.Token))

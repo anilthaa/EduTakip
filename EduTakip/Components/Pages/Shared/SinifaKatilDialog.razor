@@ -1,0 +1,196 @@
+@inject EduTakipDBContext DbContext
+@inject IToastService ToastService
+@inject DialogService DialogService
+
+<RadzenStack Gap="1.5rem">
+    <RadzenLabel Text="Katılmak istediğiniz sınıfı seçin:" />
+    
+    <RadzenDataGrid Data="@siniflar" TItem="ItemSinif" AllowPaging="true" PageSize="10" 
+                   Style="max-height: 400px;">
+        <Columns>
+            <RadzenDataGridColumn Title="Sınıf Adı" Property="Adi"></RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Durum">
+                <Template Context="item">
+                    <RadzenBadge Text="@(item.Aktif ? "Aktif" : "Pasif")" 
+                               Style="@(item.Aktif ? "background-color: #28a745; color: white;" : "background-color: #dc3545; color: white;")">
+                    </RadzenBadge>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="İşlem">
+                <Template Context="item">
+                    <RadzenButton Text="Katıl" Icon="add" Size="ButtonSize.Small" 
+                                 ButtonStyle="ButtonStyle.Success" 
+                                 Click="@(() => OnSinifSecildi(item))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="İptal" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public string KullaniciTip { get; set; } = "";
+    [Parameter] public int? OgrenciId { get; set; }
+    [Parameter] public int? OgretmenId { get; set; }
+
+    private List<ItemSinif> siniflar = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await YukleSiniflar();
+    }
+
+    async Task YukleSiniflar()
+    {
+        if (KullaniciTip.Contains("öğrenci") || KullaniciTip.Contains("ogrenci"))
+        {
+            // Öğrenci için: Kendi sınıfı hariç diğer aktif sınıfları göster
+            var ogrenciSinifId = await DbContext.Ogrenciler
+                .Where(x => x.ID == OgrenciId!.Value)
+                .Select(x => x.Sinif_ID)
+                .FirstOrDefaultAsync();
+
+            siniflar = await DbContext.Siniflar
+                .Where(s => s.Aktif && s.DelDate == null && s.ID != ogrenciSinifId)
+                .OrderBy(s => s.Adi)
+                .ToListAsync();
+        }
+        else if (KullaniciTip.Contains("öğretmen") || KullaniciTip.Contains("ogretmen"))
+        {
+            // Öğretmen için: Tüm aktif sınıfları göster
+            siniflar = await DbContext.Siniflar
+                .Where(s => s.Aktif && s.DelDate == null)
+                .OrderBy(s => s.Adi)
+                .ToListAsync();
+        }
+    }
+
+    async Task OnSinifSecildi(ItemSinif sinif)
+    {
+        if (sinif == null) return;
+
+        try
+        {
+            if (KullaniciTip.Contains("öğrenci") || KullaniciTip.Contains("ogrenci"))
+            {
+                await OgrenciSinifaKatil(sinif.ID);
+            }
+            else if (KullaniciTip.Contains("öğretmen") || KullaniciTip.Contains("ogretmen"))
+            {
+                await OgretmenSinifaKatil(sinif.ID);
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError("Hata", $"Sınıfa katılırken bir hata oluştu: {ex.Message}");
+        }
+    }
+
+    async Task OgrenciSinifaKatil(int sinifId)
+    {
+        if (!OgrenciId.HasValue) return;
+
+        // Öğrencinin kullanıcı ID'sini al
+        var kullaniciId = await DbContext.Ogrenciler
+            .Where(x => x.ID == OgrenciId.Value)
+            .Select(x => x.Kullanici_ID)
+            .FirstOrDefaultAsync();
+
+        if (kullaniciId == 0) return;
+
+        // Bu sınıftaki dersleri bul
+        var sinifAdi = await DbContext.Siniflar
+            .Where(x => x.ID == sinifId)
+            .Select(x => x.Adi)
+            .FirstOrDefaultAsync();
+
+        var dersler = await DbContext.DersProgramlari
+            .Where(x => x.Sinif == sinifAdi && x.DelDate == null)
+            .Select(x => x.Ders_ID)
+            .Distinct()
+            .ToListAsync();
+
+        // Öğrencinin zaten katıldığı dersleri kontrol et
+        var katildigiDersler = await DbContext.DersKatilimcilar
+            .Where(x => x.Ogrenci_ID == kullaniciId && dersler.Contains(x.Ders_ID) && x.DelDate == null)
+            .Select(x => x.Ders_ID)
+            .ToListAsync();
+
+        // Katılmadığı derslere katıl
+        int katilimSayisi = 0;
+        foreach (var dersId in dersler)
+        {
+            if (!katildigiDersler.Contains(dersId))
+            {
+                var katilim = new ItemDersKatilimci
+                {
+                    Ders_ID = dersId,
+                    Ogrenci_ID = kullaniciId,
+                    CreUser = 0,
+                    CreDate = DateTime.UtcNow
+                };
+
+                DbContext.DersKatilimcilar.Add(katilim);
+                katilimSayisi++;
+            }
+        }
+
+        if (katilimSayisi > 0)
+        {
+            await DbContext.SaveChangesAsync();
+            ToastService.ShowSuccess("Başarılı", $"{sinifAdi} sınıfına başarıyla katıldınız. {katilimSayisi} derse kaydınız yapıldı.");
+            DialogService.Close(true);
+        }
+        else
+        {
+            ToastService.ShowInfo("Bilgi", "Bu sınıftaki tüm derslere zaten katılıyorsunuz.");
+        }
+    }
+
+    async Task OgretmenSinifaKatil(int sinifId)
+    {
+        if (!OgretmenId.HasValue) return;
+
+        // Öğretmenin derslerini bul
+        var ogretmenDersleri = await DbContext.Dersler
+            .Where(x => x.Ogretmen_ID == OgretmenId.Value && x.DelDate == null)
+            .Select(x => x.ID)
+            .ToListAsync();
+
+        if (!ogretmenDersleri.Any())
+        {
+            ToastService.ShowWarning("Uyarı", "Henüz dersiniz bulunmamaktadır. Önce ders oluşturun.");
+            return;
+        }
+
+        // Sınıf adını al
+        var sinifAdi = await DbContext.Siniflar
+            .Where(x => x.ID == sinifId)
+            .Select(x => x.Adi)
+            .FirstOrDefaultAsync();
+
+        // Bu sınıfta zaten ders programı var mı kontrol et
+        var mevcutProgramlar = await DbContext.DersProgramlari
+            .Where(x => ogretmenDersleri.Contains(x.Ders_ID) && x.Sinif == sinifAdi && x.DelDate == null)
+            .Select(x => x.Ders_ID)
+            .Distinct()
+            .ToListAsync();
+
+        // Henüz bu sınıfta programı olmayan dersleri göster
+        var eklenebilecekDersler = ogretmenDersleri.Where(d => !mevcutProgramlar.Contains(d)).ToList();
+
+        if (!eklenebilecekDersler.Any())
+        {
+            ToastService.ShowInfo("Bilgi", "Tüm dersleriniz bu sınıfta zaten programlanmış.");
+            return;
+        }
+
+        // Kullanıcıya hangi derslere program eklemek istediğini sor
+        ToastService.ShowInfo("Bilgi", $"{sinifAdi} sınıfına ders programı eklemek için ders programı sayfasına yönlendiriliyorsunuz.");
+        DialogService.Close(sinifId);
+    }
+}
+

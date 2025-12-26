@@ -1,0 +1,243 @@
+@page "/ogretmen/ogrenciler"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Öğretmen")]
+@inject EduTakipDBContext DbContext
+@inject AuthStateService AuthStateService
+@inject NavigationManager NavigationManager
+@inject DialogService DialogService
+@inject IToastService ToastService
+
+<PageTitle>Öğrenci Listesi</PageTitle>
+
+<h3>Sınıflarımdaki Öğrenciler</h3>
+
+<RadzenCard class="mb-3">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+        <RadzenLabel Text="Sınıf Filtresi:" />
+        <RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="ID" 
+                       @bind-Value="seciliSinifId" 
+                       Placeholder="Tüm Sınıflar" 
+                       Style="width: 200px;"
+                       Change="@OnSinifFiltreDegisti" />
+        <RadzenButton Text="Filtreyi Temizle" Icon="clear" ButtonStyle="ButtonStyle.Light" 
+                     Size="ButtonSize.Small" Click="@FiltreyiTemizle" />
+    </RadzenStack>
+</RadzenCard>
+
+<RadzenCard>
+    <RadzenDataGrid Data="@filtrelenmisOgrenciler" TItem="ItemOgrenci" AllowPaging="true" PageSize="20">
+        <Columns>
+            <RadzenDataGridColumn Title="Öğrenci No" Property="OgrenciNo"></RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Ad">
+                <Template Context="item">
+                    @item.Kullanici.Adi
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Soyad">
+                <Template Context="item">
+                    @item.Kullanici.Soyadi
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="E-Posta">
+                <Template Context="item">
+                    @item.Kullanici.EPosta
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="Sınıf">
+                <Template Context="item">
+                    @item.Sinif?.Adi
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Title="İşlemler">
+                <Template Context="item">
+                    <RadzenButton Text="Sınıftan Çıkar" Icon="person_remove" Size="ButtonSize.Small" 
+                                 ButtonStyle="ButtonStyle.Danger" 
+                                 Click="@(() => OgrenciyiSiniftanCikar(item))" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenCard>
+
+@code {
+    private int? ogretmenId;
+    private List<ItemOgrenci> ogrenciler = new();
+    private List<ItemOgrenci> filtrelenmisOgrenciler = new();
+    private List<ItemSinif> siniflar = new();
+    private int? seciliSinifId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateService.CurrentUser == null)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        // Öğretmen ID'sini bul
+        ogretmenId = await DbContext.Ogretmenler
+            .Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+            .Select(x => x.ID)
+            .FirstOrDefaultAsync();
+
+        if (!ogretmenId.HasValue)
+        {
+            return;
+        }
+
+        await YukleOgrenciler();
+        await YukleSiniflar();
+    }
+
+    async Task YukleOgrenciler()
+    {
+        // Öğretmenin ders programlarındaki sınıf adlarını bul
+        var ogretmenSinifAdlari = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null && !string.IsNullOrEmpty(x.Sinif))
+            .Select(x => x.Sinif)
+            .Distinct()
+            .ToListAsync();
+
+        // Bu sınıf adlarına sahip sınıfların ID'lerini bul
+        var ogretmenSinifIdleri = await DbContext.Siniflar
+            .Where(s => ogretmenSinifAdlari.Contains(s.Adi) && s.DelDate == null)
+            .Select(s => s.ID)
+            .ToListAsync();
+
+        // Bu sınıflardaki öğrencileri getir
+        ogrenciler = await DbContext.Ogrenciler
+            .Include(x => x.Kullanici)
+            .Include(x => x.Sinif)
+            .Where(x => x.DelDate == null && ogretmenSinifIdleri.Contains(x.Sinif_ID))
+            .OrderBy(x => x.Sinif.Adi)
+            .ThenBy(x => x.Kullanici.Adi)
+            .ThenBy(x => x.Kullanici.Soyadi)
+            .ToListAsync();
+
+        Filtrele();
+    }
+
+    async Task YukleSiniflar()
+    {
+        // Öğretmenin ders programlarındaki sınıf adlarını bul
+        var ogretmenSinifAdlari = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null && !string.IsNullOrEmpty(x.Sinif))
+            .Select(x => x.Sinif)
+            .Distinct()
+            .ToListAsync();
+
+        // Bu sınıfları getir
+        siniflar = await DbContext.Siniflar
+            .Where(s => ogretmenSinifAdlari.Contains(s.Adi) && s.DelDate == null && s.Aktif)
+            .OrderBy(s => s.Adi)
+            .ToListAsync();
+    }
+
+    void OnSinifFiltreDegisti(object? value)
+    {
+        Filtrele();
+    }
+
+    void Filtrele()
+    {
+        if (seciliSinifId.HasValue)
+        {
+            filtrelenmisOgrenciler = ogrenciler
+                .Where(x => x.Sinif_ID == seciliSinifId.Value)
+                .ToList();
+        }
+        else
+        {
+            filtrelenmisOgrenciler = ogrenciler;
+        }
+    }
+
+    void FiltreyiTemizle()
+    {
+        seciliSinifId = null;
+        Filtrele();
+    }
+
+    async Task OgrenciyiSiniftanCikar(ItemOgrenci ogrenci)
+    {
+        if (!ogretmenId.HasValue) return;
+
+        // Onay dialogu
+        var result = await DialogService.Confirm(
+            $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenciyi sınıftan çıkarmak istediğinize emin misiniz?",
+            "Öğrenciyi Sınıftan Çıkar",
+            new ConfirmOptions { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+
+        if (result != true) return;
+
+        try
+        {
+            // Öğrencinin kullanıcı ID'sini al
+            var kullaniciId = ogrenci.Kullanici_ID;
+
+            // Öğretmenin derslerini bul
+            var ogretmenDersleri = await DbContext.Dersler
+                .Where(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
+                .Select(x => x.ID)
+                .ToListAsync();
+
+            if (!ogretmenDersleri.Any())
+            {
+                ToastService.ShowWarning("Uyarı", "Bu öğrenci sizin derslerinize kayıtlı değil.");
+                return;
+            }
+
+            // Öğrencinin bu öğretmenin derslerindeki katılımlarını bul
+            // Global query filter'ı bypass etmek için IgnoreQueryFilters kullan
+            // Böylece soft delete yapılmış kayıtları da görebiliriz
+            var katilimlar = await DbContext.DersKatilimcilar
+                .IgnoreQueryFilters()
+                .Where(x => x.Ogrenci_ID == kullaniciId && 
+                           ogretmenDersleri.Contains(x.Ders_ID) && 
+                           x.DelDate == null)
+                .ToListAsync();
+
+            if (!katilimlar.Any())
+            {
+                ToastService.ShowInfo("Bilgi", $"Bu öğrenci sizin derslerinize kayıtlı değil. (Kullanıcı ID: {kullaniciId}, Öğretmen Ders Sayısı: {ogretmenDersleri.Count})");
+                return;
+            }
+
+            // Soft delete yap
+            int cikarilanDersSayisi = 0;
+            foreach (var katilim in katilimlar)
+            {
+                // Entity state'i manuel olarak Modified yap
+                var entry = DbContext.Entry(katilim);
+                entry.Property(x => x.DelDate).CurrentValue = DateTime.UtcNow;
+                entry.Property(x => x.DelUser).CurrentValue = 0;
+                entry.Property(x => x.DelDate).IsModified = true;
+                entry.Property(x => x.DelUser).IsModified = true;
+                cikarilanDersSayisi++;
+            }
+
+            var saveResult = await DbContext.SaveChangesAsync();
+
+            if (saveResult > 0 && cikarilanDersSayisi > 0)
+            {
+                ToastService.ShowSuccess("Başarılı", 
+                    $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenci {cikarilanDersSayisi} dersten çıkarıldı.");
+
+                // Listeyi yenile
+                await YukleOgrenciler();
+                StateHasChanged();
+            }
+            else
+            {
+                ToastService.ShowWarning("Uyarı", $"Öğrenci çıkarılamadı. (SaveResult: {saveResult}, Katılım Sayısı: {cikarilanDersSayisi})");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError("Hata", $"Öğrenci sınıftan çıkarılırken bir hata oluştu: {ex.Message}\n\nDetay: {ex.InnerException?.Message ?? "Yok"}");
+        }
+    }
+}
+

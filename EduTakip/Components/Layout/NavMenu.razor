@@ -66,6 +66,11 @@
         @if (IsOgrenci)
         {
             <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/siniflar" Match="NavLinkMatch.All">
+                    <span class="bi bi-people" aria-hidden="true"></span> Sınıflar
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/ogrenci/dersler" Match="NavLinkMatch.All">
                     <span class="bi bi-book" aria-hidden="true"></span> Derslerim
                 </NavLink>
@@ -85,6 +90,11 @@
         @* Öğretmen menüleri *@
         @if (IsOgretmen)
         {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/siniflar" Match="NavLinkMatch.All">
+                    <span class="bi bi-people" aria-hidden="true"></span> Sınıflarım
+                </NavLink>
+            </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/ogretmen/dersler" Match="NavLinkMatch.All">
                     <span class="bi bi-book" aria-hidden="true"></span> Derslerim

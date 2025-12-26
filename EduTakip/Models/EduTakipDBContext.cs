@@ -13,6 +13,8 @@ namespace EduTakip.Models
         public DbSet<ItemOgretmen> Ogretmenler { get; set; }
         public DbSet<ItemBirim> Birimler { get; set; }
         public DbSet<ItemSinif> Siniflar { get; set; }
+        public DbSet<ItemSinifKullanici> SinifKullanicilar { get; set; }
+        public DbSet<ItemSinifOgrenci> SinifOgrenciler { get; set; }
         public DbSet<ItemDers> Dersler { get; set; }
         public DbSet<ItemDersKatilimci> DersKatilimcilar { get; set; }
         public DbSet<ItemDersKatilim> DersKatilimlar { get; set; }
@@ -148,6 +150,19 @@ namespace EduTakip.Models
                 .WithMany()
                 .HasForeignKey(x => x.Ogrenci_ID)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ItemSinifKullanici>()
+                .HasOne(x => x.Sinif)
+                .WithMany()
+                .HasForeignKey(x => x.Sinif_ID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ItemSinifKullanici>()
+                .HasOne(x => x.Kullanici)
+                .WithMany()
+                .HasForeignKey(x => x.Kullanici_ID)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }
