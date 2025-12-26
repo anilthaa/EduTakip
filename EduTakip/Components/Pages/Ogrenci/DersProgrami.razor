@@ -1,0 +1,122 @@
+@page "/ogrenci/dersprogrami"
+@attribute [Authorize(Roles ="Öğrenci")]
+<h3>Ders Programım</h3>
+
+<RadzenCard>
+	@if (list.Any())
+	{
+		<RadzenDataGrid Data="@list" TItem="ItemDersProgrami" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+			<Columns>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
+					<Template Context="item">
+						@GetGunAdi(item.Gun)
+					</Template>
+				</RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
+					<Template Context="x">
+						@x.BaslangicSaati - @x.BitisSaati
+					</Template>
+				</RadzenDataGridColumn>
+
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif" Title="Sınıf"></RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+	else
+	{
+		<p class="text-muted">Henüz ders programınız bulunmamaktadır. Bir sınıfa katıldıktan sonra ders programınız burada görünecektir.</p>
+	}
+</RadzenCard>
+
+@code {
+	List<ItemDersProgrami> list = new();
+	int? ogrenciId;
+
+	private string GetGunAdi(DayOfWeek gun)
+	{
+		return gun switch
+		{
+			DayOfWeek.Monday => "Pazartesi",
+			DayOfWeek.Tuesday => "Salı",
+			DayOfWeek.Wednesday => "Çarşamba",
+			DayOfWeek.Thursday => "Perşembe",
+			DayOfWeek.Friday => "Cuma",
+			DayOfWeek.Saturday => "Cumartesi",
+			DayOfWeek.Sunday => "Pazar",
+			_ => gun.ToString()
+		};
+	}
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			return;
+		}
+
+		// Öğrenci ID'sini bul
+		ogrenciId = await DbContext.Ogrenciler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
+		if (!ogrenciId.HasValue)
+		{
+			return;
+		}
+
+		// Öğrencinin kayıtlı olduğu sınıfların adlarını bul
+		// Ana sınıf
+		var anaSinifAdi = await DbContext.Ogrenciler
+			.Where(x => x.ID == ogrenciId.Value && x.DelDate == null)
+			.Include(x => x.Sinif)
+			.Select(x => x.Sinif.Adi)
+			.FirstOrDefaultAsync();
+
+		// Katıldığı diğer sınıflar
+		var katildigiSinifAdlari = await DbContext.SinifKullanicilar
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Include(x => x.Sinif)
+			.Select(x => x.Sinif.Adi)
+			.ToListAsync();
+
+		// Tüm sınıf adlarını birleştir
+		var tumSinifAdlari = new List<string>();
+		if (!string.IsNullOrEmpty(anaSinifAdi))
+		{
+			tumSinifAdlari.Add(anaSinifAdi);
+		}
+		tumSinifAdlari.AddRange(katildigiSinifAdlari);
+		tumSinifAdlari = tumSinifAdlari.Distinct().ToList();
+
+		if (!tumSinifAdlari.Any())
+		{
+			return;
+		}
+
+		// Öğrencinin katıldığı derslerin ID'lerini bul
+		var kullaniciId = AuthStateService.CurrentUser.ID;
+		var katildigiDersler = await DbContext.DersKatilimcilar
+			.Where(x => x.Ogrenci_ID == kullaniciId && x.DelDate == null)
+			.Select(x => x.Ders_ID)
+			.ToListAsync();
+
+		if (!katildigiDersler.Any())
+		{
+			return;
+		}
+
+		// Bu derslerin ders programlarını getir, sadece öğrencinin kayıtlı olduğu sınıfların programlarını
+		list = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.Where(x => katildigiDersler.Contains(x.Ders_ID) 
+				&& tumSinifAdlari.Contains(x.Sinif) 
+				&& x.DelDate == null 
+				&& x.Aktif)
+			.OrderBy(x => x.Gun)
+			.ThenBy(x => x.BaslangicSaati)
+			.ToListAsync();
+	}
+}
+

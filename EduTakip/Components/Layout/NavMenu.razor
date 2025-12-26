@@ -5,21 +5,13 @@
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="/home">EduTakip</a>
-        @if (AuthStateService.CurrentUser != null)
-        {
-            <div style="margin-left: auto; color: white; display: flex; align-items: center; gap: 10px;">
-                <span>@AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi</span>
-                <RadzenButton Text="Çıkış" Icon="logout" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" 
-                             Click="@Logout" />
-            </div>
-        }
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()" style="display:flex; flex-direction:column;">
+    <nav class="nav flex-column" style="flex:1">
         @* Herkes için Anasayfa *@
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="/home" Match="NavLinkMatch.All">
@@ -66,6 +58,16 @@
         @if (IsOgrenci)
         {
             <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogrenci/dersprogrami" Match="NavLinkMatch.All">
+                    <span class="bi bi-calendar" aria-hidden="true"></span> Ders Programım
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="/ogrenci/siniflarim" Match="NavLinkMatch.All">
+                    <span class="bi bi-people" aria-hidden="true"></span> Sınıflar
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
                 <NavLink class="nav-link" href="/siniflar" Match="NavLinkMatch.All">
                     <span class="bi bi-people" aria-hidden="true"></span> Sınıflar
                 </NavLink>
@@ -111,6 +113,17 @@
                 </NavLink>
             </div>
         }
+        <div class="nav-item px-3" style="margin-top:auto; display:flex; justify-content:center;align-items:center;">
+            @if (AuthStateService.CurrentUser != null)
+            {
+                <div style="margin-left: auto; color: white; display: flex; align-items: center; gap: 10px; margin-bottom:0 !important">
+                    <span>@AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi</span>
+                    <RadzenButton Text="Çıkış" Icon="logout" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                                  Click="@Logout" />
+                </div>
+            }
+        </div>
+        
     </nav>
 </div>
 

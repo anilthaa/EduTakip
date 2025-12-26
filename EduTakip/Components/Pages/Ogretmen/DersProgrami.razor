@@ -5,7 +5,11 @@
 
 <RadzenDataGrid Data="@list" TItem="ItemDersProgrami" ColumnWidth="200px" AllowPaging="true" PageSize="10">
 	<Columns>
-		<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Gun" Title="Gün"></RadzenDataGridColumn>
+		<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
+			<Template Context="item">
+				@GetGunAdi(item.Gun)
+			</Template>
+		</RadzenDataGridColumn>
 		<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
 			<Template Context="x">
 				@x.BaslangicSaati - @x.BitisSaati
@@ -21,6 +25,21 @@
 	List<ItemDersProgrami> list;
 
 	int ogretmenId = 1; //Simdilik
+
+	private string GetGunAdi(DayOfWeek gun)
+	{
+		return gun switch
+		{
+			DayOfWeek.Monday => "Pazartesi",
+			DayOfWeek.Tuesday => "Salı",
+			DayOfWeek.Wednesday => "Çarşamba",
+			DayOfWeek.Thursday => "Perşembe",
+			DayOfWeek.Friday => "Cuma",
+			DayOfWeek.Saturday => "Cumartesi",
+			DayOfWeek.Sunday => "Pazar",
+			_ => gun.ToString()
+		};
+	}
 
 	protected override async Task OnInitializedAsync()
 	{
