@@ -1,5 +1,7 @@
 ﻿@page "/ogrenci/notlarim"
 @attribute [Authorize(Roles ="Öğrenci")]
+@inject AuthStateService AuthStateService
+
 <RadzenCard>
 	<h3>Notlarım</h3>
 
@@ -49,19 +51,42 @@
 </RadzenCard>
 
 @code {
-	int ogrenciId = 1;
+	int? kullaniciId;
 	List<ItemOdevTeslim> notlar = new();
+	
 	protected override async Task OnInitializedAsync()
 	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			return;
+		}
+
+		kullaniciId = AuthStateService.CurrentUser.ID;
 		await Listele();
 	}
+
 	async Task Listele()
 	{
-		notlar = await DbContext.OdevTeslimler
+		if (!kullaniciId.HasValue)
+		{
+			return;
+		}
+
+		// ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
+		// Her ödev için sadece en son teslim kaydını göster
+		var tumTeslimler = await DbContext.OdevTeslimler
 			.Include(x => x.Odev)
 			.ThenInclude(x => x.Ders)
-			.Where(x => x.Ogrenci_ID == ogrenciId && x.DelDate == null)
+			.Where(x => x.Ogrenci_ID == kullaniciId.Value && x.DelDate == null)
 			.OrderByDescending(x => x.TeslimTarihi)
+			.ThenByDescending(x => x.ID)
 			.ToListAsync();
+		
+		// Her ödev için sadece en son (en yeni) teslim kaydını al
+		notlar = tumTeslimler
+			.GroupBy(x => x.Odev_ID)
+			.Select(g => g.First())
+			.OrderByDescending(x => x.TeslimTarihi)
+			.ToList();
 	}
 }

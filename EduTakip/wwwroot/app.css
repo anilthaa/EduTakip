@@ -83,6 +83,7 @@ h1:focus {
 }
 
 .stat-icon {
+    color:black;
     font-size: 40px;
     opacity: 0.85;
 }

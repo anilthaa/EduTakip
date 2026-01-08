@@ -91,18 +91,12 @@
 
     async Task YukleOgrenciler()
     {
-        // Öğretmenin ders programlarındaki sınıf adlarını bul
-        var ogretmenSinifAdlari = await DbContext.DersProgramlari
+        // Öğretmenin ders programlarındaki sınıf ID'lerini bul
+        var ogretmenSinifIdleri = await DbContext.DersProgramlari
             .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null && !string.IsNullOrEmpty(x.Sinif))
-            .Select(x => x.Sinif)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
             .Distinct()
-            .ToListAsync();
-
-        // Bu sınıf adlarına sahip sınıfların ID'lerini bul
-        var ogretmenSinifIdleri = await DbContext.Siniflar
-            .Where(s => ogretmenSinifAdlari.Contains(s.Adi) && s.DelDate == null)
-            .Select(s => s.ID)
             .ToListAsync();
 
         // Bu sınıflardaki öğrencileri getir
@@ -120,17 +114,17 @@
 
     async Task YukleSiniflar()
     {
-        // Öğretmenin ders programlarındaki sınıf adlarını bul
-        var ogretmenSinifAdlari = await DbContext.DersProgramlari
+        // Öğretmenin ders programlarındaki sınıf ID'lerini bul
+        var ogretmenSinifIdleri = await DbContext.DersProgramlari
             .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null && !string.IsNullOrEmpty(x.Sinif))
-            .Select(x => x.Sinif)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
             .Distinct()
             .ToListAsync();
 
         // Bu sınıfları getir
         siniflar = await DbContext.Siniflar
-            .Where(s => ogretmenSinifAdlari.Contains(s.Adi) && s.DelDate == null && s.Aktif)
+            .Where(s => ogretmenSinifIdleri.Contains(s.ID) && s.DelDate == null && s.Aktif)
             .OrderBy(s => s.Adi)
             .ToListAsync();
     }

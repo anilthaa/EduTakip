@@ -108,7 +108,7 @@
             .FirstOrDefaultAsync();
 
         var dersler = await DbContext.DersProgramlari
-            .Where(x => x.Sinif == sinifAdi && x.DelDate == null)
+            .Where(x => x.Sinif_ID == sinifId && x.DelDate == null)
             .Select(x => x.Ders_ID)
             .Distinct()
             .ToListAsync();
@@ -174,7 +174,7 @@
 
         // Bu sınıfta zaten ders programı var mı kontrol et
         var mevcutProgramlar = await DbContext.DersProgramlari
-            .Where(x => ogretmenDersleri.Contains(x.Ders_ID) && x.Sinif == sinifAdi && x.DelDate == null)
+            .Where(x => ogretmenDersleri.Contains(x.Ders_ID) && x.Sinif_ID == sinifId && x.DelDate == null)
             .Select(x => x.Ders_ID)
             .Distinct()
             .ToListAsync();

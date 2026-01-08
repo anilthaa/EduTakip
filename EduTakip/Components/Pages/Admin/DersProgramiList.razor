@@ -1,19 +1,36 @@
 ﻿@page "/admin/ders-programlari"
 @attribute [Authorize(Roles = "Admin")]
-	<h4>Ders Programları</h4>
+	
 	<RadzenButton Text="Yeni Ders Programı" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@Yeni" />
-<RadzenCard>
-	<RadzenDataGrid TItem="ItemDersProgrami" Data="@list" ColumnWidth="200px">
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Ders Programları</h3>
+	<RadzenDataGrid TItem="ItemDersProgrami" Data="@list">
 		<Columns>
 			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Ders Adı">
+				<Template Context="item">
+					@item.Ders?.Adi
+				</Template>
+			</RadzenDataGridColumn>
+
 			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
 				<Template Context="item">
 					@GetGunAdi(item.Gun)
 				</Template>
 			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Başlangıç Saati">
 				<Template Context="item">
-					@item.BaslangicSaati - @item.BitisSaati
+					@item.BaslangicSaati.ToString("hh\\:mm")
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Bitiş Saati">
+				<Template Context="item">
+					@item.BitisSaati.ToString("hh\\:mm")
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Sınıf">
+				<Template Context="item">
+					@item.Sinif?.Adi
 				</Template>
 			</RadzenDataGridColumn>
 
@@ -54,6 +71,7 @@
 	{
 		list = await DbContext.DersProgramlari
 			.Include(x => x.Ders)
+			.Include(x => x.Sinif)
 			.ToListAsync();
 	}
 

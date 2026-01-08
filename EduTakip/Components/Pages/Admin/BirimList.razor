@@ -1,33 +1,38 @@
 ﻿@page "/admin/birimler"
 @attribute [Authorize(Roles ="Admin")]
+
+<RadzenButton Text="Yeni Birim Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:15px; border-radius:10px;" Click="@YeniBirim" />
 <RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
 	<h3 style="text-align:center;">Birimler</h3>
-	<RadzenButton Text="Yeni Birim Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:15px; border-radius:10px;" Click="@YeniBirim" />
 	@if (birimler==null || !birimler.Any())
 	{
-		<p>Henüz birim eklenmemiş.</p>	
+		<p style="text-align:center;">Veri yükleniyor... Veya birim eklenmemiş</p>	
 	}
-	<RadzenDataGrid TItem="ItemBirim" Data="@birimler" AllowPaging="true" PageSize="10">
-		<Columns>
-			<RadzenDataGridColumn TItem="ItemBirim" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adı" />
-			<RadzenDataGridColumn TItem="ItemBirim" Title="Aktif">
-				<Template Context="item">
-					<span class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
-						  @onclick="@(() => ToggleAktif(item))">
-						@(item.Aktif ? "Aktif" : "Pasif")
-					</span>
-				</Template>
-			</RadzenDataGridColumn>
+	else
+	{
+		<RadzenDataGrid TItem="ItemBirim" Data="@birimler" AllowPaging="true" PageSize="10">
+			<Columns>
+				<RadzenDataGridColumn TItem="ItemBirim" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adı" />
+				<RadzenDataGridColumn TItem="ItemBirim" Title="Aktif">
+					<Template Context="item">
+						<span class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
+							  @onclick="@(() => ToggleAktif(item))">
+							@(item.Aktif ? "Aktif" : "Pasif")
+						</span>
+					</Template>
+				</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemBirim" Title="İşlemler">
-				<Template Context="item">
-					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditBirim(item))" Style="margin-right: 10px;" />
-					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
+				<RadzenDataGridColumn TItem="ItemBirim" Title="İşlemler">
+					<Template Context="item">
+						<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditBirim(item))" Style="margin-right: 10px;" />
+						<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
+					</Template>
+				</RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+	
 </RadzenCard>
 
 @code {

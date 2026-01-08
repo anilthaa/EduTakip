@@ -1,11 +1,12 @@
 ﻿@page "/admin/kullanicilar"
 @using System.Threading.Tasks
 @attribute [Authorize(Roles = "Admin")]
-<h4>Kullanıcı Listesi</h4>
+
 
 <RadzenButton Text="Yeni Kullanıcı Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
 
-<RadzenCard>
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Kullanıcı Listesi</h3>
 	<RadzenDataGrid Data="@kullanicilar" TItem="ItemKullanici" AllowPaging="true" PageSize="10">
 		<Columns>
 			<RadzenDataGridColumn Property="Adi" Title="Ad"></RadzenDataGridColumn>

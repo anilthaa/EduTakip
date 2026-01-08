@@ -1,9 +1,4 @@
 ﻿@page "/home"
-@rendermode InteractiveServer
-@inject AuthStateService AuthStateService
-@inject NavigationManager NavigationManager
-@inject EduTakipDBContext DbContext
-@inject DialogService DialogService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -23,28 +18,28 @@ else
         <h3>Admin Dashboard</h3>
         <RadzenRow Gap="20px" Style="margin-top:20px">
             <RadzenColumn Size="3">
-                <RadzenCard Style="border-left:4px solid green">
+                <RadzenCard Style="border-left:4px solid green; cursor: pointer;" @onclick="GitDersListesine">
                     <h4>Toplam Ders</h4>
                     <h2>@toplamDers</h2>
                 </RadzenCard>
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard Style="border-left:4px solid red">
+                <RadzenCard Style="border-left:4px solid red; cursor: pointer;" @onclick="GitKullaniciListesine">
                     <h4>Toplam Öğretmen</h4>
                     <h2>@toplamOgretmen</h2>
                 </RadzenCard>
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard Style="border-left:4px solid yellow">
+                <RadzenCard Style="border-left:4px solid yellow; cursor: pointer;" @onclick="GitKullaniciListesine">
                     <h4>Toplam Öğrenci</h4>
                     <h2>@toplamOgrenci</h2>
                 </RadzenCard>
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard>
+                <RadzenCard Style="cursor: pointer;" @onclick="GitDersProgramiListesine">
                     <h4>Bugünkü Ders</h4>
                     <h2>@bugunkuDers</h2>
                 </RadzenCard>
@@ -56,28 +51,28 @@ else
         @* Öğrenci Dashboard *@
         <RadzenRow Gap="20px" Style="margin-bottom:15px;">
             <RadzenColumn Size="3">
-                <RadzenCard Style="background:#f44336; color:white;">
+                <RadzenCard Style="background:#f44336; color:white; cursor: pointer;" @onclick="GitOdevlerime">
                     <h5>Bekleyen Ödevler</h5>
                     <h2>@bekleyenOdevSayisi</h2>
                 </RadzenCard>
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard Style="background:#ff9800; color:white;">
+                <RadzenCard Style="background:#ff9800; color:white; cursor: pointer;" @onclick="GitOdevlerime">
                     <h5>Yaklaşan Teslimler</h5>
                     <h2>@yaklasanTeslimSayisi</h2>
                 </RadzenCard>
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard Style="background:#2196f3; color:white;">
+                <RadzenCard Style="background:#2196f3; color:white; cursor: pointer;" @onclick="GitDersProgramima">
                     <h5>Bugünkü Dersler</h5>
                     <h2>@bugunkuDersSayisi</h2>
                 </RadzenCard>
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard Style="background:#4caf50; color:white;">
+                <RadzenCard Style="background:#4caf50; color:white; cursor: pointer;" @onclick="GitNotlarima">
                     <h5>Not Ortalaması</h5>
                     <h2>@ortalamaNot.ToString("F2")</h2>
                 </RadzenCard>
@@ -118,7 +113,11 @@ else
                     <RadzenDataGrid TItem="ItemOdev" Data="@sonOdevler" AllowPaging="true" PageSize="5">
                         <Columns>
                             <RadzenDataGridColumn Title="Ödev Adı" Property="Baslik"></RadzenDataGridColumn>
-                            <RadzenDataGridColumn Property="SonTeslimTarihi" Title="Teslim Tarihi"></RadzenDataGridColumn>
+                            <RadzenDataGridColumn Title="Teslim Tarihi">
+                                <Template Context="item">
+                                    @item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
+                                </Template>
+                            </RadzenDataGridColumn>
                         </Columns>
                     </RadzenDataGrid>
                 </RadzenCard>
@@ -130,7 +129,7 @@ else
         @* Öğretmen Dashboard *@
         <RadzenRow Gap="20px" class="mb-4">
             <RadzenColumn Size="3">
-                <RadzenCard class="stat-card blue">
+                <RadzenCard class="stat-card" Style="border-left:4px solid aqua; cursor: pointer;" @onclick="GitDerslerime">
                     <div class="stat-content">
                         <div>
                             <h6>Dersler</h6>
@@ -142,7 +141,7 @@ else
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard class="stat-card green">
+                <RadzenCard class="stat-card" Style="border-left:4px solid green; cursor: pointer;" @onclick="GitOdevlerimeOgretmen">
                     <div class="stat-content">
                         <div>
                             <h6>Odevler</h6>
@@ -154,10 +153,10 @@ else
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard class="stat-card orange">
+                <RadzenCard class="stat-card" Style="border-left:4px solid orange; cursor: pointer;" @onclick="GitBekleyenTeslimlere">
                     <div class="stat-content">
                         <div>
-                            <h6>Bekleyen</h6>
+                            <h6>Bekleyen Teslimler</h6>
                             <h2>@bekleyenTeslim</h2>
                         </div>
                         <RadzenIcon Icon="hourglass_empty" class="stat-icon" />
@@ -166,7 +165,7 @@ else
             </RadzenColumn>
 
             <RadzenColumn Size="3">
-                <RadzenCard class="stat-card purple" Style="cursor: pointer;" @onclick="GitOgrenciListesine">
+                <RadzenCard class="stat-card" Style="cursor: pointer; border-left:4px solid purple" @onclick="GitOgrenciListesine">
                     <div class="stat-content">
                         <div>
                             <h6>Sınıflarımdaki Öğrenciler</h6>
@@ -186,8 +185,8 @@ else
             </RadzenColumn>
         </RadzenRow> *@
 
-        <RadzenCard class="mt-4">
-            <h5><RadzenIcon Icon="event"></RadzenIcon>Bugünkü Dersler</h5>
+        <RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box; border-left:4px solid aqua">
+            <h5>Bugünkü Dersler</h5>
             @if (bugunkuDersler.Any())
             {
                 <RadzenDataGrid Data="@bugunkuDersler" TItem="ItemDersProgrami">
@@ -201,12 +200,12 @@ else
             }
             else
             {
-                <p class="text-muted">Bugün Dersiniz Yok</p>
+                <p class="text-muted text-center" style="font-style:italic; padding:10px">Bugün Dersiniz Yok</p>
             }
         </RadzenCard>
 
-        <RadzenCard class="mt-4">
-            <h5><RadzenIcon Icon="warning"></RadzenIcon>Not Bekleyen Teslimler</h5>
+        <RadzenCard Style="margin:0; margin-left:0; margin-top:30px; padding:20px; width:100%; max-width:none; box-sizing:border-box; border-left:4px solid orange">
+            <h5>Not Bekleyen Teslimler</h5>
             @if (bekleyenTeslimler.Any())
             {
                 <RadzenDataGrid Data="@bekleyenTeslimler" TItem="ItemOdevTeslim">
@@ -228,7 +227,7 @@ else
             }
             else
             {
-                <p class="text-muted">Bekleyen Teslim Yok</p>
+                <p class="text-muted text-center" style="font-style:italic; padding:10px">Not Bekleyen Teslim Yok</p>
             }
         </RadzenCard>
     }
@@ -321,8 +320,9 @@ else
         var bugun = DateTime.Today;
         var gun = bugun.DayOfWeek;
 
+        // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
         bekleyenOdevSayisi = await DbContext.Odevler
-            .Where(x => !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == ogrenciId.Value) && x.DelDate == null)
+            .Where(x => !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == AuthStateService.CurrentUser!.ID) && x.DelDate == null)
             .CountAsync();
 
         yaklasanTeslimSayisi = await DbContext.Odevler
@@ -337,9 +337,22 @@ else
 
         bugunkuDersSayisi = bugunkuDersler.Count;
 
-        ortalamaNot = await DbContext.OdevTeslimler
-            .Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null && x.Not != null)
-            .AverageAsync(x => (decimal?)x.Not) ?? 0;
+        // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
+        // Her ödev için sadece en son teslim kaydını al (aynı ödev için birden fazla teslim olabilir)
+        var kullaniciId = AuthStateService.CurrentUser!.ID;
+        
+        // Önce tüm teslimleri çek, sonra memory'de grupla
+        var tumTeslimler = await DbContext.OdevTeslimler
+            .Where(x => x.Ogrenci_ID == kullaniciId && x.DelDate == null && x.Not != null)
+            .ToListAsync();
+        
+        // Her ödev için sadece en son (en yeni) teslim kaydını al
+        var ogrenciNotlari = tumTeslimler
+            .GroupBy(x => x.Odev_ID)
+            .Select(g => g.OrderByDescending(x => x.TeslimTarihi).ThenByDescending(x => x.ID).First().Not!.Value)
+            .ToList();
+        
+        ortalamaNot = ogrenciNotlari.Any() ? (decimal)ogrenciNotlari.Average() : 0;
 
         sonOdevler = await DbContext.Odevler
             .OrderByDescending(x => x.CreDate)
@@ -360,18 +373,12 @@ else
         dersSayisi = await DbContext.Dersler.CountAsync(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null);
         odevSayisi = await DbContext.Odevler.CountAsync(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null);
         bekleyenTeslim = await DbContext.OdevTeslimler.CountAsync(x => x.Odev.Ders.Ogretmen_ID == ogretmenId.Value && x.Not == null && x.DelDate == null);
-        // Öğretmenin ders programlarındaki sınıf adlarını bul
-        var ogretmenSinifAdlari = await DbContext.DersProgramlari
+        // Öğretmenin ders programlarındaki sınıf ID'lerini bul
+        var ogretmenSinifIdleri = await DbContext.DersProgramlari
             .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null && !string.IsNullOrEmpty(x.Sinif))
-            .Select(x => x.Sinif)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
             .Distinct()
-            .ToListAsync();
-
-        // Bu sınıf adlarına sahip sınıfların ID'lerini bul
-        var ogretmenSinifIdleri = await DbContext.Siniflar
-            .Where(s => ogretmenSinifAdlari.Contains(s.Adi) && s.DelDate == null)
-            .Select(s => s.ID)
             .ToListAsync();
 
         // Bu sınıflardaki öğrencileri say
@@ -403,6 +410,55 @@ else
     void GitOgrenciListesine()
     {
         NavigationManager.NavigateTo("/ogretmen/ogrenciler");
+    }
+
+    // Admin yönlendirmeleri
+    void GitDersListesine()
+    {
+        NavigationManager.NavigateTo("/admin/dersler");
+    }
+
+    void GitKullaniciListesine()
+    {
+        NavigationManager.NavigateTo("/admin/kullanicilar");
+    }
+
+    void GitDersProgramiListesine()
+    {
+        NavigationManager.NavigateTo("/admin/ders-programlari");
+    }
+
+    // Öğrenci yönlendirmeleri
+    void GitOdevlerime()
+    {
+        NavigationManager.NavigateTo("/ogrenci/odevlerim");
+    }
+
+    void GitDersProgramima()
+    {
+        NavigationManager.NavigateTo("/ogrenci/dersprogrami");
+    }
+
+    void GitNotlarima()
+    {
+        NavigationManager.NavigateTo("/ogrenci/notlarim");
+    }
+
+    // Öğretmen yönlendirmeleri
+    void GitDerslerime()
+    {
+        NavigationManager.NavigateTo("/ogretmen/dersler");
+    }
+
+    void GitOdevlerimeOgretmen()
+    {
+        NavigationManager.NavigateTo("/ogretmen/odevler");
+    }
+
+    void GitBekleyenTeslimlere()
+    {
+        // Bekleyen teslimler için ödevler sayfasına git
+        NavigationManager.NavigateTo("/ogretmen/odevler");
     }
 
     

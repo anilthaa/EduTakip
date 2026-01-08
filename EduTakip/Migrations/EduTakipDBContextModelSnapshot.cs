@@ -227,9 +227,11 @@ namespace EduTakip.Migrations
                     b.Property<int>("Gun")
                         .HasColumnType("int");
 
-                    b.Property<string>("Sinif")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("SinifID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Sinif_ID")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdDate")
                         .HasColumnType("datetime2");
@@ -238,6 +240,8 @@ namespace EduTakip.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ID");
+
+                    b.HasIndex("SinifID");
 
                     b.HasIndex("Ders_ID", "Gun", "BaslangicSaati", "BitisSaati")
                         .IsUnique();
@@ -725,7 +729,15 @@ namespace EduTakip.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("EduTakip.Models.ItemSinif", "Sinif")
+                        .WithMany()
+                        .HasForeignKey("SinifID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Ders");
+
+                    b.Navigation("Sinif");
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemKullanici", b =>

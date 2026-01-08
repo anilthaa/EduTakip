@@ -1,8 +1,9 @@
 ﻿@page "/admin/kullanici-tipleri"
 @attribute [Authorize(Roles ="Admin")]
-<h4>Kullanıcı Tipleri</h4>
+
 <RadzenButton Text="Yeni Kullanıcı Tipi Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:15px; border-radius:10px;" Click="@YeniTip" />
-<RadzenCard>
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Kullanıcı Tipleri</h3>
 	<RadzenDataGrid TItem="ItemKullaniciTip" Data="@tipler" AllowPaging="true" PageSize="10">
 		<Columns>
 			<RadzenDataGridColumn TItem="ItemKullaniciTip" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>

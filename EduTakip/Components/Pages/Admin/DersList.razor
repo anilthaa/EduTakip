@@ -1,9 +1,9 @@
 ﻿@page "/admin/dersler"
 @attribute [Authorize(Roles = "Admin")]
-	<h4>Dersler</h4>
-	<RadzenButton Text="Yeni Ders Ekle" Icon="add" Style="margin-bottom:15px;border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniDers" />
-<RadzenCard>
 	
+	<RadzenButton Text="Yeni Ders Ekle" Icon="add" Style="margin-bottom:15px;border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniDers" />
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Dersler</h3>
 	<RadzenDataGrid TItem="ItemDers" Data="@dersler" AllowPaging="true" PageSize="10">
 		<Columns>
 			@if (dersler == null || !dersler.Any())

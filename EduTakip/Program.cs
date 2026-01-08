@@ -94,6 +94,20 @@ builder.Services.AddScoped<TooltipService>();
 // Toast Notification Service
 builder.Services.AddSingleton<IToastService, ToastService>();
 
+// Büyük dosya yüklemeleri için limitleri artır
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+	options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50MB
+	options.ValueLengthLimit = 50 * 1024 * 1024; // 50MB
+	options.MultipartHeadersLengthLimit = 50 * 1024 * 1024; // 50MB
+});
+
+// Kestrel için request body size limitini artır
+builder.WebHost.ConfigureKestrel(options =>
+{
+	options.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50MB
+});
+
 var app = builder.Build();
 
 
@@ -247,6 +261,59 @@ authGroup.MapGet("/user-types", async (EduTakipDBContext db) =>
         .ToListAsync();
     return Results.Ok(types);
 });
+
+// Dosya yükleme endpoint'i
+var uploadGroup = app.MapGroup("/api/upload");
+uploadGroup.MapPost("/", async (HttpRequest request) =>
+{
+    try
+    {
+        if (!request.HasFormContentType)
+        {
+            return Results.BadRequest("Form content type bekleniyor.");
+        }
+
+        // Request body size limitini kontrol et
+        const long maxFileSize = 50 * 1024 * 1024; // 50MB
+        
+        var form = await request.ReadFormAsync();
+        var file = form.Files.FirstOrDefault();
+
+        if (file == null || file.Length == 0)
+        {
+            return Results.BadRequest("Dosya bulunamadı.");
+        }
+
+        // Dosya boyutu kontrolü
+        if (file.Length > maxFileSize)
+        {
+            return Results.BadRequest($"Dosya boyutu çok büyük. Maksimum {maxFileSize / (1024 * 1024)}MB olmalıdır.");
+        }
+
+        // Uploads klasörünü oluştur
+        var uploadsFolder = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+        if (!Directory.Exists(uploadsFolder))
+        {
+            Directory.CreateDirectory(uploadsFolder);
+        }
+
+        // Dosya adını benzersiz yap
+        var fileName = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{file.FileName}";
+        var filePath = Path.Combine(uploadsFolder, fileName);
+
+        // Dosyayı kaydet
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        return Results.Ok(new { fileName = $"/uploads/{fileName}" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Dosya yüklenirken hata oluştu: {ex.Message}");
+    }
+}).DisableAntiforgery();
 
 // Seed Data - Admin kullanıcı tipi ve admin kullanıcısı
 using (var scope = app.Services.CreateScope())

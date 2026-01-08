@@ -1,27 +1,44 @@
 ﻿@page "/ogretmen/odevler"
-@attribute [Authorize(Roles ="Öğretmen")]
-<h3>Ödevlerim</h3>
-
- <RadzenButton Icon="add" Text="Yeni Ödev Ekle" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:10px; border-radius:10px;" Click="yeniOdev" Title="Yeni Ödev">
- </RadzenButton>
+@attribute [Authorize(Roles = "Öğretmen")]
 
 
-<RadzenDataGrid Data="@list" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-	<Columns>
-		<RadzenDataGridColumn TItem="ItemOdev" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
-		<RadzenDataGridColumn TItem="ItemOdev" Property="Baslik" Title="Baslik"></RadzenDataGridColumn>
-		<RadzenDataGridColumn TItem="ItemOdev" Property="SonTeslimTarihi" Title="Son Teslim"></RadzenDataGridColumn>
+<RadzenButton Icon="add" Text="Yeni Ödev Ekle" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:10px; border-radius:10px;" Click="yeniOdev" Title="Yeni Ödev">
+</RadzenButton>
+
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center" class="mb-3">Ödevlerim</h3>
+	@if (list == null || !list.Any())
+	{
+		<div style="text-align:center; padding:50px">
+			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+		</div>
+	}
+	else
+	{
+		<RadzenDataGrid Data="@list" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+			<Columns>
+				<RadzenDataGridColumn TItem="ItemOdev" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemOdev" Property="Baslik" Title="Baslik"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemOdev" Title="Son Teslim">
+					<Template Context="item">
+						@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
+					</Template>
+				</RadzenDataGridColumn>
 
 
-		<RadzenDataGridColumn TItem="ItemOdev" Title="Islemler">
-			<Template Context="item">
-				<RadzenButton Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Style="margin-right:10px;" Click="@(args => duzenleOdev(item))" Title="Düzenle"></RadzenButton>
-				<RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="margin-right:10px;" Click="@(args=>silOdev(item))" Title="Sil"></RadzenButton>
-				<RadzenButton Icon="folder_open" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(()=> GitTeslimlere(item.ID))" Title="Teslimler"></RadzenButton>
-			</Template>
-		</RadzenDataGridColumn>
-	</Columns>
-</RadzenDataGrid>
+				<RadzenDataGridColumn TItem="ItemOdev" Title="Islemler">
+					<Template Context="item">
+						<RadzenButton Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Style="margin-right:10px;" Click="@(args => duzenleOdev(item))" Title="Düzenle"></RadzenButton>
+						<RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="margin-right:10px;" Click="@(args => silOdev(item))" Title="Sil"></RadzenButton>
+						<RadzenButton Icon="folder_open" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => GitTeslimlere(item.ID))" Title="Teslimler"></RadzenButton>
+					</Template>
+				</RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+
+</RadzenCard>
+
 
 @code {
 
@@ -39,7 +56,7 @@
 		list = await DbContext.Odevler
 			.Include(x => x.Ders)
 			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == null)
-			.OrderByDescending(x=>x.VerilisTarihi)
+			.OrderByDescending(x => x.VerilisTarihi)
 			.ToListAsync();
 	}
 
@@ -54,7 +71,7 @@
 
 	async Task duzenleOdev(ItemOdev item)
 	{
-		var result= await DialogService.OpenAsync<OdevTnm>("Ödev Düzenle", new Dictionary<string, object>()
+		var result = await DialogService.OpenAsync<OdevTnm>("Ödev Düzenle", new Dictionary<string, object>()
 		{
 			{ "OdevId", item.ID }
 		}, new DialogOptions() { Width = "600px", Height = "400px" });

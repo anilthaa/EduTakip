@@ -41,6 +41,13 @@
 
 	async Task Yukle()
 	{
+		// Bu sınıfta programlanmış derslerin ID'lerini bul
+		var sinifDersleri = await DbContext.DersProgramlari
+			.Where(dp => dp.Sinif_ID == sinifId && dp.DelDate == null && dp.Aktif)
+			.Select(dp => dp.Ders_ID)
+			.Distinct()
+			.ToListAsync();
+
 		detay = await DbContext.Siniflar
 			.Where(s => s.ID == sinifId && s.DelDate == null)
 			.Select(s => new SinifDashboardOgretmenDto
@@ -48,9 +55,9 @@
 					SinifId = s.ID,
 					SinifAdi = s.Adi,
 					OgrenciSayisi = DbContext.SinifKullanicilar
-					.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && o.DelDate == null),
-
-				OdevSayisi = DbContext.Odevler.Count(x=>x.ID==s.ID && x.DelDate==null)
+						.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && o.DelDate == null),
+					OdevSayisi = DbContext.Odevler
+						.Count(o => sinifDersleri.Contains(o.Ders_ID) && o.DelDate == null)
 				}).FirstOrDefaultAsync();
 
 	}
