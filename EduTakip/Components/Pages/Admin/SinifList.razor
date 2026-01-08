@@ -2,9 +2,10 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject IToastService ToastService
 
-	<h4>Sınıflar</h4>
+	
 	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniSinif" />
-<RadzenCard>
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Sınıflar</h3>
 	<RadzenDataGrid TItem="ItemSinif" Data="@siniflar" AllowPaging="true" PageSize="10">
 		<Columns>
 			<RadzenDataGridColumn TItem="ItemSinif" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>

@@ -16,26 +16,25 @@
             <p>Hesabınıza giriş yapın</p>
         </div>
 
-        <RadzenForm class="auth-form">
+        <RadzenTemplateForm Data="@loginModel" TItem="LoginModel" Submit="@OnLogin" class="auth-form">
             <RadzenFieldset Text="Giriş Bilgileri" class="w-100">
                 <RadzenStack Gap="1.5rem">
                     <RadzenFormField Text="E-posta" class="w-100">
-                        <RadzenTextBox @bind-Value="email" Placeholder="ornek@email.com" class="w-100" />
+                        <RadzenTextBox @bind-Value="loginModel.EPosta" Placeholder="ornek@email.com" class="w-100" />
                         <RadzenFormFieldValidator />
                     </RadzenFormField>
 
                     <RadzenFormField Text="Şifre" class="w-100">
-                        <RadzenPassword @bind-Value="sifre" Placeholder="Şifrenizi girin" class="w-100" />
+                        <RadzenPassword @bind-Value="loginModel.Sifre" Placeholder="Şifrenizi girin" class="w-100" />
                         <RadzenFormFieldValidator />
                     </RadzenFormField>
 
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
-                        <RadzenButton ButtonType="ButtonType.Button" 
+                        <RadzenButton ButtonType="ButtonType.Submit" 
                                      Text="Giriş Yap" 
                                      Icon="login" 
                                      IsBusy="@isLoading"
                                      ButtonStyle="ButtonStyle.Primary" 
-                                     Click="@(() => OnLoginButtonClick())"
                                      class="w-100"
                                       Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
                     </RadzenStack>
@@ -46,15 +45,20 @@
                     </div>
                 </RadzenStack>
             </RadzenFieldset>
-        </RadzenForm>
+        </RadzenTemplateForm>
     </div>
 </div>
 
 @code {
-    private string email = "";
-    private string sifre = "";
+    private LoginModel loginModel = new();
     private bool isLoading = false;
     private bool isInitialized = false;
+
+    public class LoginModel
+    {
+        public string EPosta { get; set; } = "";
+        public string Sifre { get; set; } = "";
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -67,19 +71,12 @@
         }
     }
 
-    private async Task OnLoginButtonClick()
-    {
-        // Form validasyonunu manuel kontrol et ve OnLogin'ı çağır
-        var loginRequest = new LoginRequest(email, sifre);
-        await OnLogin(loginRequest);
-    }
-
-    private async Task OnLogin(LoginRequest args)
+    private async Task OnLogin(LoginModel model)
     {
         if (isLoading) return;
 
         // Temel validasyon
-        if (string.IsNullOrWhiteSpace(args.EPosta) || string.IsNullOrWhiteSpace(args.Sifre))
+        if (string.IsNullOrWhiteSpace(model.EPosta) || string.IsNullOrWhiteSpace(model.Sifre))
         {
             NotificationService.Notify(new NotificationMessage
             {
@@ -96,7 +93,8 @@
         
         try
         {
-            var response = await AuthService.LoginAsync(args);
+            var loginRequest = new LoginRequest(model.EPosta, model.Sifre);
+            var response = await AuthService.LoginAsync(loginRequest);
             
             if (response != null && !string.IsNullOrEmpty(response.Token))
             {

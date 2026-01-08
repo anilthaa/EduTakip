@@ -1,30 +1,91 @@
 ﻿@page "/ogretmen/dersler"
 @attribute [Authorize(Roles ="Öğretmen")]
-<h3>Derslerim</h3>
+@inject AuthStateService AuthStateService
 
-<RadzenDataGrid Data="@list" TItem="ItemDers" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-	<Columns>
-		<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adi"></RadzenDataGridColumn>
-		<RadzenDataGridColumn TItem="ItemDers" Property="Aciklama" Title="Açıklama"></RadzenDataGridColumn>
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Derslerim</h3>
+	@if (list == null || !list.Any())
+	{
+		<div style="text-align:center; padding:50px">
+			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+		</div>
+	}
+	else
+	{
+		<RadzenDataGrid Data="@list" TItem="ItemDers" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+			<Columns>
+				<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adi"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemDers" Property="Aciklama" Title="Açıklama"></RadzenDataGridColumn>
 
-		<RadzenDataGridColumn TItem="ItemDers" Title="Öğrenci Sayısı">
-			<Template Context="x">
-				@x.Katilimcilar?.Count()
-			</Template>
-		</RadzenDataGridColumn>
-	</Columns>
-</RadzenDataGrid>
+				<RadzenDataGridColumn TItem="ItemDers" Title="Öğrenci Sayısı">
+					<Template Context="x">
+						@((dersOgrenciSayilari.TryGetValue(x.ID, out var sayi) ? sayi : 0))
+					</Template>
+				</RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+	
+</RadzenCard>
+
 
 @code {
-	List<ItemDers> list;
+	List<ItemDers> list = new();
 
-	int ogretmenId = 1; //Simdilik
+	// Her ders için öğrenci sayısı sözlüğü
+	Dictionary<int, int> dersOgrenciSayilari = new();
+
+	int? ogretmenId;
 
 	protected override async Task OnInitializedAsync()
 	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			return;
+		}
+
+		// Giriş yapan kullanıcının öğretmen ID'sini bul
+		ogretmenId = await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
+		if (!ogretmenId.HasValue)
+		{
+			return;
+		}
+
+		// Öğretmenin derslerini getir
 		list = await DbContext.Dersler
-			.Include(x => x.Katilimcilar)
-			.Where(x => x.Ogretmen_ID == ogretmenId && x.DelDate == null)
+			.Where(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
+			.OrderBy(x => x.Adi)
 			.ToListAsync();
+
+		// Bu derslerin ID'leri
+		var dersIdleri = list.Select(x => x.ID).ToList();
+
+		if (dersIdleri.Count == 0)
+		{
+			return;
+		}
+
+		// Her ders için, programlandığı sınıflardaki öğrenci sayısını (distinct) bul
+		var query =
+			from dp in DbContext.DersProgramlari
+			join ogr in DbContext.Ogrenciler on dp.Sinif_ID equals ogr.Sinif_ID
+			where dersIdleri.Contains(dp.Ders_ID)
+				  && dp.DelDate == null
+				  && dp.Aktif
+				  && ogr.DelDate == null
+			group ogr by dp.Ders_ID into g
+			select new
+			{
+				DersId = g.Key,
+				Count = g.Select(o => o.ID).Distinct().Count()
+			};
+
+		var sonucListesi = await query.ToListAsync();
+
+		dersOgrenciSayilari = sonucListesi.ToDictionary(x => x.DersId, x => x.Count);
 	}
 }

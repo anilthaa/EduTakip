@@ -1,5 +1,8 @@
 ﻿@page "/ogrenci/odevlerim"
 @attribute [Authorize(Roles ="Öğrenci")]
+@inject AuthStateService AuthStateService
+@inject DialogService DialogService
+
 <RadzenCard>
 		<h4>Ödevlerim</h4>
 	<RadzenDataGrid Data="@odevlerim" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
@@ -10,7 +13,11 @@
 				</Template>
 			</RadzenDataGridColumn>
 			<RadzenDataGridColumn Property="Baslik" Title="Başlık"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="SonTeslimTarihi" Title="Son Teslim Tarihi"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Title="Son Teslim Tarihi">
+				<Template Context="item">
+					@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
+				</Template>
+			</RadzenDataGridColumn>
 			<RadzenDataGridColumn Title="Durum">
 				<Template Context="item">
 					@if (TeslimEdildi(item.ID))
@@ -41,24 +48,37 @@
 </RadzenCard>
 
 @code {
-	int ogrenciId = 1;
+	int? kullaniciId;
 
 	List<ItemOdev> odevlerim = new();
 	List<ItemOdevTeslim> odevTeslimler = new();
 
 	protected override async Task OnInitializedAsync()
 	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			return;
+		}
+
+		kullaniciId = AuthStateService.CurrentUser.ID;
 		await Listele();
 	}
 
 	async Task Listele()
 	{
+		if (!kullaniciId.HasValue)
+		{
+			return;
+		}
+
 		odevlerim = await DbContext.Odevler
 			.Include(x => x.Ders)
 			.OrderByDescending(x => x.SonTeslimTarihi)
 			.ToListAsync();
+		
+		// ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
 		odevTeslimler = await DbContext.OdevTeslimler
-			.Where(x => x.Ogrenci_ID == ogrenciId && x.DelDate == null)
+			.Where(x => x.Ogrenci_ID == kullaniciId.Value && x.DelDate == null)
 			.ToListAsync();
 	}
 
@@ -81,8 +101,13 @@
 			StateHasChanged();
 		}
 	}
-	void TeslimDetay(int odevId)
+	async Task TeslimDetay(int odevId)
 	{
-		//
+		await DialogService.OpenAsync<OdevTeslimDetay>("Teslim Detayı",
+			new Dictionary<string, object>()
+			{
+				{ "OdevId", odevId },
+			},
+			new DialogOptions() { Width = "600px", Height = "auto" });
 	}
 }

@@ -1,9 +1,11 @@
 ﻿@page "/ogretmen/odev-teslimleri/{OdevId:int}"
 @attribute [Authorize(Roles ="Öğretmen")]
+@inject NavigationManager NavigationManager
+
 <RadzenCard>
 	<h4>Odev Teslimleri</h4>
 
-	<RadzenDataGrid Data="@teslimler" TItem="ItemOdevTeslim" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+	<RadzenDataGrid Data="@teslimler" TItem="ItemOdevTeslim" AllowPaging="true" PageSize="10">
 		<Columns>
 			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ogrenci">
 				<Template Context="item">
@@ -12,26 +14,54 @@
 				
 			</RadzenDataGridColumn>
 
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ödev">
+				<Template Context="item">
+					@item.Odev.Baslik
+				</Template>
+			</RadzenDataGridColumn>
+
 			<RadzenDataGridColumn TItem="ItemOdevTeslim" Property="TeslimTarihi" Title="Teslim Tarihi"></RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Dosya">
-				<Template Context="item">
-					@if (!string.IsNullOrEmpty(item.DosyaYolu))
-					{
-						<a href="@item.DosyaYolu" target="_blank">Indir</a>
-					}
-				</Template>	
-			</RadzenDataGridColumn>
+			
 
 			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Not">
 				<Template Context="item">
-					@item.Not
+					@if (item.Not.HasValue)
+					{
+						@item.Not
+					}
+					else
+					{
+						<span style="color: gray;">Not Verilmedi</span>
+					}
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Öğretmen Yorumu">
+				<Template Context="item">
+					@if (!string.IsNullOrEmpty(item.OgretmenYorumu))
+					{
+						@item.OgretmenYorumu
+					}
+					else
+					{
+						<span style="color: gray;">Yorum Yok</span>
+					}
 				</Template>
 			</RadzenDataGridColumn>
 
 			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Islem">
 				<Template Context="item">
 					<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => NotVer(item))"></RadzenButton>
+				</Template>
+			</RadzenDataGridColumn>
+
+			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Dosya">
+				<Template Context="item">
+					@if (!string.IsNullOrEmpty(item.DosyaYolu))
+					{
+						<RadzenButton Icon="download" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => DosyaIndir(item.DosyaYolu))"></RadzenButton>
+					}
 				</Template>
 			</RadzenDataGridColumn>
 		</Columns>
@@ -65,6 +95,14 @@
 		{
 			await Listele();
 			StateHasChanged();
+		}
+	}
+
+	void DosyaIndir(string dosyaYolu)
+	{
+		if (!string.IsNullOrEmpty(dosyaYolu))
+		{
+			NavigationManager.NavigateTo(dosyaYolu, forceLoad: true);
 		}
 	}
 }

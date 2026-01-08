@@ -18,8 +18,8 @@
 					</Template>
 				</RadzenDataGridColumn>
 
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif" Title="Sınıf"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif.Adi" Title="Sınıf"></RadzenDataGridColumn>
 			</Columns>
 		</RadzenDataGrid>
 	}
@@ -74,9 +74,16 @@
 			.Select(x => x.Sinif.Adi)
 			.FirstOrDefaultAsync();
 
-		// Katıldığı diğer sınıflar
+		// Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
 		var katildigiSinifAdlari = await DbContext.SinifKullanicilar
 			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Include(x => x.Sinif)
+			.Select(x => x.Sinif.Adi)
+			.ToListAsync();
+
+		// SinifOgrenciler tablosundan katıldığı sınıflar
+		var sinifOgrenciSinifAdlari = await DbContext.SinifOgrenciler
+			.Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null)
 			.Include(x => x.Sinif)
 			.Select(x => x.Sinif.Adi)
 			.ToListAsync();
@@ -88,6 +95,7 @@
 			tumSinifAdlari.Add(anaSinifAdi);
 		}
 		tumSinifAdlari.AddRange(katildigiSinifAdlari);
+		tumSinifAdlari.AddRange(sinifOgrenciSinifAdlari);
 		tumSinifAdlari = tumSinifAdlari.Distinct().ToList();
 
 		if (!tumSinifAdlari.Any())
@@ -95,23 +103,23 @@
 			return;
 		}
 
-		// Öğrencinin katıldığı derslerin ID'lerini bul
-		var kullaniciId = AuthStateService.CurrentUser.ID;
-		var katildigiDersler = await DbContext.DersKatilimcilar
-			.Where(x => x.Ogrenci_ID == kullaniciId && x.DelDate == null)
-			.Select(x => x.Ders_ID)
+		// Öğrencinin kayıtlı olduğu sınıfların ID'lerini bul
+		var tumSinifIdleri = await DbContext.Siniflar
+			.Where(s => tumSinifAdlari.Contains(s.Adi) && s.DelDate == null)
+			.Select(s => s.ID)
 			.ToListAsync();
 
-		if (!katildigiDersler.Any())
+		if (!tumSinifIdleri.Any())
 		{
 			return;
 		}
 
-		// Bu derslerin ders programlarını getir, sadece öğrencinin kayıtlı olduğu sınıfların programlarını
+		// Öğrencinin kayıtlı olduğu sınıfların ders programlarını getir
+		// Öğrenci, içinde olduğu sınıfların tüm ders programlarını görebilir
 		list = await DbContext.DersProgramlari
 			.Include(x => x.Ders)
-			.Where(x => katildigiDersler.Contains(x.Ders_ID) 
-				&& tumSinifAdlari.Contains(x.Sinif) 
+			.Include(x => x.Sinif)
+			.Where(x => tumSinifIdleri.Contains(x.Sinif_ID) 
 				&& x.DelDate == null 
 				&& x.Aktif)
 			.OrderBy(x => x.Gun)

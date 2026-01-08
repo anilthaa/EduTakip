@@ -19,7 +19,11 @@
 			</div>
 			<div class="col-12 mb-3">
 				<RadzenLabel Text="Sınıf"></RadzenLabel>
-				<RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="Adi" @bind-Value="model.Sinif" Style="width:100%"></RadzenDropDown>
+				<RadzenDropDown Data="@siniflar"
+								TextProperty="Adi"
+								ValueProperty="ID"
+								@bind-Value="model.SinifID"
+								Style="width:100%"></RadzenDropDown>
 			</div>
 			<div class="col-12 mb-3">
 				<RadzenCheckBox @bind-Value="model.Aktif"></RadzenCheckBox>
@@ -100,6 +104,9 @@
 			}
 			item.BaslangicSaati = baslangicSaati.TimeOfDay;
 			item.BitisSaati = bitisSaati.TimeOfDay;
+
+			// Sinif foreign key alanlarını senkronize et
+			item.Sinif_ID = item.SinifID;
 
 			int ogretmenId=await DbContext.Dersler.Where(x => x.ID == item.Ders_ID).Select(x => x.Ogretmen_ID).FirstOrDefaultAsync();
 

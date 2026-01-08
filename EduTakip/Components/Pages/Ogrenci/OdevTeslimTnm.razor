@@ -1,5 +1,40 @@
-﻿<RadzenTemplateForm Data="@model" TItem="ItemOdevTeslim" Submit="@Kaydet">
-	<RadzenUpload Url="upload" Change="@OnUpload" Style="width:100%"></RadzenUpload>
+﻿@inject EduTakipDBContext DbContext
+@inject AuthStateService AuthStateService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject HttpClient HttpClient
+@inject NavigationManager NavigationManager
+
+<RadzenTemplateForm Data="@model" TItem="ItemOdevTeslim" Submit="@Kaydet">
+	<div class="mb-3">
+		<RadzenLabel Text="Dosya Seçin"></RadzenLabel>
+		<InputFile OnChange="OnDosyaSecildi" 
+		           accept=".pdf,.doc,.docx,.txt,.zip,.rar" 
+		           class="form-control" 
+		           style="width:100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+	</div>
+	
+	@if (!string.IsNullOrEmpty(secilenDosyaAdi))
+	{
+		<div class="mt-2 mb-2">
+			<RadzenBadge Text="@($"Dosya seçildi: {secilenDosyaAdi} ({FormatDosyaBoyutu(dosyaBoyutu)})")" 
+			             Style="@(dosyaBoyutu > 50 * 1024 * 1024 ? "background-color: #dc3545; color: white;" : "background-color: #28a745; color: white;")"></RadzenBadge>
+		</div>
+	}
+	@if (dosyaBoyutu > 50 * 1024 * 1024)
+	{
+		<div class="mt-2 mb-2">
+			<RadzenBadge Text="Dosya boyutu 50MB'ı aşıyor! Lütfen daha küçük bir dosya seçin." Style="background-color: #dc3545; color: white;"></RadzenBadge>
+		</div>
+	}
+	
+	@if (yukleniyor)
+	{
+		<div class="mt-2 mb-2">
+			<RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="width: 20px; height: 20px;"></RadzenProgressBarCircular>
+			<span class="ml-2">Dosya yükleniyor...</span>
+		</div>
+	}
 
 	<div class="mt-3 text-center">
 		<RadzenButton Text="Teslim Et" ButtonType="ButtonType.Submit" Style="background-color:green; margin-right:10px;"></RadzenButton>
@@ -10,33 +45,219 @@
 @code {
 	ItemOdevTeslim model = new();
 	[Parameter] public int OdevId { get; set; }
-	int ogrenciId = 1; // Bu değeri oturum açan öğrencinin ID'si ile değiştirin.
-	protected override void OnInitialized()
+	int? ogrenciId;
+	string? secilenDosyaAdi;
+	long dosyaBoyutu = 0;
+	bool yukleniyor = false;
+	IBrowserFile? secilenDosya;
+	const long maxDosyaBoyutu = 50 * 1024 * 1024; // 50MB
+
+	protected override async Task OnInitializedAsync()
 	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			return;
+		}
+
+		// Büyük dosyalar için HttpClient timeout'unu artır (5 dakika)
+		HttpClient.Timeout = TimeSpan.FromMinutes(5);
+
+		// Öğrenci ID'sini bul
+		ogrenciId = await DbContext.Ogrenciler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
+		if (!ogrenciId.HasValue)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", "Öğrenci bilgisi bulunamadı.");
+			DialogService.Close(false);
+			return;
+		}
+
 		model.Odev_ID = OdevId;
-		model.Ogrenci_ID = ogrenciId;
+		model.Ogrenci_ID = AuthStateService.CurrentUser.ID; // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID
 		model.TeslimTarihi = DateTime.UtcNow;
+		model.DosyaYolu = string.Empty; // Başlangıç değeri
+		model.OgretmenYorumu = string.Empty; // Başlangıç değeri
 	}
 
-	void OnUpload(UploadChangeEventArgs args)
+	async Task OnDosyaSecildi(InputFileChangeEventArgs e)
 	{
-		model.DosyaYolu = "/uploads/" + args.Files.First().Name;
+		if (e.File != null)
+		{
+			secilenDosya = e.File;
+			secilenDosyaAdi = e.File.Name;
+			dosyaBoyutu = e.File.Size;
+			
+			// Dosya boyutu kontrolü
+			if (dosyaBoyutu > maxDosyaBoyutu)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", 
+					$"Dosya boyutu {FormatDosyaBoyutu(dosyaBoyutu)} - Maksimum 50MB olmalıdır. Lütfen daha küçük bir dosya seçin.");
+				secilenDosya = null;
+				secilenDosyaAdi = null;
+				dosyaBoyutu = 0;
+				StateHasChanged();
+				return;
+			}
+			
+			await DosyayiYukle();
+		}
+	}
+
+	string FormatDosyaBoyutu(long bytes)
+	{
+		if (bytes < 1024)
+			return $"{bytes} B";
+		else if (bytes < 1024 * 1024)
+			return $"{bytes / 1024.0:F2} KB";
+		else
+			return $"{bytes / (1024.0 * 1024.0):F2} MB";
+	}
+
+	async Task DosyayiYukle()
+	{
+		if (secilenDosya == null)
+			return;
+
+		try
+		{
+			yukleniyor = true;
+			StateHasChanged();
+
+			// Dosya boyutu kontrolü
+			if (secilenDosya.Size > maxDosyaBoyutu)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", 
+					$"Dosya boyutu {FormatDosyaBoyutu(secilenDosya.Size)} - Maksimum 50MB olmalıdır.");
+				return;
+			}
+
+			// FormData oluştur
+			using var content = new MultipartFormDataContent();
+			using var stream = secilenDosya.OpenReadStream(maxAllowedSize: maxDosyaBoyutu); // 50MB limit
+			using var streamContent = new StreamContent(stream);
+			streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(secilenDosya.ContentType);
+			content.Add(streamContent, "file", secilenDosya.Name);
+
+			// Dosyayı yükle - Absolute URI oluştur
+			var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+			var uploadUrl = $"{baseUrl}/api/upload";
+			
+			// Büyük dosyalar için timeout ayarla (5 dakika)
+			using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+			var response = await HttpClient.PostAsync(uploadUrl, content, cts.Token);
+
+			if (response.IsSuccessStatusCode)
+			{
+				var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+				if (result != null && !string.IsNullOrEmpty(result.fileName))
+				{
+					model.DosyaYolu = result.fileName;
+					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Dosya başarıyla yüklendi.");
+				}
+				else
+				{
+					// Response'dan dosya yolunu alamazsak, dosya adından oluştur
+					var dosyaAdi = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{secilenDosya.Name}";
+					model.DosyaYolu = $"/uploads/{dosyaAdi}";
+					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Dosya seçildi.");
+				}
+			}
+			else
+			{
+				var errorMessage = await response.Content.ReadAsStringAsync();
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Dosya yüklenirken hata oluştu: {errorMessage}");
+			}
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Dosya yüklenirken hata oluştu: {ex.Message}");
+		}
+		finally
+		{
+			yukleniyor = false;
+			StateHasChanged();
+		}
+	}
+
+	class UploadResponse
+	{
+		public string fileName { get; set; } = string.Empty;
 	}
 
 	async Task Kaydet()
 	{
 		try
 		{
-			model.CreDate = DateTime.UtcNow;
-			model.CreUser = 1;
-			DbContext.OdevTeslimler.Add(model);
+			if (string.IsNullOrEmpty(model.DosyaYolu))
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Lütfen bir dosya seçin.");
+				return;
+			}
+
+			// Dosya boyutu kontrolü
+			if (dosyaBoyutu > maxDosyaBoyutu)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", 
+					$"Dosya boyutu {FormatDosyaBoyutu(dosyaBoyutu)} - Maksimum 50MB olmalıdır. Lütfen daha küçük bir dosya seçin.");
+				return;
+			}
+
+			// Model alanlarını kontrol et ve doldur
+			if (string.IsNullOrEmpty(model.DosyaYolu))
+				model.DosyaYolu = string.Empty;
+			if (string.IsNullOrEmpty(model.OgretmenYorumu))
+				model.OgretmenYorumu = string.Empty;
+
+			// Zaten teslim edilmiş mi kontrol et
+			var mevcutTeslim = await DbContext.OdevTeslimler
+				.Where(x => x.Odev_ID == model.Odev_ID && x.Ogrenci_ID == model.Ogrenci_ID && x.DelDate == null)
+				.FirstOrDefaultAsync();
+
+			if (mevcutTeslim != null)
+			{
+				// Güncelle
+				mevcutTeslim.DosyaYolu = model.DosyaYolu ?? string.Empty;
+				mevcutTeslim.TeslimTarihi = DateTime.UtcNow;
+				mevcutTeslim.UpdDate = DateTime.UtcNow;
+				mevcutTeslim.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
+				if (string.IsNullOrEmpty(mevcutTeslim.OgretmenYorumu))
+					mevcutTeslim.OgretmenYorumu = string.Empty;
+				DbContext.OdevTeslimler.Update(mevcutTeslim);
+			}
+			else
+			{
+				// Yeni kayıt
+				model.CreDate = DateTime.UtcNow;
+				model.CreUser = AuthStateService.CurrentUser?.ID ?? 0;
+				model.DosyaYolu = model.DosyaYolu ?? string.Empty;
+				model.OgretmenYorumu = model.OgretmenYorumu ?? string.Empty;
+				DbContext.OdevTeslimler.Add(model);
+			}
+
 			await DbContext.SaveChangesAsync();
 			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ödev başarıyla teslim edildi.");
 			DialogService.Close(true);
 		}
+		catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
+		{
+			var errorMessage = dbEx.Message;
+			if (dbEx.InnerException != null)
+			{
+				errorMessage += $" | Inner: {dbEx.InnerException.Message}";
+			}
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Veritabanı hatası: {errorMessage}");
+		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			var errorMessage = ex.Message;
+			if (ex.InnerException != null)
+			{
+				errorMessage += $" | Inner: {ex.InnerException.Message}";
+			}
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {errorMessage}");
 		}
 	}
 }

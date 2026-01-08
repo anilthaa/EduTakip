@@ -1,0 +1,109 @@
+
+
+<RadzenCard>
+	<h4>Ödev Teslim Detayı</h4>
+
+	@if (teslim == null)
+	{
+		<p>Yükleniyor...</p>
+	}
+	else
+	{
+		<div style="padding: 20px;">
+			<div class="mb-3">
+				<RadzenLabel Text="Ödev Başlığı:" Style="font-weight: bold;"></RadzenLabel>
+				<p>@teslim.Odev?.Baslik</p>
+			</div>
+
+			<div class="mb-3">
+				<RadzenLabel Text="Ders:" Style="font-weight: bold;"></RadzenLabel>
+				<p>@teslim.Odev?.Ders?.Adi</p>
+			</div>
+
+			<div class="mb-3">
+				<RadzenLabel Text="Teslim Tarihi:" Style="font-weight: bold;"></RadzenLabel>
+				<p>@teslim.TeslimTarihi.ToString("dd.MM.yyyy HH:mm")</p>
+			</div>
+
+			<div class="mb-3">
+				<RadzenLabel Text="Dosya:" Style="font-weight: bold;"></RadzenLabel>
+				@if (!string.IsNullOrEmpty(teslim.DosyaYolu))
+				{
+					<div>
+						<RadzenButton Icon="download" Text="Dosyayı İndir" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => DosyaIndir(teslim.DosyaYolu))"></RadzenButton>
+					</div>
+				}
+				else
+				{
+					<p style="color: gray;">Dosya bulunamadı</p>
+				}
+			</div>
+
+			<div class="mb-3">
+				<RadzenLabel Text="Not:" Style="font-weight: bold;"></RadzenLabel>
+				@if (teslim.Not.HasValue)
+				{
+					<p style="font-size: 18px; font-weight: bold; color: #4caf50;">@teslim.Not</p>
+				}
+				else
+				{
+					<p style="color: gray;">Henüz not verilmedi</p>
+				}
+			</div>
+
+			<div class="mb-3">
+				<RadzenLabel Text="Öğretmen Yorumu:" Style="font-weight: bold;"></RadzenLabel>
+				@if (!string.IsNullOrEmpty(teslim.OgretmenYorumu))
+				{
+					<RadzenCard Style="background-color: #f5f5f5; padding: 15px; margin-top: 10px;">
+						<p style="margin: 0;">@teslim.OgretmenYorumu</p>
+					</RadzenCard>
+				}
+				else
+				{
+					<p style="color: gray;">Henüz yorum yapılmadı</p>
+				}
+			</div>
+
+			<div class="mt-4 text-center">
+				<RadzenButton Text="Kapat" ButtonStyle="ButtonStyle.Secondary" Click="@(() => DialogService.Close(false))"></RadzenButton>
+			</div>
+		</div>
+	}
+</RadzenCard>
+
+@code {
+	ItemOdevTeslim? teslim;
+	[Parameter] public int OdevId { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", "Kullanıcı bilgisi bulunamadı.");
+			DialogService.Close(false);
+			return;
+		}
+
+		teslim = await DbContext.OdevTeslimler
+			.Include(x => x.Odev)
+				.ThenInclude(o => o.Ders)
+			.Where(x => x.Odev_ID == OdevId && x.Ogrenci_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.FirstOrDefaultAsync();
+
+		if (teslim == null)
+		{
+			NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Teslim bilgisi bulunamadı.");
+			DialogService.Close(false);
+			return;
+		}
+	}
+
+	void DosyaIndir(string dosyaYolu)
+	{
+		if (!string.IsNullOrEmpty(dosyaYolu))
+		{
+			NavigationManager.NavigateTo(dosyaYolu, forceLoad: true);
+		}
+	}
+}

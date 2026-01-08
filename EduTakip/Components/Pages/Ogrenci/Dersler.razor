@@ -1,6 +1,87 @@
-﻿@page "/ogrenci/dersler"
+﻿@page "/ogrenci/derslerim"
 <h3>Dersler</h3>
-@attribute [Authorize(Roles ="Öğrenci")]
+@attribute [Authorize(Roles = "Öğrenci")]
+
+<h3>Derslerim</h3>
+
+@if (dersler.Any())
+{
+	<RadzenRow Gap="1rem">
+		@foreach (var ders in dersler)
+		{
+			<RadzenColumn Size="12" SizeMD="6" SizeLG="4">
+				<RadzenCard>
+					<h5 class="mb-3">@ders.DersAdi</h5>
+
+					<p>
+						<b>Öğretmen:</b>
+						<p style="display:inline-block">@ders.OgretmenAdSoyad</p> <br />
+						<b>Sınıflar:</b> <p style="display:inline-block">@string.Join(",", ders.Siniflar)</p>
+					</p>
+
+					<RadzenButton Icon="Assignment" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => OdevlereGit(ders.DersId))"></RadzenButton>
+				</RadzenCard>
+			</RadzenColumn>
+		}
+	</RadzenRow>
+}
+else
+{
+	<RadzenCard>
+		<p class="text-muted">
+			Henuz Herhangi bir derse katilmadiniz.
+		</p>
+	</RadzenCard>
+}
 @code {
+	List<OgrenciDersDto> dersler = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		var kullaniciId = AuthStateService.CurrentUser?.ID;
+		if (kullaniciId == null)
+			return;
+
+		// Öğrencinin katıldığı sınıflar
+		var sinifIdler = await DbContext.SinifKullanicilar
+			.Where(x =>
+				x.Kullanici_ID == kullaniciId &&
+				x.Tip == "Öğrenci" &&
+				x.DelDate == null)
+			.Select(x => x.Sinif_ID)
+			.ToListAsync();
+
+		if (!sinifIdler.Any())
+			return;
+
+		// Ders programlarından dersleri çek
+		dersler = await DbContext.DersProgramlari
+			.Where(x =>
+				sinifIdler.Contains(x.Sinif_ID) &&
+				x.DelDate == null &&
+				x.Aktif)
+			.GroupBy(x => x.Ders_ID)
+			.Select(g => new OgrenciDersDto
+			{
+				DersId = g.Key,
+				DersAdi = g.First().Ders.Adi,
+				OgretmenAdSoyad =
+					g.First().Ders.Ogretmen.Kullanici.Adi + " " +
+					g.First().Ders.Ogretmen.Kullanici.Soyadi,
+
+				Siniflar = g
+					.Select(x => x.Sinif.Adi)
+					.Distinct()
+					.ToList()
+			})
+			.OrderBy(x => x.DersAdi)
+			.ToListAsync();
+	}
+
+	void OdevlereGit(int dersId)
+	{
+		NavigationManager.NavigateTo("/ogrenci/odevlerim");
+	}
+
 
 }

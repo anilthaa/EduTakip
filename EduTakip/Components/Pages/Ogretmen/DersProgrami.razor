@@ -1,25 +1,38 @@
 ﻿@page "/ogretmen/dersprogrami"
 @attribute [Authorize(Roles ="Öğretmen")]
-<h3>Ders Programım</h3>
 
 
-<RadzenDataGrid Data="@list" TItem="ItemDersProgrami" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-	<Columns>
-		<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
-			<Template Context="item">
-				@GetGunAdi(item.Gun)
-			</Template>
-		</RadzenDataGridColumn>
-		<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
-			<Template Context="x">
-				@x.BaslangicSaati - @x.BitisSaati
-			</Template>
-		</RadzenDataGridColumn>
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box; margin-top:20px">
+	<h3 style="text-align:center;" class="mb-4">Ders Programım</h3>
+	@if (list==null ||!list.Any())
+	{
+		<div style="text-align:center; padding:50px">
+			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+		</div>
+	}
+	else
+	{
+		<RadzenDataGrid Data="@list" TItem="ItemDersProgrami" ColumnWidth="200px" AllowPaging="true" PageSize="10">
+			<Columns>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
+					<Template Context="item">
+						@GetGunAdi(item.Gun)
+					</Template>
+				</RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
+					<Template Context="x">
+						@x.BaslangicSaati - @x.BitisSaati
+					</Template>
+				</RadzenDataGridColumn>
 
-		<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
-		<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif" Title="Sınıf"></RadzenDataGridColumn>
-	</Columns>
-</RadzenDataGrid>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif.Adi" Title="Sınıf"></RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+	
+</RadzenCard>
+
 @code {
 
 	List<ItemDersProgrami> list;
@@ -45,6 +58,7 @@
 	{
 		list = await DbContext.DersProgramlari
 			.Include(x => x.Ders)
+			.Include(x => x.Sinif)
 			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == null && x.Aktif)
 			.OrderBy(x => x.Gun)
 			.ThenBy(x => x.BaslangicSaati)
