@@ -101,6 +101,22 @@
 
         if (kullaniciId == 0) return;
 
+        // Öğrencinin ItemOgrenci kaydını al ve Sinif_ID null ise güncelle
+        var ogrenci = await DbContext.Ogrenciler
+            .Where(x => x.ID == OgrenciId.Value && x.DelDate == null)
+            .FirstOrDefaultAsync();
+
+        bool sinifIdGuncellendi = false;
+        if (ogrenci != null && !ogrenci.Sinif_ID.HasValue)
+        {
+            // İlk sınıfa katılıyor, ana sınıf olarak ayarla
+            ogrenci.Sinif_ID = sinifId;
+            ogrenci.UpdDate = DateTime.UtcNow;
+            ogrenci.UpdUser = kullaniciId;
+            DbContext.Ogrenciler.Update(ogrenci);
+            sinifIdGuncellendi = true;
+        }
+
         // Bu sınıftaki dersleri bul
         var sinifAdi = await DbContext.Siniflar
             .Where(x => x.ID == sinifId)
@@ -138,7 +154,7 @@
             }
         }
 
-        if (katilimSayisi > 0)
+        if (katilimSayisi > 0 || sinifIdGuncellendi)
         {
             await DbContext.SaveChangesAsync();
             ToastService.ShowSuccess("Başarılı", $"{sinifAdi} sınıfına başarıyla katıldınız. {katilimSayisi} derse kaydınız yapıldı.");

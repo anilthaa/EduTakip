@@ -317,30 +317,94 @@ else
 
         if (!ogrenciId.HasValue) return;
 
+        var kullaniciId = AuthStateService.CurrentUser!.ID;
         var bugun = DateTime.Today;
         var gun = bugun.DayOfWeek;
 
-        // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
-        bekleyenOdevSayisi = await DbContext.Odevler
-            .Where(x => !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == AuthStateService.CurrentUser!.ID) && x.DelDate == null)
-            .CountAsync();
+        // Öğrencinin kayıtlı olduğu sınıfların ID'lerini bul
+        // Ana sınıf (nullable olabilir)
+        var anaSinifId = await DbContext.Ogrenciler
+            .Where(x => x.ID == ogrenciId.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
+            .FirstOrDefaultAsync();
 
-        yaklasanTeslimSayisi = await DbContext.Odevler
-            .Where(x => x.DelDate == null && x.SonTeslimTarihi >= bugun && x.SonTeslimTarihi <= bugun.AddDays(3))
-            .CountAsync();
-
-        bugunkuDersler = await DbContext.DersProgramlari
-            .Include(x => x.Ders)
-            .Where(x => x.Gun == gun && x.DelDate == null)
-            .OrderBy(x => x.BaslangicSaati)
+        // Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
+        var katildigiSinifIdleri = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == kullaniciId && x.Tip == "Öğrenci" && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
             .ToListAsync();
+
+        // SinifOgrenciler tablosundan katıldığı sınıflar
+        var sinifOgrenciSinifIdleri = await DbContext.SinifOgrenciler
+            .Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
+            .ToListAsync();
+
+        // Tüm sınıf ID'lerini birleştir
+        var tumSinifIdleri = new List<int>();
+        if (anaSinifId.HasValue && anaSinifId.Value > 0)
+        {
+            tumSinifIdleri.Add(anaSinifId.Value);
+        }
+        tumSinifIdleri.AddRange(katildigiSinifIdleri);
+        tumSinifIdleri.AddRange(sinifOgrenciSinifIdleri);
+        tumSinifIdleri = tumSinifIdleri.Distinct().ToList();
+
+        // Öğrencinin katıldığı sınıflardaki ders programlarından ders ID'lerini al
+        var ogrenciDersIdleri = new List<int>();
+        if (tumSinifIdleri.Any())
+        {
+            ogrenciDersIdleri = await DbContext.DersProgramlari
+                .Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && x.DelDate == null && x.Aktif)
+                .Select(x => x.Ders_ID)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
+        // Bekleyen ödev sayısı - öğrencinin katıldığı sınıflardaki derslerin ödevleri
+        if (ogrenciDersIdleri.Any())
+        {
+            bekleyenOdevSayisi = await DbContext.Odevler
+                .Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && 
+                           !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == kullaniciId && t.DelDate == null) && 
+                           x.DelDate == null)
+                .CountAsync();
+
+            yaklasanTeslimSayisi = await DbContext.Odevler
+                .Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && 
+                           x.DelDate == null && 
+                           x.SonTeslimTarihi >= bugun && 
+                           x.SonTeslimTarihi <= bugun.AddDays(3))
+                .CountAsync();
+        }
+        else
+        {
+            bekleyenOdevSayisi = 0;
+            yaklasanTeslimSayisi = 0;
+        }
+
+        // Bugünkü dersler - öğrencinin katıldığı sınıflardaki ders programları
+        if (tumSinifIdleri.Any())
+        {
+            bugunkuDersler = await DbContext.DersProgramlari
+                .Include(x => x.Ders)
+                .Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && 
+                           x.Gun == gun && 
+                           x.DelDate == null && 
+                           x.Aktif)
+                .OrderBy(x => x.BaslangicSaati)
+                .ToListAsync();
+        }
+        else
+        {
+            bugunkuDersler = new List<ItemDersProgrami>();
+        }
 
         bugunkuDersSayisi = bugunkuDersler.Count;
 
         // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
         // Her ödev için sadece en son teslim kaydını al (aynı ödev için birden fazla teslim olabilir)
-        var kullaniciId = AuthStateService.CurrentUser!.ID;
-        
         // Önce tüm teslimleri çek, sonra memory'de grupla
         var tumTeslimler = await DbContext.OdevTeslimler
             .Where(x => x.Ogrenci_ID == kullaniciId && x.DelDate == null && x.Not != null)
@@ -354,10 +418,20 @@ else
         
         ortalamaNot = ogrenciNotlari.Any() ? (decimal)ogrenciNotlari.Average() : 0;
 
-        sonOdevler = await DbContext.Odevler
-            .OrderByDescending(x => x.CreDate)
-            .Take(5)
-            .ToListAsync();
+        // Son ödevler - öğrencinin katıldığı sınıflardaki derslerin ödevleri
+        if (ogrenciDersIdleri.Any())
+        {
+            sonOdevler = await DbContext.Odevler
+                .Include(x => x.Ders)
+                .Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && x.DelDate == null)
+                .OrderByDescending(x => x.CreDate)
+                .Take(5)
+                .ToListAsync();
+        }
+        else
+        {
+            sonOdevler = new List<ItemOdev>();
+        }
     }
 
     async Task YukleOgretmen()
@@ -383,7 +457,7 @@ else
 
         // Bu sınıflardaki öğrencileri say
         ogrenciSayisi = await DbContext.Ogrenciler
-            .Where(x => x.DelDate == null && ogretmenSinifIdleri.Contains(x.Sinif_ID))
+            .Where(x => x.DelDate == null && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
             .CountAsync();
 
         var bugun = DateTime.Today.DayOfWeek;

@@ -179,12 +179,12 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     
     if (userTypeName.Contains("öğrenci") || userTypeName.Contains("ogrenci") || userTypeName.Contains("student"))
     {
-        if (!request.Sinif_ID.HasValue || string.IsNullOrWhiteSpace(request.OgrenciNo))
+        if (string.IsNullOrWhiteSpace(request.OgrenciNo))
         {
             // Kullanıcıyı geri sil
             db.Kullanicilar.Remove(user);
             await db.SaveChangesAsync();
-            return Results.BadRequest("Öğrenci için sınıf ve öğrenci numarası gereklidir.");
+            return Results.BadRequest("Öğrenci için öğrenci numarası gereklidir.");
         }
 
         // Öğrenci numarası kontrolü
@@ -196,11 +196,18 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
             return Results.Conflict("Bu öğrenci numarası zaten kayıtlı.");
         }
 
+        // Sınıf seçilmemişse null bırak (öğrenci kayıt olduktan sonra sınıfa katılabilir)
+        int? sinifId = null;
+        if (request.Sinif_ID.HasValue && request.Sinif_ID.Value > 0)
+        {
+            sinifId = request.Sinif_ID.Value;
+        }
+
         var ogrenci = new ItemOgrenci
         {
             Kullanici_ID = user.ID,
             OgrenciNo = request.OgrenciNo.Trim(),
-            Sinif_ID = request.Sinif_ID.Value,
+            Sinif_ID = sinifId,
             CreUser = 0,
             CreDate = DateTime.UtcNow
         };

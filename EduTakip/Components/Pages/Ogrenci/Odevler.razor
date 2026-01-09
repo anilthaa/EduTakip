@@ -64,6 +64,7 @@
 		await Listele();
 	}
 
+
 	async Task Listele()
 	{
 		if (!kullaniciId.HasValue)
@@ -71,8 +72,79 @@
 			return;
 		}
 
+		// Öğrenci ID'sini bul
+		var ogrenciId = await DbContext.Ogrenciler
+			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.DelDate == null)
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
+		if (ogrenciId == 0)
+		{
+			odevlerim = new List<ItemOdev>();
+			odevTeslimler = new List<ItemOdevTeslim>();
+			return;
+		}
+
+		// Öğrencinin kayıtlı olduğu sınıfların ID'lerini bul
+		// Ana sınıf (nullable olabilir)
+		var anaSinifId = await DbContext.Ogrenciler
+			.Where(x => x.ID == ogrenciId && x.DelDate == null)
+			.Select(x => x.Sinif_ID)
+			.FirstOrDefaultAsync();
+
+		// Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
+		var katildigiSinifIdleri = await DbContext.SinifKullanicilar
+			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Select(x => x.Sinif_ID)
+			.ToListAsync();
+
+		// SinifOgrenciler tablosundan katıldığı sınıflar
+		var sinifOgrenciSinifIdleri = await DbContext.SinifOgrenciler
+			.Where(x => x.Ogrenci_ID == ogrenciId && x.DelDate == null)
+			.Select(x => x.Sinif_ID)
+			.ToListAsync();
+
+		// Tüm sınıf ID'lerini birleştir
+		var tumSinifIdleri = new List<int>();
+		if (anaSinifId.HasValue && anaSinifId.Value > 0)
+		{
+			tumSinifIdleri.Add(anaSinifId.Value);
+		}
+		tumSinifIdleri.AddRange(katildigiSinifIdleri);
+		tumSinifIdleri.AddRange(sinifOgrenciSinifIdleri);
+		tumSinifIdleri = tumSinifIdleri.Distinct().ToList();
+
+		if (!tumSinifIdleri.Any())
+		{
+			odevlerim = new List<ItemOdev>();
+			odevTeslimler = new List<ItemOdevTeslim>();
+			return;
+		}
+
+		// Öğrencinin katıldığı sınıflardaki ders programlarından ders ID'lerini al
+		// Sadece öğrencinin gerçekten katıldığı sınıflardaki ders programlarına bağlı ödevleri göster
+		var ogrenciDersIdleri = new List<int>();
+		if (tumSinifIdleri.Any())
+		{
+			ogrenciDersIdleri = await DbContext.DersProgramlari
+				.Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && x.DelDate == null && x.Aktif)
+				.Select(x => x.Ders_ID)
+				.Distinct()
+				.ToListAsync();
+		}
+
+		if (!ogrenciDersIdleri.Any())
+		{
+			odevlerim = new List<ItemOdev>();
+			odevTeslimler = new List<ItemOdevTeslim>();
+			return;
+		}
+
+		// Sadece öğrencinin katıldığı sınıflardaki ders programlarına bağlı ödevleri göster
+		// Öğrenci, sadece kendi katıldığı sınıflardaki derslerin ödevlerini görmeli
 		odevlerim = await DbContext.Odevler
 			.Include(x => x.Ders)
+			.Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && x.DelDate == null)
 			.OrderByDescending(x => x.SonTeslimTarihi)
 			.ToListAsync();
 		

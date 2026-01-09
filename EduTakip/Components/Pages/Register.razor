@@ -45,12 +45,6 @@
 
                     @if (selectedUserType == "ogrenci")
                     {
-                            <RadzenLabel Text="Sınıf"></RadzenLabel>
-                            <RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="ID" 
-                                           @bind-Value="registerModel.Sinif_ID" 
-                                           Placeholder="Sınıf seçin" class="w-100" />
-                            <RadzenFormFieldValidator />
-
                             <RadzenLabel Text="Öğrenci No"></RadzenLabel>
                             <RadzenTextBox @bind-Value="registerModel.OgrenciNo" Placeholder="Öğrenci numaranızı girin" class="w-100" />
                             <RadzenFormFieldValidator />
@@ -93,7 +87,6 @@
     private bool isInitialized = false;
     private int selectedUserTypeIndex = 0; // Varsayılan olarak Öğrenci seçili
     private string selectedUserType = "ogrenci";
-    private List<ItemSinif> siniflar = new();
     private List<ItemBirim> birimler = new();
     private List<ItemKullaniciTip> kullaniciTipleri = new();
 
@@ -120,14 +113,9 @@
                 return;
             }
             
-            // Kullanıcı tiplerini, sınıfları ve birimleri yükle
+            // Kullanıcı tiplerini ve birimleri yükle (sınıflar artık gerekli değil)
             kullaniciTipleri = await DbContext.KullaniciTipleri
                 .Where(kt => kt.Aktif && kt.DelDate == null)
-                .ToListAsync();
-            
-            siniflar = await DbContext.Siniflar
-                .Where(s => s.Aktif && s.DelDate == null)
-                .OrderBy(s => s.Adi)
                 .ToListAsync();
             
             birimler = await DbContext.Birimler
@@ -191,6 +179,7 @@
         if (selectedUserType == "ogrenci")
         {
             registerModel.Birim_ID = null;
+            registerModel.Sinif_ID = null; // Sınıf seçimi kaldırıldı
         }
         else if (selectedUserType == "ogretmen")
         {
@@ -233,13 +222,13 @@
 
         if (selectedUserType == "ogrenci")
         {
-            if (!model.Sinif_ID.HasValue || string.IsNullOrWhiteSpace(model.OgrenciNo))
+            if (string.IsNullOrWhiteSpace(model.OgrenciNo))
             {
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Uyarı",
-                    Detail = "Lütfen sınıf ve öğrenci numarası bilgilerini girin.",
+                    Detail = "Lütfen öğrenci numarası bilgisini girin.",
                     Duration = 4000
                 });
                 return;

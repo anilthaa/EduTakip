@@ -63,6 +63,24 @@
 
         try
         {
+            // Öğrenci ise ve ItemOgrenci.Sinif_ID null ise, ilk katıldığı sınıfı ana sınıf olarak ayarla
+            if ((KullaniciTip.Contains("öğrenci") || KullaniciTip.Contains("ogrenci") || KullaniciTip.Contains("Öğrenci")) && 
+                !string.IsNullOrEmpty(KullaniciTip))
+            {
+                var ogrenci = await DbContext.Ogrenciler
+                    .Where(x => x.Kullanici_ID == KullaniciId && x.DelDate == null)
+                    .FirstOrDefaultAsync();
+
+                if (ogrenci != null && !ogrenci.Sinif_ID.HasValue)
+                {
+                    // İlk sınıfa katılıyor, ana sınıf olarak ayarla
+                    ogrenci.Sinif_ID = sinif.ID;
+                    ogrenci.UpdDate = DateTime.UtcNow;
+                    ogrenci.UpdUser = KullaniciId;
+                    DbContext.Ogrenciler.Update(ogrenci);
+                }
+            }
+
             // ItemSinifKullanici kaydı oluştur
             var yeniKayit = new ItemSinifKullanici
             {

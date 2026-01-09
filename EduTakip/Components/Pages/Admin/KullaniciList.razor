@@ -1,6 +1,8 @@
 ﻿@page "/admin/kullanicilar"
 @using System.Threading.Tasks
 @attribute [Authorize(Roles = "Admin")]
+@inject AuthStateService AuthStateService
+@inject NotificationService NotificationService
 
 
 <RadzenButton Text="Yeni Kullanıcı Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
@@ -76,11 +78,79 @@
 			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
 		if (result == true)
 		{
-			kullanici.DelDate = DateTime.Now;
-			kullanici.DelUser = 1;
-			DbContext.Kullanicilar.Update(kullanici);
-			await DbContext.SaveChangesAsync();
-			await Listele();
+			try
+			{
+				// Kullanıcıyı soft delete yap
+				kullanici.DelDate = DateTime.UtcNow;
+				kullanici.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+				DbContext.Kullanicilar.Update(kullanici);
+
+				// Öğrenci ise, ilgili tablolardaki kayıtları da soft delete yap
+				var kullaniciTip = kullanici.KullaniciTip?.Adi?.ToLower() ?? "";
+				if (kullaniciTip.Contains("öğrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
+				{
+					// Öğrenci ID'sini bul
+					var ogrenci = await DbContext.Ogrenciler
+						.IgnoreQueryFilters()
+						.Where(x => x.Kullanici_ID == kullanici.ID && x.DelDate == null)
+						.FirstOrDefaultAsync();
+
+					if (ogrenci != null)
+					{
+						// ItemOgrenci'yi soft delete yap
+						ogrenci.DelDate = DateTime.UtcNow;
+						ogrenci.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+						DbContext.Ogrenciler.Update(ogrenci);
+
+						// SinifKullanicilar tablosundaki kayıtları soft delete yap
+						var sinifKullanicilar = await DbContext.SinifKullanicilar
+							.IgnoreQueryFilters()
+							.Where(x => x.Kullanici_ID == kullanici.ID && x.DelDate == null)
+							.ToListAsync();
+
+						foreach (var sk in sinifKullanicilar)
+						{
+							sk.DelDate = DateTime.UtcNow;
+							sk.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+							DbContext.SinifKullanicilar.Update(sk);
+						}
+
+						// SinifOgrenciler tablosundaki kayıtları soft delete yap
+						var sinifOgrenciler = await DbContext.SinifOgrenciler
+							.IgnoreQueryFilters()
+							.Where(x => x.Ogrenci_ID == ogrenci.ID && x.DelDate == null)
+							.ToListAsync();
+
+						foreach (var so in sinifOgrenciler)
+						{
+							so.DelDate = DateTime.UtcNow;
+							so.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+							DbContext.SinifOgrenciler.Update(so);
+						}
+
+						// DersKatilimcilar tablosundaki kayıtları soft delete yap (Ogrenci_ID aslında Kullanici_ID)
+						var dersKatilimcilar = await DbContext.DersKatilimcilar
+							.IgnoreQueryFilters()
+							.Where(x => x.Ogrenci_ID == kullanici.ID && x.DelDate == null)
+							.ToListAsync();
+
+						foreach (var dk in dersKatilimcilar)
+						{
+							dk.DelDate = DateTime.UtcNow;
+							dk.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+							DbContext.DersKatilimcilar.Update(dk);
+						}
+					}
+				}
+
+				await DbContext.SaveChangesAsync();
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Kullanıcı ve ilgili kayıtlar başarıyla silindi.");
+				await Listele();
+			}
+			catch (Exception ex)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Kullanıcı silinirken bir hata oluştu: {ex.Message}");
+			}
 		}
 	}
 }
