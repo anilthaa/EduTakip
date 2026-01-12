@@ -8,7 +8,7 @@
 }
 
 .auth-card {
-    background: white;
+    background: var(--rz-body-background-color, white);
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     padding: 3rem;
@@ -22,13 +22,13 @@
 }
 
 .auth-header h2 {
-    color: #333;
+    color: var(--rz-text-color, #333);
     margin-bottom: 0.5rem;
     font-weight: 600;
 }
 
 .auth-header p {
-    color: #666;
+    color: var(--rz-text-secondary-color, #666);
     font-size: 0.95rem;
 }
 
@@ -40,6 +40,21 @@
 .auth-form ::deep .rz-form-field {
     width: 100%;
     box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+/* RadzenFieldset içindeki boşlukları düzenle */
+.auth-form ::deep .rz-fieldset {
+    padding: 1.5rem;
+}
+
+.auth-form ::deep .rz-fieldset-content {
+    padding-top: 1rem;
+}
+
+/* RadzenStack boşlukları */
+.auth-form ::deep .rz-stack {
+    gap: 1.5rem;
 }
 
 .auth-form ::deep .rz-textbox,

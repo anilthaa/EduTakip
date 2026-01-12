@@ -19,8 +19,8 @@
         <RadzenTemplateForm Data="@loginModel" TItem="LoginModel" Submit="@OnLogin" class="auth-form">
             <RadzenFieldset Text="Giriş Bilgileri" class="w-100">
                 <RadzenStack Gap="1.5rem">
-                    <RadzenFormField Text="E-posta" class="w-100">
-                        <RadzenTextBox @bind-Value="loginModel.EPosta" Placeholder="ornek@email.com" class="w-100" />
+                    <RadzenFormField Text="E-posta" Style="width:100%">
+                        <RadzenTextBox @bind-Value="loginModel.EPosta" Placeholder="ornek@email.com" />
                         <RadzenFormFieldValidator />
                     </RadzenFormField>
 
@@ -39,7 +39,7 @@
                                       Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
                     </RadzenStack>
 
-                    <div class="text-center w-100">
+                    <div class="text-center w-100" style="margin-top: 1rem;">
                         <span>Hesabınız yok mu? </span>
                         <RadzenLink Path="/register" Text="Kayıt Ol" />
                     </div>

@@ -477,7 +477,7 @@ namespace EduTakip.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("Sinif_ID")
+                    b.Property<int?>("Sinif_ID")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdDate")
@@ -792,8 +792,7 @@ namespace EduTakip.Migrations
                     b.HasOne("EduTakip.Models.ItemSinif", "Sinif")
                         .WithMany()
                         .HasForeignKey("Sinif_ID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Kullanici");
 

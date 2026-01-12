@@ -2,70 +2,81 @@
 @attribute [Authorize(Roles ="Öğretmen")]
 @inject NavigationManager NavigationManager
 
-<RadzenCard>
-	<h4>Odev Teslimleri</h4>
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3>Odev Teslimleri</h3>
 
-	<RadzenDataGrid Data="@teslimler" TItem="ItemOdevTeslim" AllowPaging="true" PageSize="10">
-		<Columns>
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ogrenci">
-				<Template Context="item">
-					@item.Ogrenci.Adi @item.Ogrenci.Soyadi
-				</Template>
-				
-			</RadzenDataGridColumn>
+	@if (teslimler==null || !teslimler.Any())
+	{
+		<div style="text-align:center; padding:50px">
+			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+		</div>
+	}
+	else
+	{
+		<RadzenDataGrid Data="@teslimler" TItem="ItemOdevTeslim" AllowPaging="true" PageSize="10">
+			<Columns>
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Öğrenci Adı Soyadı">
+					<Template Context="item">
+						@item.Ogrenci.Adi @item.Ogrenci.Soyadi
+					</Template>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ödev">
-				<Template Context="item">
-					@item.Odev.Baslik
-				</Template>
-			</RadzenDataGridColumn>
+				</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Property="TeslimTarihi" Title="Teslim Tarihi"></RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ödev">
+					<Template Context="item">
+						@item.Odev.Baslik
+					</Template>
+				</RadzenDataGridColumn>
 
-			
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Property="TeslimTarihi" Title="Teslim Tarihi"></RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Not">
-				<Template Context="item">
-					@if (item.Not.HasValue)
-					{
-						@item.Not
-					}
-					else
-					{
-						<span style="color: gray;">Not Verilmedi</span>
-					}
-				</Template>
-			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Öğretmen Yorumu">
-				<Template Context="item">
-					@if (!string.IsNullOrEmpty(item.OgretmenYorumu))
-					{
-						@item.OgretmenYorumu
-					}
-					else
-					{
-						<span style="color: gray;">Yorum Yok</span>
-					}
-				</Template>
-			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Islem">
-				<Template Context="item">
-					<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => NotVer(item))"></RadzenButton>
-				</Template>
-			</RadzenDataGridColumn>
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Not">
+					<Template Context="item">
+						@if (item.Not.HasValue)
+						{
+							@item.Not
+						}
+						else
+						{
+							<span style="color: gray;">Not Verilmedi</span>
+						}
+					</Template>
+				</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Dosya">
-				<Template Context="item">
-					@if (!string.IsNullOrEmpty(item.DosyaYolu))
-					{
-						<RadzenButton Icon="download" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => DosyaIndir(item.DosyaYolu))"></RadzenButton>
-					}
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-		</RadzenDataGrid>	
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Öğretmen Yorumu">
+					<Template Context="item">
+						@if (!string.IsNullOrEmpty(item.OgretmenYorumu))
+						{
+							@item.OgretmenYorumu
+						}
+						else
+						{
+							<span style="color: gray;">Yorum Yok</span>
+						}
+					</Template>
+				</RadzenDataGridColumn>
+
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="İşlem">
+					<Template Context="item">
+						<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => NotVer(item))"></RadzenButton>
+					</Template>
+				</RadzenDataGridColumn>
+
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Dosya">
+					<Template Context="item">
+						@if (!string.IsNullOrEmpty(item.DosyaYolu))
+						{
+							<RadzenButton Icon="download" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => DosyaIndir(item.DosyaYolu))"></RadzenButton>
+						}
+					</Template>
+				</RadzenDataGridColumn>
+			</Columns>
+		</RadzenDataGrid>
+	}
+
+		
 </RadzenCard>
 @code {
 	[Parameter] public int OdevId { get; set; }

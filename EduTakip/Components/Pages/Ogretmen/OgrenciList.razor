@@ -103,8 +103,8 @@
         ogrenciler = await DbContext.Ogrenciler
             .Include(x => x.Kullanici)
             .Include(x => x.Sinif)
-            .Where(x => x.DelDate == null && ogretmenSinifIdleri.Contains(x.Sinif_ID))
-            .OrderBy(x => x.Sinif.Adi)
+            .Where(x => x.DelDate == null && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
+            .OrderBy(x => x.Sinif != null ? x.Sinif.Adi : "")
             .ThenBy(x => x.Kullanici.Adi)
             .ThenBy(x => x.Kullanici.Soyadi)
             .ToListAsync();

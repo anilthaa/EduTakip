@@ -16,35 +16,175 @@ else
     {
         @* Admin Dashboard *@
         <h3>Admin Dashboard</h3>
-        <RadzenRow Gap="20px" Style="margin-top:20px">
-            <RadzenColumn Size="3">
-                <RadzenCard Style="border-left:4px solid green; cursor: pointer;" @onclick="GitDersListesine">
-                    <h4>Toplam Ders</h4>
-                    <h2>@toplamDers</h2>
+        <div style="width: 100%; margin-top: 20px;">
+            <RadzenRow Gap="10px" Style="width: 100%; margin: 0; display: flex; flex-wrap: nowrap; box-sizing: border-box;">
+                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
+                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid blue; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitSinifListesine">
+                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Toplam Sınıf</h5>
+                        <h3 style="margin: 0; font-size: 1.75rem;">@toplamSinif</h3>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
+                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid red; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitKullaniciListesine">
+                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Toplam Öğretmen</h5>
+                        <h3 style="margin: 0; font-size: 1.75rem;">@toplamOgretmen</h3>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
+                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid yellow; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitKullaniciListesine">
+                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Toplam Öğrenci</h5>
+                        <h3 style="margin: 0; font-size: 1.75rem;">@toplamOgrenci</h3>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
+                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid green; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitDersProgramiListesine">
+                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Bugünkü Katılım %</h5>
+                        <h3 style="margin: 0; font-size: 1.75rem;">@bugunkuKatilimYuzdesi.ToString("F1")%</h3>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
+                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid purple; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitDersProgramiListesine">
+                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Aktif Ders Programı</h5>
+                        <h3 style="margin: 0; font-size: 1.75rem;">@aktifDersProgrami</h3>
+                    </RadzenCard>
+                </RadzenColumn>
+            </RadzenRow>
+        </div>
+
+        @* Grafikler *@
+        <RadzenRow Gap="20px" Style="margin-top: 30px;">
+            <RadzenColumn Size="6">
+                <RadzenCard>
+                    <h4 style="margin-bottom: 1rem;">Son 7 Gün Katılım Grafiği</h4>
+                    <RadzenChart>
+                        <RadzenLineSeries Data="@son7GunKatilim" CategoryProperty="Tarih" ValueProperty="KatilimYuzdesi" Title="Katılım %">
+                            <RadzenMarkers />
+                        </RadzenLineSeries>
+                        <RadzenCategoryAxis Padding="20" />
+                        <RadzenValueAxis>
+                            <RadzenGridLines />
+                            <RadzenAxisTitle Text="Katılım %" />
+                        </RadzenValueAxis>
+                    </RadzenChart>
                 </RadzenCard>
             </RadzenColumn>
 
-            <RadzenColumn Size="3">
-                <RadzenCard Style="border-left:4px solid red; cursor: pointer;" @onclick="GitKullaniciListesine">
-                    <h4>Toplam Öğretmen</h4>
-                    <h2>@toplamOgretmen</h2>
-                </RadzenCard>
-            </RadzenColumn>
-
-            <RadzenColumn Size="3">
-                <RadzenCard Style="border-left:4px solid yellow; cursor: pointer;" @onclick="GitKullaniciListesine">
-                    <h4>Toplam Öğrenci</h4>
-                    <h2>@toplamOgrenci</h2>
-                </RadzenCard>
-            </RadzenColumn>
-
-            <RadzenColumn Size="3">
-                <RadzenCard Style="cursor: pointer;" @onclick="GitDersProgramiListesine">
-                    <h4>Bugünkü Ders</h4>
-                    <h2>@bugunkuDers</h2>
+            <RadzenColumn Size="6">
+                <RadzenCard>
+                    <h4 style="margin-bottom: 1rem;">Sınıf Bazlı Öğrenci Dağılımı</h4>
+                    <RadzenChart>
+                        <RadzenPieSeries Data="@sinifBazliOgrenciDagilimi" CategoryProperty="SinifAdi" ValueProperty="OgrenciSayisi" />
+                        <RadzenLegend />
+                    </RadzenChart>
                 </RadzenCard>
             </RadzenColumn>
         </RadzenRow>
+
+        @* Uyarı Tablosu *@
+        <RadzenCard Style="margin-top: 30px;">
+            <h4 style="margin-bottom: 1rem;">Sistem Uyarıları</h4>
+            <RadzenRow Gap="20px">
+                <RadzenColumn Size="4">
+                    <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Öğretmeni Olmayan Dersler</h5>
+                    @if (ogretmeniOlmayanDersler.Any())
+                    {
+                        <RadzenDataGrid Data="@ogretmeniOlmayanDersler" TItem="ItemDers" AllowPaging="false" Style="max-height: 200px;">
+                            <Columns>
+                                <RadzenDataGridColumn Property="Adi" Title="Ders Adı" />
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                    else
+                    {
+                        <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm derslerin öğretmeni var</p>
+                    }
+                </RadzenColumn>
+
+                <RadzenColumn Size="4">
+                    <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Öğrencisi Olmayan Sınıflar</h5>
+                    @if (ogrencisiOlmayanSiniflar.Any())
+                    {
+                        <RadzenDataGrid Data="@ogrencisiOlmayanSiniflar" TItem="ItemSinif" AllowPaging="false" Style="max-height: 200px;">
+                            <Columns>
+                                <RadzenDataGridColumn Property="Adi" Title="Sınıf Adı" />
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                    else
+                    {
+                        <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm sınıflarda öğrenci var</p>
+                    }
+                </RadzenColumn>
+
+                <RadzenColumn Size="4">
+                    <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Ders Programı Olmayan Sınıflar</h5>
+                    @if (dersProgramiOlmayanSiniflar.Any())
+                    {
+                        <RadzenDataGrid Data="@dersProgramiOlmayanSiniflar" TItem="ItemSinif" AllowPaging="false" Style="max-height: 200px;">
+                            <Columns>
+                                <RadzenDataGridColumn Property="Adi" Title="Sınıf Adı" />
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                    else
+                    {
+                        <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm sınıfların ders programı var</p>
+                    }
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenCard>
+
+        @* Bugünkü Dersler Tablosu *@
+        <RadzenCard Style="margin-top: 30px; margin-bottom:20px">
+            <h4 style="margin-bottom: 1rem;">Bugünkü Dersler</h4>
+            @if (bugunkuDerslerAdmin.Any())
+            {
+                <RadzenDataGrid Data="@bugunkuDerslerAdmin" TItem="ItemDersProgrami" AllowPaging="true" PageSize="10">
+                    <Columns>
+                        <RadzenDataGridColumn Title="Ders">
+                            <Template Context="item">
+                                @item.Ders.Adi
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Sınıf">
+                            <Template Context="item">
+                                @item.Sinif.Adi
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Başlangıç Saati">
+                            <Template Context="item">
+                                @item.BaslangicSaati.ToString(@"hh\:mm")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Bitiş Saati">
+                            <Template Context="item">
+                                @item.BitisSaati.ToString(@"hh\:mm")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="Aktif" Title="Aktif">
+                            <Template Context="item">
+                                @if (item.Aktif)
+                                {
+                                    <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Aktif" />
+                                }
+                                else
+                                {
+                                    <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Pasif" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            }
+            else
+            {
+                <p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Bugün ders programı bulunmamaktadır</p>
+            }
+        </RadzenCard>
     }
     else if (kullaniciTip.Contains("öğrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
     {
@@ -243,10 +383,17 @@ else
 
 @code {
     // Admin için
-    int toplamDers;
+    int toplamSinif;
     int toplamOgretmen;
     int toplamOgrenci;
-    int bugunkuDers;
+    decimal bugunkuKatilimYuzdesi;
+    int aktifDersProgrami;
+    List<GunlukKatilimDto> son7GunKatilim = new();
+    List<SinifOgrenciDagilimDto> sinifBazliOgrenciDagilimi = new();
+    List<ItemDers> ogretmeniOlmayanDersler = new();
+    List<ItemSinif> ogrencisiOlmayanSiniflar = new();
+    List<ItemSinif> dersProgramiOlmayanSiniflar = new();
+    List<ItemDersProgrami> bugunkuDerslerAdmin = new();
 
     // Öğrenci için
     int bekleyenOdevSayisi;
@@ -299,12 +446,227 @@ else
 
     async Task YukleAdmin()
     {
-        toplamDers = await DbContext.Dersler.CountAsync(x => x.DelDate == null);
+        toplamSinif = await DbContext.Siniflar.CountAsync(x => x.DelDate == null);
         toplamOgretmen = await DbContext.Ogretmenler.CountAsync(x => x.DelDate == null);
         toplamOgrenci = await DbContext.Ogrenciler.CountAsync(x => x.DelDate == null);
-        var bugun = DateTime.Today.DayOfWeek;
-        bugunkuDers = await DbContext.DersProgramlari
-            .CountAsync(x => x.DelDate == null && x.Gun == bugun && x.Aktif);
+        
+        // Aktif Ders Programı sayısı
+        aktifDersProgrami = await DbContext.DersProgramlari
+            .CountAsync(x => x.DelDate == null && x.Aktif);
+        
+        // Bugünkü Katılım % hesaplama
+        var bugun = DateTime.Today;
+        var bugunGunu = bugun.DayOfWeek;
+        
+        // Bugünkü ders programlarını al
+        var bugunkuDersProgramlari = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Where(x => x.DelDate == null && x.Gun == bugunGunu && x.Aktif)
+            .ToListAsync();
+        
+        if (bugunkuDersProgramlari.Any())
+        {
+            // Bugünkü ders ID'lerini al
+            var bugunkuDersIdleri = bugunkuDersProgramlari
+                .Select(x => x.Ders_ID)
+                .Distinct()
+                .ToList();
+            
+            // Bugünkü derslerin toplam katılımcı sayısını hesapla
+            var toplamKatilimciSayisi = await DbContext.DersKatilimcilar
+                .Where(x => bugunkuDersIdleri.Contains(x.Ders_ID) && x.DelDate == null)
+                .CountAsync();
+            
+            // Bugünkü katılım kayıtlarını say (bugünün tarihinde giriş yapanlar)
+            var bugunkuKatilimSayisi = await DbContext.DersKatilimlar
+                .Where(x => bugunkuDersIdleri.Contains(x.Ders_ID) && 
+                           x.DelDate == null &&
+                           x.GirisZamani.Date == bugun.Date)
+                .CountAsync();
+            
+            // Yüzde hesapla
+            if (toplamKatilimciSayisi > 0)
+            {
+                bugunkuKatilimYuzdesi = (decimal)bugunkuKatilimSayisi / toplamKatilimciSayisi * 100;
+            }
+            else
+            {
+                bugunkuKatilimYuzdesi = 0;
+            }
+        }
+        else
+        {
+            bugunkuKatilimYuzdesi = 0;
+        }
+
+        // Son 7 gün katılım verilerini çek
+        await YukleSon7GunKatilim();
+
+        // Sınıf bazlı öğrenci dağılımını çek
+        await YukleSinifBazliOgrenciDagilimi();
+
+        // Uyarı verilerini çek
+        await YukleUyariVerileri();
+
+        // Bugünkü ders programlarını çek
+        await YukleBugunkuDersler();
+    }
+
+    async Task YukleBugunkuDersler()
+    {
+        var bugun = DateTime.Today;
+        var bugunGunu = bugun.DayOfWeek;
+
+        bugunkuDerslerAdmin = await DbContext.DersProgramlari
+            .Include(x => x.Ders)
+            .Include(x => x.Sinif)
+            .Where(x => x.DelDate == null && x.Gun == bugunGunu)
+            .OrderBy(x => x.BaslangicSaati)
+            .ToListAsync();
+    }
+
+    async Task YukleUyariVerileri()
+    {
+        // Öğretmeni olmayan dersler (Ogretmen_ID'si geçersiz veya öğretmen silinmiş)
+        var tumDersler = await DbContext.Dersler
+            .Where(x => x.DelDate == null)
+            .ToListAsync();
+
+        var aktifOgretmenIdleri = await DbContext.Ogretmenler
+            .Where(o => o.DelDate == null)
+            .Select(o => o.ID)
+            .ToListAsync();
+
+        ogretmeniOlmayanDersler = tumDersler
+            .Where(d => !aktifOgretmenIdleri.Contains(d.Ogretmen_ID))
+            .ToList();
+
+        // Öğrencisi olmayan sınıflar
+        var tumSiniflar = await DbContext.Siniflar
+            .Where(x => x.DelDate == null)
+            .ToListAsync();
+
+        ogrencisiOlmayanSiniflar = new List<ItemSinif>();
+        foreach (var sinif in tumSiniflar)
+        {
+            var ogrenciSayisi = await DbContext.Ogrenciler
+                .CountAsync(o => o.Sinif_ID == sinif.ID && o.DelDate == null);
+            
+            if (ogrenciSayisi == 0)
+            {
+                ogrencisiOlmayanSiniflar.Add(sinif);
+            }
+        }
+
+        // Ders programı olmayan sınıflar
+        var dersProgramiOlanSinifIdleri = await DbContext.DersProgramlari
+            .Where(x => x.DelDate == null)
+            .Select(x => x.Sinif_ID)
+            .Distinct()
+            .ToListAsync();
+
+        dersProgramiOlmayanSiniflar = tumSiniflar
+            .Where(s => !dersProgramiOlanSinifIdleri.Contains(s.ID))
+            .ToList();
+    }
+
+    async Task YukleSon7GunKatilim()
+    {
+        son7GunKatilim = new List<GunlukKatilimDto>();
+        var bugun = DateTime.Today;
+
+        // Son 7 günü oluştur
+        for (int i = 6; i >= 0; i--)
+        {
+            var tarih = bugun.AddDays(-i);
+            var gun = tarih.DayOfWeek;
+
+            // O günkü ders programlarını al
+            var oGunDersProgramlari = await DbContext.DersProgramlari
+                .Where(x => x.DelDate == null && x.Gun == gun && x.Aktif)
+                .ToListAsync();
+
+            if (oGunDersProgramlari.Any())
+            {
+                var oGunDersIdleri = oGunDersProgramlari
+                    .Select(x => x.Ders_ID)
+                    .Distinct()
+                    .ToList();
+
+                // Toplam katılımcı sayısı
+                var toplamKatilimciSayisi = await DbContext.DersKatilimcilar
+                    .Where(x => oGunDersIdleri.Contains(x.Ders_ID) && x.DelDate == null)
+                    .CountAsync();
+
+                // O günkü katılım kayıtları
+                var oGunKatilimSayisi = await DbContext.DersKatilimlar
+                    .Where(x => oGunDersIdleri.Contains(x.Ders_ID) &&
+                               x.DelDate == null &&
+                               x.GirisZamani.Date == tarih.Date)
+                    .CountAsync();
+
+                decimal katilimYuzdesi = 0;
+                if (toplamKatilimciSayisi > 0)
+                {
+                    katilimYuzdesi = (decimal)oGunKatilimSayisi / toplamKatilimciSayisi * 100;
+                }
+
+                son7GunKatilim.Add(new GunlukKatilimDto
+                {
+                    Tarih = tarih.ToString("dd.MM"),
+                    KatilimYuzdesi = katilimYuzdesi
+                });
+            }
+            else
+            {
+                son7GunKatilim.Add(new GunlukKatilimDto
+                {
+                    Tarih = tarih.ToString("dd.MM"),
+                    KatilimYuzdesi = 0
+                });
+            }
+        }
+    }
+
+    async Task YukleSinifBazliOgrenciDagilimi()
+    {
+        var siniflar = await DbContext.Siniflar
+            .Where(x => x.DelDate == null)
+            .ToListAsync();
+
+        sinifBazliOgrenciDagilimi = new List<SinifOgrenciDagilimDto>();
+
+        foreach (var sinif in siniflar)
+        {
+            var ogrenciSayisi = await DbContext.Ogrenciler
+                .CountAsync(o => o.Sinif_ID == sinif.ID && o.DelDate == null);
+
+            if (ogrenciSayisi > 0)
+            {
+                sinifBazliOgrenciDagilimi.Add(new SinifOgrenciDagilimDto
+                {
+                    SinifAdi = sinif.Adi,
+                    OgrenciSayisi = ogrenciSayisi
+                });
+            }
+        }
+
+        sinifBazliOgrenciDagilimi = sinifBazliOgrenciDagilimi
+            .OrderByDescending(x => x.OgrenciSayisi)
+            .ToList();
+    }
+
+    // DTO sınıfları
+    public class GunlukKatilimDto
+    {
+        public string Tarih { get; set; } = string.Empty;
+        public decimal KatilimYuzdesi { get; set; }
+    }
+
+    public class SinifOgrenciDagilimDto
+    {
+        public string SinifAdi { get; set; } = string.Empty;
+        public int OgrenciSayisi { get; set; }
     }
 
     async Task YukleOgrenci()
@@ -317,30 +679,94 @@ else
 
         if (!ogrenciId.HasValue) return;
 
+        var kullaniciId = AuthStateService.CurrentUser!.ID;
         var bugun = DateTime.Today;
         var gun = bugun.DayOfWeek;
 
-        // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
-        bekleyenOdevSayisi = await DbContext.Odevler
-            .Where(x => !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == AuthStateService.CurrentUser!.ID) && x.DelDate == null)
-            .CountAsync();
+        // Öğrencinin kayıtlı olduğu sınıfların ID'lerini bul
+        // Ana sınıf (nullable olabilir)
+        var anaSinifId = await DbContext.Ogrenciler
+            .Where(x => x.ID == ogrenciId.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
+            .FirstOrDefaultAsync();
 
-        yaklasanTeslimSayisi = await DbContext.Odevler
-            .Where(x => x.DelDate == null && x.SonTeslimTarihi >= bugun && x.SonTeslimTarihi <= bugun.AddDays(3))
-            .CountAsync();
-
-        bugunkuDersler = await DbContext.DersProgramlari
-            .Include(x => x.Ders)
-            .Where(x => x.Gun == gun && x.DelDate == null)
-            .OrderBy(x => x.BaslangicSaati)
+        // Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
+        var katildigiSinifIdleri = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == kullaniciId && x.Tip == "Öğrenci" && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
             .ToListAsync();
+
+        // SinifOgrenciler tablosundan katıldığı sınıflar
+        var sinifOgrenciSinifIdleri = await DbContext.SinifOgrenciler
+            .Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null)
+            .Select(x => x.Sinif_ID)
+            .ToListAsync();
+
+        // Tüm sınıf ID'lerini birleştir
+        var tumSinifIdleri = new List<int>();
+        if (anaSinifId.HasValue && anaSinifId.Value > 0)
+        {
+            tumSinifIdleri.Add(anaSinifId.Value);
+        }
+        tumSinifIdleri.AddRange(katildigiSinifIdleri);
+        tumSinifIdleri.AddRange(sinifOgrenciSinifIdleri);
+        tumSinifIdleri = tumSinifIdleri.Distinct().ToList();
+
+        // Öğrencinin katıldığı sınıflardaki ders programlarından ders ID'lerini al
+        var ogrenciDersIdleri = new List<int>();
+        if (tumSinifIdleri.Any())
+        {
+            ogrenciDersIdleri = await DbContext.DersProgramlari
+                .Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && x.DelDate == null && x.Aktif)
+                .Select(x => x.Ders_ID)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
+        // Bekleyen ödev sayısı - öğrencinin katıldığı sınıflardaki derslerin ödevleri
+        if (ogrenciDersIdleri.Any())
+        {
+            bekleyenOdevSayisi = await DbContext.Odevler
+                .Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && 
+                           !DbContext.OdevTeslimler.Any(t => t.Odev_ID == x.ID && t.Ogrenci_ID == kullaniciId && t.DelDate == null) && 
+                           x.DelDate == null)
+                .CountAsync();
+
+            yaklasanTeslimSayisi = await DbContext.Odevler
+                .Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && 
+                           x.DelDate == null && 
+                           x.SonTeslimTarihi >= bugun && 
+                           x.SonTeslimTarihi <= bugun.AddDays(3))
+                .CountAsync();
+        }
+        else
+        {
+            bekleyenOdevSayisi = 0;
+            yaklasanTeslimSayisi = 0;
+        }
+
+        // Bugünkü dersler - öğrencinin katıldığı sınıflardaki ders programları
+        if (tumSinifIdleri.Any())
+        {
+            bugunkuDersler = await DbContext.DersProgramlari
+                .Include(x => x.Ders)
+                .Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && 
+                           x.Gun == gun && 
+                           x.DelDate == null && 
+                           x.Aktif)
+                .OrderBy(x => x.BaslangicSaati)
+                .ToListAsync();
+        }
+        else
+        {
+            bugunkuDersler = new List<ItemDersProgrami>();
+        }
 
         bugunkuDersSayisi = bugunkuDersler.Count;
 
         // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
         // Her ödev için sadece en son teslim kaydını al (aynı ödev için birden fazla teslim olabilir)
-        var kullaniciId = AuthStateService.CurrentUser!.ID;
-        
         // Önce tüm teslimleri çek, sonra memory'de grupla
         var tumTeslimler = await DbContext.OdevTeslimler
             .Where(x => x.Ogrenci_ID == kullaniciId && x.DelDate == null && x.Not != null)
@@ -354,10 +780,20 @@ else
         
         ortalamaNot = ogrenciNotlari.Any() ? (decimal)ogrenciNotlari.Average() : 0;
 
-        sonOdevler = await DbContext.Odevler
-            .OrderByDescending(x => x.CreDate)
-            .Take(5)
-            .ToListAsync();
+        // Son ödevler - öğrencinin katıldığı sınıflardaki derslerin ödevleri
+        if (ogrenciDersIdleri.Any())
+        {
+            sonOdevler = await DbContext.Odevler
+                .Include(x => x.Ders)
+                .Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && x.DelDate == null)
+                .OrderByDescending(x => x.CreDate)
+                .Take(5)
+                .ToListAsync();
+        }
+        else
+        {
+            sonOdevler = new List<ItemOdev>();
+        }
     }
 
     async Task YukleOgretmen()
@@ -383,7 +819,7 @@ else
 
         // Bu sınıflardaki öğrencileri say
         ogrenciSayisi = await DbContext.Ogrenciler
-            .Where(x => x.DelDate == null && ogretmenSinifIdleri.Contains(x.Sinif_ID))
+            .Where(x => x.DelDate == null && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
             .CountAsync();
 
         var bugun = DateTime.Today.DayOfWeek;
@@ -413,9 +849,9 @@ else
     }
 
     // Admin yönlendirmeleri
-    void GitDersListesine()
+    void GitSinifListesine()
     {
-        NavigationManager.NavigateTo("/admin/dersler");
+        NavigationManager.NavigateTo("/admin/siniflar");
     }
 
     void GitKullaniciListesine()
