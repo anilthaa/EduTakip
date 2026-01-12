@@ -15,7 +15,7 @@
 	{
 		<RadzenDataGrid Data="@teslimler" TItem="ItemOdevTeslim" AllowPaging="true" PageSize="10">
 			<Columns>
-				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Ogrenci">
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Öğrenci Adı Soyadı">
 					<Template Context="item">
 						@item.Ogrenci.Adi @item.Ogrenci.Soyadi
 					</Template>
@@ -58,7 +58,7 @@
 					</Template>
 				</RadzenDataGridColumn>
 
-				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="Islem">
+				<RadzenDataGridColumn TItem="ItemOdevTeslim" Title="İşlem">
 					<Template Context="item">
 						<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => NotVer(item))"></RadzenButton>
 					</Template>

@@ -9,6 +9,13 @@
 
 <PageTitle>Kayıt Ol</PageTitle>
 
+<style>
+    html, body {
+        overflow: hidden !important;
+        height: 100% !important;
+    }
+</style>
+
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
@@ -16,7 +23,7 @@
             <p>Yeni hesap oluşturun</p>
         </div>
 
-        <RadzenTabs SelectedIndex="@selectedUserTypeIndex" SelectedIndexChanged="@OnSelectedIndexChanged" class="w-100" Style="margin-bottom: 1.5rem; margin-top: 1rem;">
+        <RadzenTabs SelectedIndex="@selectedUserTypeIndex" SelectedIndexChanged="@OnSelectedIndexChanged" class="w-100" Style="margin-bottom: 0.75rem; margin-top: 0;">
             <Tabs>
                 <RadzenTabsItem Text="Öğrenci" />
                 <RadzenTabsItem Text="Öğretmen" />
@@ -25,38 +32,44 @@
 
         <RadzenTemplateForm Data="@registerModel" TItem="RegisterModel" Submit="@OnRegister" class="auth-form">
             <RadzenFieldset Text="Kayıt Bilgileri" class="w-100">
-                <RadzenStack>
-                        <RadzenLabel Text="Ad"></RadzenLabel>
-                        <RadzenTextBox @bind-Value="registerModel.Adi" Placeholder="Adınızı girin" class="w-100" />
-                        <RadzenFormFieldValidator />
+                <RadzenStack Gap="1rem">
+                        <RadzenFormField Text="Ad" class="w-100">
+                            <RadzenTextBox @bind-Value="registerModel.Adi" Placeholder="Adınızı girin" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
                    
-                        <RadzenLabel Text="Soyad"></RadzenLabel>
-                        <RadzenTextBox @bind-Value="registerModel.Soyadi" Placeholder="Soyadınızı girin" class="w-100" />
-                        <RadzenFormFieldValidator />
+                        <RadzenFormField Text="Soyad" class="w-100">
+                            <RadzenTextBox @bind-Value="registerModel.Soyadi" Placeholder="Soyadınızı girin" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
                     
-                        <RadzenLabel Text="E-posta"></RadzenLabel>
-                        <RadzenTextBox @bind-Value="registerModel.EPosta" Placeholder="ornek@email.com" class="w-100" />
-                        <RadzenFormFieldValidator />
+                        <RadzenFormField Text="E-posta" class="w-100">
+                            <RadzenTextBox @bind-Value="registerModel.EPosta" Placeholder="ornek@email.com" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
                    
-                        <RadzenLabel Text="Şifre"></RadzenLabel>
-                        <RadzenPassword @bind-Value="registerModel.Sifre" Placeholder="En az 6 karakter" class="w-100" />
-                        <RadzenFormFieldValidator />
+                        <RadzenFormField Text="Şifre" class="w-100">
+                            <RadzenPassword @bind-Value="registerModel.Sifre" Placeholder="En az 6 karakter" class="w-100" />
+                            <RadzenFormFieldValidator />
+                        </RadzenFormField>
                     
 
                     @if (selectedUserType == "ogrenci")
                     {
-                            <RadzenLabel Text="Öğrenci No"></RadzenLabel>
-                            <RadzenTextBox @bind-Value="registerModel.OgrenciNo" Placeholder="Öğrenci numaranızı girin" class="w-100" />
-                            <RadzenFormFieldValidator />
+                            <RadzenFormField Text="Öğrenci No" class="w-100">
+                                <RadzenTextBox @bind-Value="registerModel.OgrenciNo" Placeholder="Öğrenci numaranızı girin" class="w-100" />
+                                <RadzenFormFieldValidator />
+                            </RadzenFormField>
                     }
 
                     @if (selectedUserType == "ogretmen")
                     {
-                            <RadzenLabel Text="Birim"></RadzenLabel>
-                            <RadzenDropDown Data="@birimler" TextProperty="Adi" ValueProperty="ID" 
-                                           @bind-Value="registerModel.Birim_ID" 
-                                           Placeholder="Birim seçin" class="w-100" />
-                            <RadzenFormFieldValidator />
+                            <RadzenFormField Text="Birim" class="w-100">
+                                <RadzenDropDown Data="@birimler" TextProperty="Adi" ValueProperty="ID" 
+                                               @bind-Value="registerModel.Birim_ID" 
+                                               Placeholder="Birim seçin" class="w-100" />
+                                <RadzenFormFieldValidator />
+                            </RadzenFormField>
                     }
 
                     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
@@ -69,7 +82,7 @@
                                       Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
                     </RadzenStack>
 
-                    <div class="text-center w-100">
+                    <div class="text-center w-100" style="margin-top: 0.5rem;">
                         <span>Zaten hesabınız var mı? </span>
                         <RadzenLink Path="/login" Text="Giriş Yap" />
                     </div>
