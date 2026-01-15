@@ -122,7 +122,7 @@
             
             if (AuthStateService.IsAuthenticated)
             {
-                Navigation.NavigateTo("/home");
+                Navigation.NavigateTo("/dashboard");
                 return;
             }
             
@@ -203,6 +203,49 @@
         StateHasChanged();
     }
 
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        try
+        {
+            var emailRegex = new System.Text.RegularExpressions.Regex(
+                @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | 
+                System.Text.RegularExpressions.RegexOptions.Compiled);
+            return emailRegex.IsMatch(email.Trim());
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsValidName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return false;
+        
+        // Ad/soyad en az 2 karakter olmalı ve sadece harf, boşluk, tire, nokta içerebilir
+        var nameRegex = new System.Text.RegularExpressions.Regex(
+            @"^[a-zA-ZçğıöşüÇĞIİÖŞÜ\s\-\.]{2,50}$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+        return nameRegex.IsMatch(name.Trim());
+    }
+
+    private bool IsValidOgrenciNo(string ogrenciNo)
+    {
+        if (string.IsNullOrWhiteSpace(ogrenciNo))
+            return false;
+        
+        // Öğrenci numarası sadece harf, rakam ve tire içerebilir, 3-20 karakter arası
+        var ogrenciNoRegex = new System.Text.RegularExpressions.Regex(
+            @"^[a-zA-Z0-9\-]{3,20}$",
+            System.Text.RegularExpressions.RegexOptions.Compiled);
+        return ogrenciNoRegex.IsMatch(ogrenciNo.Trim());
+    }
+
     private async Task OnRegister(RegisterModel model)
     {
         if (isLoading) return;
@@ -233,6 +276,119 @@
             return;
         }
 
+        // Ad validasyonu
+        if (string.IsNullOrWhiteSpace(model.Adi))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen adınızı girin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        if (!IsValidName(model.Adi))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Ad en az 2 karakter olmalı ve sadece harf içermelidir.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        // Soyad validasyonu
+        if (string.IsNullOrWhiteSpace(model.Soyadi))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen soyadınızı girin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        if (!IsValidName(model.Soyadi))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Soyad en az 2 karakter olmalı ve sadece harf içermelidir.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        // E-posta validasyonu
+        if (string.IsNullOrWhiteSpace(model.EPosta))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen e-posta adresinizi girin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        if (!IsValidEmail(model.EPosta))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen geçerli bir e-posta adresi girin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        // Şifre validasyonu
+        if (string.IsNullOrWhiteSpace(model.Sifre))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Lütfen şifrenizi girin.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        if (model.Sifre.Length < 6)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Şifre en az 6 karakter olmalıdır.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        if (model.Sifre.Length > 100)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Uyarı",
+                Detail = "Şifre en fazla 100 karakter olabilir.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        // Öğrenci için özel kontroller
         if (selectedUserType == "ogrenci")
         {
             if (string.IsNullOrWhiteSpace(model.OgrenciNo))
@@ -242,6 +398,18 @@
                     Severity = NotificationSeverity.Warning,
                     Summary = "Uyarı",
                     Detail = "Lütfen öğrenci numarası bilgisini girin.",
+                    Duration = 4000
+                });
+                return;
+            }
+
+            if (!IsValidOgrenciNo(model.OgrenciNo))
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Uyarı",
+                    Detail = "Öğrenci numarası 3-20 karakter arası olmalı ve sadece harf, rakam ve tire içermelidir.",
                     Duration = 4000
                 });
                 return;
@@ -260,23 +428,6 @@
                 });
                 return;
             }
-        }
-
-        // Temel alan validasyonu
-        if (string.IsNullOrWhiteSpace(model.Adi) || 
-            string.IsNullOrWhiteSpace(model.Soyadi) || 
-            string.IsNullOrWhiteSpace(model.EPosta) || 
-            string.IsNullOrWhiteSpace(model.Sifre) || 
-            model.Sifre.Length < 6)
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Warning,
-                Summary = "Uyarı",
-                Detail = "Lütfen tüm zorunlu alanları doldurun ve şifrenin en az 6 karakter olduğundan emin olun.",
-                Duration = 4000
-            });
-            return;
         }
 
         isLoading = true;
@@ -302,61 +453,14 @@
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Success,
-                    Summary = "Başarılı",
-                    Detail = "Kayıt başarıyla oluşturuldu. Giriş yapılıyor...",
-                    Duration = 2000
+                    Summary = "Kayıt Başarılı",
+                    Detail = "Kayıt başarıyla oluşturuldu. Lütfen e-postanızı kontrol edin ve hesabınızı onaylayın. E-posta onayından sonra admin onayı beklenmektedir.",
+                    Duration = 5000
                 });
                 
-                // Kayıt sonrası otomatik giriş yap
-                await Task.Delay(500);
-                
-                var loginRequest = new LoginRequest(model.EPosta, model.Sifre);
-                var loginResponse = await AuthService.LoginAsync(loginRequest);
-                
-                if (loginResponse != null && !string.IsNullOrEmpty(loginResponse.Token))
-                {
-                    var success = await AuthStateService.LoginAsync(loginResponse.Token, loginResponse.Kullanici);
-                    
-                    if (success)
-                    {
-                        NotificationService.Notify(new NotificationMessage
-                        {
-                            Severity = NotificationSeverity.Success,
-                            Summary = "Başarılı",
-                            Detail = "Giriş yapıldı",
-                            Duration = 2000
-                        });
-                        
-                        await Task.Delay(500);
-                        Navigation.NavigateTo("/home");
-                    }
-                    else
-                    {
-                        NotificationService.Notify(new NotificationMessage
-                        {
-                            Severity = NotificationSeverity.Warning,
-                            Summary = "Uyarı",
-                            Detail = "Kayıt başarılı ancak otomatik giriş yapılamadı. Lütfen manuel olarak giriş yapın.",
-                            Duration = 4000
-                        });
-                        
-                        await Task.Delay(500);
-                        Navigation.NavigateTo("/login");
-                    }
-                }
-                else
-                {
-                    NotificationService.Notify(new NotificationMessage
-                    {
-                        Severity = NotificationSeverity.Warning,
-                        Summary = "Uyarı",
-                        Detail = "Kayıt başarılı ancak otomatik giriş yapılamadı. Lütfen manuel olarak giriş yapın.",
-                        Duration = 4000
-                    });
-                    
-                    await Task.Delay(500);
-                    Navigation.NavigateTo("/login");
-                }
+                // Giriş sayfasına yönlendir
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/login");
             }
             else
             {

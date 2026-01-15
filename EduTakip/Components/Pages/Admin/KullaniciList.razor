@@ -5,10 +5,10 @@
 @inject NotificationService NotificationService
 
 
-<RadzenButton Text="Yeni Kullanıcı Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
+<RadzenButton Text="Yeni Kullanici Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
 
 <RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Kullanıcı Listesi</h3>
+	<h3 style="text-align:center;">Kullanici Listesi</h3>
 	<RadzenDataGrid Data="@kullanicilar" TItem="ItemKullanici" AllowPaging="true" PageSize="10">
 		<Columns>
 			<RadzenDataGridColumn Property="Adi" Title="Ad"></RadzenDataGridColumn>
@@ -25,7 +25,7 @@
 				</Template>
 			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn Title="İşlemler">
+			<RadzenDataGridColumn Title="Islemler">
 				<Template Context="item">
 					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => duzenleKullanici(item))"></RadzenButton>
 					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => silKullanici(item))"></RadzenButton>
@@ -51,7 +51,7 @@
 	}
 	async Task yeniKullanici()
 	{
-		var result=await DialogService.OpenAsync<KullaniciTnm>("Yeni Kullanıcı",
+		var result=await DialogService.OpenAsync<KullaniciTnm>("Yeni Kullanici",
 			new Dictionary<string, object>(),
 			new DialogOptions() { Width = "600px", Height = "400px" });
 
@@ -63,7 +63,7 @@
 
 	async Task duzenleKullanici(ItemKullanici kullanici)
 	{
-		var result = await DialogService.OpenAsync<KullaniciTnm>("Kullanıcı Düzenle",
+		var result = await DialogService.OpenAsync<KullaniciTnm>("Kullanici Düzenle",
 			new Dictionary<string, object>() { { "KullaniciId", kullanici.ID } },
 			new DialogOptions() { Width = "600px", Height = "400px" });
 		if (result == true)
@@ -74,22 +74,22 @@
 
 	async Task silKullanici(ItemKullanici kullanici)
 	{
-		bool? result = await DialogService.Confirm("Kullanıcıyı silmek istediğinize emin misiniz?", "Onay",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		bool? result = await DialogService.Confirm("Kullaniciyi silmek istediginize emin misiniz?", "Onay",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
 		if (result == true)
 		{
 			try
 			{
-				// Kullanıcıyı soft delete yap
+				// Kullaniciyi soft delete yap
 				kullanici.DelDate = DateTime.UtcNow;
 				kullanici.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
 				DbContext.Kullanicilar.Update(kullanici);
 
-				// Öğrenci ise, ilgili tablolardaki kayıtları da soft delete yap
+				// Ögrenci ise, ilgili tablolardaki kayitlari da soft delete yap
 				var kullaniciTip = kullanici.KullaniciTip?.Adi?.ToLower() ?? "";
-				if (kullaniciTip.Contains("öğrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
+				if (kullaniciTip.Contains("ögrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
 				{
-					// Öğrenci ID'sini bul
+					// Ögrenci ID'sini bul
 					var ogrenci = await DbContext.Ogrenciler
 						.IgnoreQueryFilters()
 						.Where(x => x.Kullanici_ID == kullanici.ID && x.DelDate == null)
@@ -102,7 +102,7 @@
 						ogrenci.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
 						DbContext.Ogrenciler.Update(ogrenci);
 
-						// SinifKullanicilar tablosundaki kayıtları soft delete yap
+						// SinifKullanicilar tablosundaki kayitlari soft delete yap
 						var sinifKullanicilar = await DbContext.SinifKullanicilar
 							.IgnoreQueryFilters()
 							.Where(x => x.Kullanici_ID == kullanici.ID && x.DelDate == null)
@@ -115,7 +115,7 @@
 							DbContext.SinifKullanicilar.Update(sk);
 						}
 
-						// SinifOgrenciler tablosundaki kayıtları soft delete yap
+						// SinifOgrenciler tablosundaki kayitlari soft delete yap
 						var sinifOgrenciler = await DbContext.SinifOgrenciler
 							.IgnoreQueryFilters()
 							.Where(x => x.Ogrenci_ID == ogrenci.ID && x.DelDate == null)
@@ -128,7 +128,7 @@
 							DbContext.SinifOgrenciler.Update(so);
 						}
 
-						// DersKatilimcilar tablosundaki kayıtları soft delete yap (Ogrenci_ID aslında Kullanici_ID)
+						// DersKatilimcilar tablosundaki kayitlari soft delete yap (Ogrenci_ID aslinda Kullanici_ID)
 						var dersKatilimcilar = await DbContext.DersKatilimcilar
 							.IgnoreQueryFilters()
 							.Where(x => x.Ogrenci_ID == kullanici.ID && x.DelDate == null)

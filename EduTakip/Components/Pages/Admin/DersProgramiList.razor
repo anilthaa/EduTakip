@@ -1,13 +1,13 @@
 ﻿@page "/admin/ders-programlari"
 @attribute [Authorize(Roles = "Admin")]
 	
-	<RadzenButton Text="Yeni Ders Programı" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@Yeni" />
+	<RadzenButton Text="Yeni Ders Programi" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@Yeni" />
 <RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Ders Programları</h3>
+	<h3 style="text-align:center;">Ders Programlari</h3>
 	<RadzenDataGrid TItem="ItemDersProgrami" Data="@list">
 		<Columns>
 			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Ders Adı">
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Ders Adi">
 				<Template Context="item">
 					@item.Ders?.Adi
 				</Template>
@@ -18,23 +18,23 @@
 					@GetGunAdi(item.Gun)
 				</Template>
 			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Başlangıç Saati">
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Baslangiç Saati">
 				<Template Context="item">
 					@item.BaslangicSaati.ToString("hh\\:mm")
 				</Template>
 			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Bitiş Saati">
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Bitis Saati">
 				<Template Context="item">
 					@item.BitisSaati.ToString("hh\\:mm")
 				</Template>
 			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Sınıf">
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Sinif">
 				<Template Context="item">
 					@item.Sinif?.Adi
 				</Template>
 			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="İşlemler">
+			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Islemler">
 				<Template Context="item">
 					<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditDersProg(item.ID))" Style="margin-right: 10px;" />
 					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteDersProg(item))" />
@@ -57,9 +57,9 @@
 		return gun switch
 		{
 			DayOfWeek.Monday => "Pazartesi",
-			DayOfWeek.Tuesday => "Salı",
-			DayOfWeek.Wednesday => "Çarşamba",
-			DayOfWeek.Thursday => "Perşembe",
+			DayOfWeek.Tuesday => "Sali",
+			DayOfWeek.Wednesday => "Çarsamba",
+			DayOfWeek.Thursday => "Persembe",
 			DayOfWeek.Friday => "Cuma",
 			DayOfWeek.Saturday => "Cumartesi",
 			DayOfWeek.Sunday => "Pazar",
@@ -78,7 +78,7 @@
 	async Task Yeni()
 	{
 		var result = await DialogService.OpenAsync<DersProgramiTnm>(
-			"Ders Programı",
+			"Ders Programi",
 			null,
 			new DialogOptions() { Width = "600px" });
 		
@@ -90,7 +90,7 @@
 
 	async Task EditDersProg(int id)
 	{
-		var result = await DialogService.OpenAsync<DersProgramiTnm>("Ders Programı Düzenle", new Dictionary<string, object>()
+		var result = await DialogService.OpenAsync<DersProgramiTnm>("Ders Programi Düzenle", new Dictionary<string, object>()
 		{
 			{ "Id", id }
 		}, new DialogOptions() { Width = "600px"});
@@ -102,13 +102,13 @@
 
 	async Task DeleteDersProg(ItemDersProgrami item)
 	{
-		bool? result = await DialogService.Confirm("Seçili ders programını silmek istediğinize emin misiniz?", "Ders Programı Sil", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		bool? result = await DialogService.Confirm("Seçili ders programini silmek istediginize emin misiniz?", "Ders Programi Sil", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
 		if (result == true)
 		{
 			try
 			{
 				item.DelDate = DateTime.UtcNow;
-				item.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+				item.DelUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
 				DbContext.DersProgramlari.Update(item);
 				await DbContext.SaveChangesAsync();
 				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ders programı başarıyla silindi.");

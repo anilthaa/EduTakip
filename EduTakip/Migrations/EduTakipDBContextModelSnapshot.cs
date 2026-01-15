@@ -280,12 +280,30 @@ namespace EduTakip.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("EmailConfirmationToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("EmailConfirmationTokenExpiry")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("bit");
+
                     b.Property<int>("KullaniciTip_ID")
                         .HasColumnType("int");
+
+                    b.Property<bool>("Reddedildi")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Sifre")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SifreSifirlamaToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("SifreSifirlamaTokenExpiry")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Soyadi")
                         .IsRequired()

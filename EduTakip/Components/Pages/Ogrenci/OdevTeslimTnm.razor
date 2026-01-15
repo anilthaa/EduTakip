@@ -24,7 +24,7 @@
 	@if (dosyaBoyutu > 50 * 1024 * 1024)
 	{
 		<div class="mt-2 mb-2">
-			<RadzenBadge Text="Dosya boyutu 50MB'ı aşıyor! Lütfen daha küçük bir dosya seçin." Style="background-color: #dc3545; color: white;"></RadzenBadge>
+			<RadzenBadge Text="Dosya boyutu 50MB'i asiyor! Lütfen daha küçük bir dosya seçin." Style="background-color: #dc3545; color: white;"></RadzenBadge>
 		</div>
 	}
 	
@@ -38,7 +38,7 @@
 
 	<div class="mt-3 text-center">
 		<RadzenButton Text="Teslim Et" ButtonType="ButtonType.Submit" Style="background-color:green; margin-right:10px;"></RadzenButton>
-		<RadzenButton Text="İptal" Style="background-color:red" Click="@(args=>DialogService.Close(false))"></RadzenButton>
+		<RadzenButton Text="Iptal" Style="background-color:red" Click="@(args=>DialogService.Close(false))"></RadzenButton>
 	</div>
 </RadzenTemplateForm>
 
@@ -59,10 +59,10 @@
 			return;
 		}
 
-		// Büyük dosyalar için HttpClient timeout'unu artır (5 dakika)
+		// Büyük dosyalar için HttpClient timeout'unu artir (5 dakika)
 		HttpClient.Timeout = TimeSpan.FromMinutes(5);
 
-		// Öğrenci ID'sini bul
+		// Ögrenci ID'sini bul
 		ogrenciId = await DbContext.Ogrenciler
 			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
 			.Select(x => x.ID)
@@ -76,10 +76,10 @@
 		}
 
 		model.Odev_ID = OdevId;
-		model.Ogrenci_ID = AuthStateService.CurrentUser.ID; // ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID
+		model.Ogrenci_ID = AuthStateService.CurrentUser.ID; // ItemOdevTeslim'de Ogrenci_ID aslinda Kullanici_ID
 		model.TeslimTarihi = DateTime.UtcNow;
-		model.DosyaYolu = string.Empty; // Başlangıç değeri
-		model.OgretmenYorumu = string.Empty; // Başlangıç değeri
+		model.DosyaYolu = string.Empty; // Baslangiç degeri
+		model.OgretmenYorumu = string.Empty; // Baslangiç degeri
 	}
 
 	async Task OnDosyaSecildi(InputFileChangeEventArgs e)
@@ -134,14 +134,14 @@
 				return;
 			}
 
-			// FormData oluştur
+			// FormData olustur
 			using var content = new MultipartFormDataContent();
 			using var stream = secilenDosya.OpenReadStream(maxAllowedSize: maxDosyaBoyutu); // 50MB limit
 			using var streamContent = new StreamContent(stream);
 			streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(secilenDosya.ContentType);
 			content.Add(streamContent, "file", secilenDosya.Name);
 
-			// Dosyayı yükle - Absolute URI oluştur
+			// Dosyayi yükle - Absolute URI olustur
 			var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
 			var uploadUrl = $"{baseUrl}/api/upload";
 			
@@ -159,7 +159,7 @@
 				}
 				else
 				{
-					// Response'dan dosya yolunu alamazsak, dosya adından oluştur
+					// Response'dan dosya yolunu alamazsak, dosya adindan olustur
 					var dosyaAdi = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{secilenDosya.Name}";
 					model.DosyaYolu = $"/uploads/{dosyaAdi}";
 					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Dosya seçildi.");
@@ -205,13 +205,13 @@
 				return;
 			}
 
-			// Model alanlarını kontrol et ve doldur
+			// Model alanlarini kontrol et ve doldur
 			if (string.IsNullOrEmpty(model.DosyaYolu))
 				model.DosyaYolu = string.Empty;
 			if (string.IsNullOrEmpty(model.OgretmenYorumu))
 				model.OgretmenYorumu = string.Empty;
 
-			// Zaten teslim edilmiş mi kontrol et
+			// Zaten teslim edilmis mi kontrol et
 			var mevcutTeslim = await DbContext.OdevTeslimler
 				.Where(x => x.Odev_ID == model.Odev_ID && x.Ogrenci_ID == model.Ogrenci_ID && x.DelDate == null)
 				.FirstOrDefaultAsync();
@@ -229,7 +229,7 @@
 			}
 			else
 			{
-				// Yeni kayıt
+				// Yeni kayit
 				model.CreDate = DateTime.UtcNow;
 				model.CreUser = AuthStateService.CurrentUser?.ID ?? 0;
 				model.DosyaYolu = model.DosyaYolu ?? string.Empty;

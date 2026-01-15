@@ -1,0 +1,137 @@
+@page "/admin/bekleyen-hesaplar"
+@using System.Threading.Tasks
+@attribute [Authorize(Roles = "Admin")]
+@inject AuthStateService AuthStateService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<h3 style="text-align:center;">Onay Bekleyen Hesaplar</h3>
+	<RadzenDataGrid Data="@bekleyenHesaplar" TItem="ItemKullanici" AllowPaging="true" PageSize="10" AllowSorting="true">
+		<Columns>
+			<RadzenDataGridColumn Property="Adi" Title="Ad" Sortable="true"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="Soyadi" Title="Soyad" Sortable="true"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="EPosta" Title="E-Posta" Sortable="true"></RadzenDataGridColumn>
+			<RadzenDataGridColumn Title="Kullanıcı Tipi" Sortable="true">
+				<Template Context="item">
+					@(item.KullaniciTip?.Adi ?? "")
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn Property="CreDate" Title="Kayıt Tarihi" Sortable="true">
+				<Template Context="item">
+					@item.CreDate.ToString("dd.MM.yyyy HH:mm")
+				</Template>
+			</RadzenDataGridColumn>
+			<RadzenDataGridColumn Title="İşlemler">
+				<Template Context="item">
+					<div style="display: flex; gap: 8px;">
+						<RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Click="@(() => OnaylaHesap(item))" Text="Onayla"></RadzenButton>
+						<RadzenButton Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => ReddetHesap(item))" Text="Reddet"></RadzenButton>
+					</div>
+				</Template>
+			</RadzenDataGridColumn>
+		</Columns>
+		<EmptyTemplate>
+			<div style="text-align: center; padding: 20px;">
+				<p>Onay bekleyen hesap bulunmamaktadır.</p>
+			</div>
+		</EmptyTemplate>
+	</RadzenDataGrid>
+</RadzenCard>
+
+@code {
+	List<ItemKullanici> bekleyenHesaplar = new();
+
+	protected override async Task OnInitializedAsync()
+	{
+		await Listele();
+	}
+
+	async Task Listele()
+	{
+		try
+		{
+			bekleyenHesaplar = await DbContext.Kullanicilar
+				.Include(k => k.KullaniciTip)
+				.Where(k => k.DelDate == null 
+					&& k.EmailConfirmed 
+					&& !k.Aktif
+					&& !k.Reddedildi)
+				.OrderBy(k => k.CreDate)
+				.ToListAsync();
+		}
+		catch (Exception ex)
+		{
+			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+		}
+	}
+
+	async Task OnaylaHesap(ItemKullanici kullanici)
+	{
+		bool? result = await DialogService.Confirm("Bu hesabı onaylamak istediğinize emin misiniz?", "Onay",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		
+		if (result == true)
+		{
+			try
+			{
+				// E-posta onayı kontrolü
+				if (!kullanici.EmailConfirmed)
+				{
+					NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Kullanıcının önce e-postasını onaylaması gerekmektedir.");
+					return;
+				}
+
+				// Hesap zaten aktifse
+				if (kullanici.Aktif)
+				{
+					NotificationService.Notify(NotificationSeverity.Info, "Bilgi", "Hesap zaten aktif.");
+					await Listele();
+					return;
+				}
+
+				// Hesabı aktifleştir
+				kullanici.Aktif = true;
+				kullanici.UpdDate = DateTime.UtcNow;
+				kullanici.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
+				
+				DbContext.Kullanicilar.Update(kullanici);
+				await DbContext.SaveChangesAsync();
+
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap başarıyla onaylandı.");
+				await Listele();
+			}
+			catch (Exception ex)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			}
+		}
+	}
+
+	async Task ReddetHesap(ItemKullanici kullanici)
+	{
+		bool? result = await DialogService.Confirm("Bu hesabı reddetmek istediğinize emin misiniz? Reddedilen kullanıcı giriş yapamayacaktır.", "Reddet",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		
+		if (result == true)
+		{
+			try
+			{
+				// Hesabı reddet
+				kullanici.Reddedildi = true;
+				kullanici.UpdDate = DateTime.UtcNow;
+				kullanici.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
+				
+				DbContext.Kullanicilar.Update(kullanici);
+				await DbContext.SaveChangesAsync();
+
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap başarıyla reddedildi.");
+				await Listele();
+			}
+			catch (Exception ex)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			}
+		}
+	}
+}

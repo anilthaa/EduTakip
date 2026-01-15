@@ -19,5 +19,12 @@ namespace EduTakip.Models
     public record AuthUserDto(int ID, string Adi, string Soyadi, string EPosta, string KullaniciTip);
 
     public record AuthResponse(string Token, AuthUserDto Kullanici);
+
+    public record ForgotPasswordRequest(
+        [property: Required, EmailAddress] string EPosta);
+
+    public record ResetPasswordRequest(
+        [property: Required] string Token,
+        [property: Required, MinLength(6)] string YeniSifre);
 }
 

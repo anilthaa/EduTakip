@@ -1,5 +1,5 @@
 ﻿<RadzenTemplateForm TItem="ItemDersProgrami" Data="@model" Submit="@Kaydet">
-	<RadzenFieldset Text="Ders Programı Bilgileri">
+	<RadzenFieldset Text="Ders Programi Bilgileri">
 		<div class="row">
 			<div class="col-12 mb-3">
 				<RadzenLabel Text="Ders"></RadzenLabel>
@@ -10,15 +10,15 @@
 				<RadzenDropDown Data="@gunler" TextProperty="Adi" ValueProperty="Deger" @bind-Value="model.Gun" Style="width:100%"></RadzenDropDown>
 			</div>
 			<div class="col-6 mb-3">
-				<RadzenLabel Text="Başlangıç Saati"></RadzenLabel>
+				<RadzenLabel Text="Baslangiç Saati"></RadzenLabel>
 				<RadzenDatePicker @bind-Value="baslangicSaati" ShowTime="true" TimeOnly="true" DateFormat="HH:mm" HourFormat="24" Style="width:100%"></RadzenDatePicker>
 			</div>
 			<div class="col-6 mb-3">
-				<RadzenLabel Text="Bitiş Saati"></RadzenLabel>
+				<RadzenLabel Text="Bitis Saati"></RadzenLabel>
 				<RadzenDatePicker @bind-Value="bitisSaati" ShowTime="true" TimeOnly="true" DateFormat="HH:mm" HourFormat="24" Style="width:100%"></RadzenDatePicker>
 			</div>
 			<div class="col-12 mb-3">
-				<RadzenLabel Text="Sınıf"></RadzenLabel>
+				<RadzenLabel Text="Sinif"></RadzenLabel>
 				<RadzenDropDown Data="@siniflar"
 								TextProperty="Adi"
 								ValueProperty="ID"
@@ -31,7 +31,7 @@
 			</div>
 			<div class="col-12 text-center">
 				<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
-				<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+				<RadzenButton Text="Iptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
 			</div>
 		</div>
 	</RadzenFieldset>
@@ -58,9 +58,9 @@
 		gunler = new List<GunItem>
 		{
 			new GunItem { Deger = DayOfWeek.Monday, Adi = "Pazartesi" },
-			new GunItem { Deger = DayOfWeek.Tuesday, Adi = "Salı" },
-			new GunItem { Deger = DayOfWeek.Wednesday, Adi = "Çarşamba" },
-			new GunItem { Deger = DayOfWeek.Thursday, Adi = "Perşembe" },
+			new GunItem { Deger = DayOfWeek.Tuesday, Adi = "Sali" },
+			new GunItem { Deger = DayOfWeek.Wednesday, Adi = "Çarsamba" },
+			new GunItem { Deger = DayOfWeek.Thursday, Adi = "Persembe" },
 			new GunItem { Deger = DayOfWeek.Friday, Adi = "Cuma" },
 			new GunItem { Deger = DayOfWeek.Saturday, Adi = "Cumartesi" },
 			new GunItem { Deger = DayOfWeek.Sunday, Adi = "Pazar" }
@@ -105,7 +105,7 @@
 			item.BaslangicSaati = baslangicSaati.TimeOfDay;
 			item.BitisSaati = bitisSaati.TimeOfDay;
 
-			// Sinif foreign key alanlarını senkronize et
+			// Sinif foreign key alanlarini senkronize et
 			item.Sinif_ID = item.SinifID;
 
 			int ogretmenId=await DbContext.Dersler.Where(x => x.ID == item.Ders_ID).Select(x => x.Ogretmen_ID).FirstOrDefaultAsync();
@@ -121,13 +121,13 @@
 			if (Id.HasValue && Id.Value > 0)
 			{
 				item.UpdDate = DateTime.UtcNow;
-				item.UpdUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+				item.UpdUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
 				DbContext.DersProgramlari.Update(item);
 			}
 			else
 			{
 				item.CreDate = DateTime.UtcNow;
-				item.CreUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+				item.CreUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
 				await DbContext.DersProgramlari.AddAsync(item);
 			}
 			await DbContext.SaveChangesAsync();

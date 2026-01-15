@@ -39,7 +39,11 @@
                                       Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
                     </RadzenStack>
 
-                    <div class="text-center w-100" style="margin-top: 1rem;">
+                    <div class="text-center w-100" style="margin-top:5px;">
+                        <RadzenLink Path="/forgot-password" Text="Şifremi Unuttum" Style="font-size: 0.9rem; color: #667eea;" />
+                    </div>
+
+                    <div class="text-center w-100" style="margin-top:5px;">
                         <span>Hesabınız yok mu? </span>
                         <RadzenLink Path="/register" Text="Kayıt Ol" />
                     </div>
@@ -111,7 +115,7 @@
                     });
                     
                     await Task.Delay(500);
-                    Navigation.NavigateTo("/home");
+                    Navigation.NavigateTo("/dashboard");
                 }
                 else
                 {

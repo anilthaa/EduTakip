@@ -9,6 +9,8 @@ namespace EduTakip.Services
         Task<AuthResponse?> LoginAsync(LoginRequest request);
         Task<AuthUserDto?> RegisterAsync(RegisterRequest request);
         Task<List<UserTypeDto>?> GetUserTypesAsync();
+        Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request);
+        Task<bool> ResetPasswordAsync(ResetPasswordRequest request);
     }
 
     public record UserTypeDto(int ID, string Adi);
@@ -91,6 +93,54 @@ namespace EduTakip.Services
             catch
             {
                 return null;
+            }
+        }
+
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("/api/auth/forgot-password", request);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+                
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Şifre sıfırlama isteği başarısız: {errorMessage}");
+            }
+            catch (HttpRequestException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new HttpRequestException($"Şifre sıfırlama isteği sırasında bir hata oluştu: {ex.Message}", ex);
+            }
+        }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("/api/auth/reset-password", request);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+                
+                var errorMessage = await response.Content.ReadAsStringAsync();
+                throw new HttpRequestException($"Şifre sıfırlama başarısız: {errorMessage}");
+            }
+            catch (HttpRequestException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new HttpRequestException($"Şifre sıfırlama sırasında bir hata oluştu: {ex.Message}", ex);
             }
         }
     }

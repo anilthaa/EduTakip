@@ -5,7 +5,7 @@
 	<RadzenDatePicker @bind-Value="model.SonTeslimTarihi" ShowTime="true" DateFormat="dd.MM.yyyy HH:mm" HourFormat="24" Style="margin-top:10px" Placeholder="Son Teslim Tarihi"></RadzenDatePicker>
 	<div class="mt-3 text-center">
 		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
-		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+		<RadzenButton Text="Iptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
 	</div>
 </RadzenTemplateForm>
 
@@ -34,11 +34,11 @@
 			.Select(x => x.ID)
 			.FirstAsync();
 
-			// SinifId gönderilmişse, o sınıfın adını al ve o sınıfta programlanmış dersleri göster
-			// SinifId gönderilmemişse (0), öğretmenin tüm derslerini göster
+			// SinifId gönderilmisse, o sinifin adini al ve o sinifta programlanmis dersleri göster
+			// SinifId gönderilmemisse (0), ögretmenin tüm derslerini göster
 			if (SinifId > 0)
 			{
-				// Sınıf adını al
+				// Sinif adini al
 				var sinifAdi = await DbContext.Siniflar
 					.Where(s => s.ID == SinifId && s.DelDate == null)
 					.Select(s => s.Adi)
@@ -46,7 +46,7 @@
 
 				if (!string.IsNullOrEmpty(sinifAdi))
 				{
-					// Bu sınıfta programlanmış dersleri getir
+					// Bu sinifta programlanmis dersleri getir
 					var sinifDersleri = await DbContext.DersProgramlari
 						.Where(dp => dp.Sinif_ID == SinifId && dp.DelDate == null && dp.Aktif)
 						.Select(dp => dp.Ders_ID)
@@ -62,7 +62,7 @@
 				}
 				else
 				{
-					// Sınıf bulunamadıysa, öğretmenin tüm derslerini göster
+					// Sinif bulunamadiysa, ögretmenin tüm derslerini göster
 					dersler = await DbContext.Dersler
 						.Where(x => x.Ogretmen_ID == ogretmenId && x.DelDate == null)
 						.OrderBy(x => x.Adi)
@@ -71,7 +71,7 @@
 			}
 			else
 			{
-				// SinifId gönderilmemişse, öğretmenin tüm derslerini göster
+				// SinifId gönderilmemisse, ögretmenin tüm derslerini göster
 				dersler = await DbContext.Dersler
 					.Where(x => x.Ogretmen_ID == ogretmenId && x.DelDate == null)
 					.OrderBy(x => x.Adi)
