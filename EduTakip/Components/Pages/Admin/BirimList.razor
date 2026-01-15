@@ -6,14 +6,14 @@
 	<h3 style="text-align:center;">Birimler</h3>
 	@if (birimler==null || !birimler.Any())
 	{
-		<p style="text-align:center;">Veri yükleniyor... Veya birim eklenmemiş</p>	
+		<p style="text-align:center;">Veri yükleniyor... Veya birim eklenmemis</p>	
 	}
 	else
 	{
 		<RadzenDataGrid TItem="ItemBirim" Data="@birimler" AllowPaging="true" PageSize="10">
 			<Columns>
 				<RadzenDataGridColumn TItem="ItemBirim" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adı" />
+				<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adi" />
 				<RadzenDataGridColumn TItem="ItemBirim" Title="Aktif">
 					<Template Context="item">
 						<span class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
@@ -23,7 +23,7 @@
 					</Template>
 				</RadzenDataGridColumn>
 
-				<RadzenDataGridColumn TItem="ItemBirim" Title="İşlemler">
+				<RadzenDataGridColumn TItem="ItemBirim" Title="Islemler">
 					<Template Context="item">
 						<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditBirim(item))" Style="margin-right: 10px;" />
 						<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
@@ -81,7 +81,7 @@
 		var yeniDurum = !birim.Aktif;
 		birim.Aktif = yeniDurum;
 		birim.UpdDate = DateTime.UtcNow;
-		birim.UpdUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+		birim.UpdUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
 		DbContext.Birimler.Update(birim);
 		await DbContext.SaveChangesAsync();
 		await Listele();
@@ -91,10 +91,10 @@
 
 	async Task DeleteBirim(ItemBirim birim)
 	{
-		bool? result = await DialogService.Confirm($"'{birim.Adi}' birimini silmek istediğinize emin misiniz?", "Birim Silme Onayı", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		bool? result = await DialogService.Confirm($"'{birim.Adi}' birimini silmek istediginize emin misiniz?", "Birim Silme Onayi", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
 		if (result == true)
 		{
-			birim.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+			birim.DelUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
 			birim.DelDate = DateTime.UtcNow;
 			birim.Aktif = false;
 			DbContext.Birimler.Update(birim);

@@ -1,4 +1,4 @@
-﻿@page "/ogretmen/sinif-ogrencileri/{sinifId:int}"
+@page "/ogretmen/sinif-ogrencileri/{sinifId:int}"
 @attribute [Authorize(Roles="Öğretmen")]
 
 <h3>Sınıftaki Öğrenciler</h3>
@@ -47,12 +47,49 @@
 
 	async Task OgrenciCikar(int sinifOgrenciId)
 	{
-		var ogrenci = await DbContext.SinifKullanicilar.FindAsync(sinifOgrenciId);
-		if (ogrenci != null)
+		var sinifKullanici = await DbContext.SinifKullanicilar.FindAsync(sinifOgrenciId);
+		if (sinifKullanici != null)
 		{
-			ogrenci.DelDate = DateTime.Now;
-			ogrenci.DelUser = AuthStateService.CurrentUser.ID;
-			await DbContext.SaveChangesAsync();
+			try
+			{
+				// Öğrencinin ItemOgrenci kaydını bul
+				var ogrenci = await DbContext.Ogrenciler
+					.Where(x => x.Kullanici_ID == sinifKullanici.Kullanici_ID && x.DelDate == null)
+					.FirstOrDefaultAsync();
+
+				// Eğer bu öğrencinin ana sınıfı bu sınıfsa, Sinif_ID'yi null yap
+				if (ogrenci != null && ogrenci.Sinif_ID == sinifKullanici.Sinif_ID)
+				{
+					ogrenci.Sinif_ID = null;
+					ogrenci.UpdDate = DateTime.UtcNow;
+					ogrenci.UpdUser = AuthStateService.CurrentUser.ID;
+					DbContext.Ogrenciler.Update(ogrenci);
+				}
+
+				// SinifKullanicilar kaydını soft delete yap
+				sinifKullanici.DelDate = DateTime.UtcNow;
+				sinifKullanici.DelUser = AuthStateService.CurrentUser.ID;
+				DbContext.SinifKullanicilar.Update(sinifKullanici);
+
+				// SinifOgrenciler tablosundaki kayıtları da kontrol et ve soft delete yap (eğer öğrenci bulunduysa)
+				if (ogrenci != null)
+				{
+					var sinifOgrenciKayitlari = await DbContext.SinifOgrenciler
+						.IgnoreQueryFilters()
+						.Where(x => x.Sinif_ID == sinifKullanici.Sinif_ID && 
+								   x.Ogrenci_ID == ogrenci.ID && 
+								   x.DelDate == null)
+						.ToListAsync();
+
+					foreach (var so in sinifOgrenciKayitlari)
+					{
+						so.DelDate = DateTime.UtcNow;
+						so.DelUser = AuthStateService.CurrentUser.ID;
+						DbContext.SinifOgrenciler.Update(so);
+					}
+				}
+
+				await DbContext.SaveChangesAsync();
 			NotificationService.Notify(new NotificationMessage
 			{
 				Severity = NotificationSeverity.Success,
@@ -60,8 +97,12 @@
 				Detail = "Öğrenci sınıftan çıkarıldı.",
 				Duration = 4000
 			});
-			await Yukle();
-			StateHasChanged();
+				await Yukle();
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+			}
 		}
 	}
 	public class SinifOgrenciDto

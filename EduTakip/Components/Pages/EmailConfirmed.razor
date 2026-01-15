@@ -1,0 +1,24 @@
+@page "/email-confirmed"
+@layout EmptyLayout
+
+<PageTitle>E-posta Onaylandı</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <RadzenCard>
+                <div style="text-align: center; padding: 20px;">
+                    <RadzenIcon Icon="check_circle" Style="font-size: 48px; color: green; margin-bottom: 20px;" />
+                    <h3>E-posta Başarıyla Onaylandı!</h3>
+                    <p>Hesabınızın e-postası onaylandı. Hesabınızın admin tarafından onaylanması gerekmektedir.</p>
+                    <p>Admin onayından sonra giriş yapabilirsiniz.</p>
+                    <RadzenButton Text="Giriş Sayfasına Git" ButtonStyle="ButtonStyle.Primary" Click="@(() => NavigationManager.NavigateTo("/login"))" Style="margin-top: 20px;" />
+                </div>
+            </RadzenCard>
+        </div>
+    </div>
+</div>
+
+@code {
+    // NavigationManager _Imports.razor'dan geliyor
+}

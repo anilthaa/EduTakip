@@ -3,7 +3,7 @@
 	<RadzenTextArea @bind-Value="model.OgretmenYorumu" Placeholder="Ogretmen Yorumu" Style="width:100%; margin-top:10px"></RadzenTextArea>
 	<div class="mt-3 text-center">
 		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
-		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+		<RadzenButton Text="Iptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
 	</div>
 </RadzenTemplateForm>
 @code {

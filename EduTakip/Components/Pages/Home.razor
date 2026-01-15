@@ -1,4 +1,4 @@
-﻿@page "/home"
+﻿@page "/dashboard"
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -50,6 +50,13 @@ else
                     <RadzenCard class="admin-stat-card" Style="border-left:4px solid purple; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitDersProgramiListesine">
                         <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Aktif Ders Programı</h5>
                         <h3 style="margin: 0; font-size: 1.75rem;">@aktifDersProgrami</h3>
+                    </RadzenCard>
+                </RadzenColumn>
+
+                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
+                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid orange; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitBekleyenHesaplara">
+                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Onay Bekleyen Hesaplar</h5>
+                        <h3 style="margin: 0; font-size: 1.75rem;">@onayBekleyenHesapSayisi</h3>
                     </RadzenCard>
                 </RadzenColumn>
             </RadzenRow>
@@ -332,9 +339,21 @@ else
                 <RadzenDataGrid Data="@bugunkuDersler" TItem="ItemDersProgrami">
                     <Columns>
                         <RadzenDataGridColumn Property="Ders.Adi" Title="Ders Adı"></RadzenDataGridColumn>
-                        <RadzenDataGridColumn Property="BaslangicSaati" Title="Başlangıç Saati"></RadzenDataGridColumn>
-                        <RadzenDataGridColumn Property="BitisSaati" Title="Bitiş Saati"></RadzenDataGridColumn>
-                        <RadzenDataGridColumn Property="Sinif" Title="Sinif"></RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Sınıf">
+                            <Template Context="item">
+                                @item.Sinif?.Adi
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Başlangıç Saati">
+                            <Template Context="item">
+                                @item.BaslangicSaati.ToString(@"hh\:mm")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Bitiş Saati">
+                            <Template Context="item">
+                                @item.BitisSaati.ToString(@"hh\:mm")
+                            </Template>
+                        </RadzenDataGridColumn>
                     </Columns>
                 </RadzenDataGrid>
             }
@@ -388,6 +407,7 @@ else
     int toplamOgrenci;
     decimal bugunkuKatilimYuzdesi;
     int aktifDersProgrami;
+    int onayBekleyenHesapSayisi;
     List<GunlukKatilimDto> son7GunKatilim = new();
     List<SinifOgrenciDagilimDto> sinifBazliOgrenciDagilimi = new();
     List<ItemDers> ogretmeniOlmayanDersler = new();
@@ -449,6 +469,10 @@ else
         toplamSinif = await DbContext.Siniflar.CountAsync(x => x.DelDate == null);
         toplamOgretmen = await DbContext.Ogretmenler.CountAsync(x => x.DelDate == null);
         toplamOgrenci = await DbContext.Ogrenciler.CountAsync(x => x.DelDate == null);
+        
+        // Onay bekleyen hesaplar (EmailConfirmed = true ama Aktif = false ve Reddedildi = false)
+        onayBekleyenHesapSayisi = await DbContext.Kullanicilar
+            .CountAsync(x => x.DelDate == null && x.EmailConfirmed && !x.Aktif && !x.Reddedildi);
         
         // Aktif Ders Programı sayısı
         aktifDersProgrami = await DbContext.DersProgramlari
@@ -690,21 +714,58 @@ else
             .Select(x => x.Sinif_ID)
             .FirstOrDefaultAsync();
 
-        // Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
-        var katildigiSinifIdleri = await DbContext.SinifKullanicilar
-            .Where(x => x.Kullanici_ID == kullaniciId && x.Tip == "Öğrenci" && x.DelDate == null)
-            .Select(x => x.Sinif_ID)
-            .ToListAsync();
-
-        // SinifOgrenciler tablosundan katıldığı sınıflar
-        var sinifOgrenciSinifIdleri = await DbContext.SinifOgrenciler
-            .Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null)
-            .Select(x => x.Sinif_ID)
-            .ToListAsync();
-
-        // Tüm sınıf ID'lerini birleştir
-        var tumSinifIdleri = new List<int>();
+        // Ana sınıfın silinmemiş ve aktif olduğunu kontrol et
+        bool anaSinifGecerli = false;
         if (anaSinifId.HasValue && anaSinifId.Value > 0)
+        {
+            anaSinifGecerli = await DbContext.Siniflar
+                .AnyAsync(x => x.ID == anaSinifId.Value && x.DelDate == null && x.Aktif);
+            
+            // Eğer ana sınıf silinmiş veya pasifse, öğrencinin Sinif_ID alanını null yap
+            if (!anaSinifGecerli)
+            {
+                var ogrenci = await DbContext.Ogrenciler
+                    .Where(x => x.ID == ogrenciId.Value && x.DelDate == null)
+                    .FirstOrDefaultAsync();
+                
+                if (ogrenci != null && ogrenci.Sinif_ID == anaSinifId.Value)
+                {
+                    ogrenci.Sinif_ID = null;
+                    ogrenci.UpdDate = DateTime.UtcNow;
+                    ogrenci.UpdUser = kullaniciId;
+                    DbContext.Ogrenciler.Update(ogrenci);
+                    await DbContext.SaveChangesAsync();
+                    anaSinifId = null; // Artık geçersiz
+                }
+            }
+        }
+
+        // Aktif ve silinmemiş sınıfların ID'lerini al
+        var aktifSinifIdleri = await DbContext.Siniflar
+            .Where(x => x.DelDate == null && x.Aktif)
+            .Select(x => x.ID)
+            .ToListAsync();
+
+        // Katıldığı diğer sınıflar (SinifKullanicilar tablosundan) - sadece aktif ve silinmemiş olanlar
+        var katildigiSinifIdleri = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == kullaniciId && 
+                       x.Tip == "Öğrenci" && 
+                       x.DelDate == null &&
+                       aktifSinifIdleri.Contains(x.Sinif_ID))
+            .Select(x => x.Sinif_ID)
+            .ToListAsync();
+
+        // SinifOgrenciler tablosundan katıldığı sınıflar - sadece aktif ve silinmemiş olanlar
+        var sinifOgrenciSinifIdleri = await DbContext.SinifOgrenciler
+            .Where(x => x.Ogrenci_ID == ogrenciId.Value && 
+                       x.DelDate == null &&
+                       aktifSinifIdleri.Contains(x.Sinif_ID))
+            .Select(x => x.Sinif_ID)
+            .ToListAsync();
+
+        // Tüm sınıf ID'lerini birleştir (sadece geçerli olanlar)
+        var tumSinifIdleri = new List<int>();
+        if (anaSinifId.HasValue && anaSinifId.Value > 0 && anaSinifGecerli)
         {
             tumSinifIdleri.Add(anaSinifId.Value);
         }
@@ -825,9 +886,13 @@ else
         var bugun = DateTime.Today.DayOfWeek;
         bugunkuDerslerOgretmen = await DbContext.DersProgramlari
             .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.Gun == bugun && x.DelDate == null)
+            .Include(x => x.Sinif)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && x.Gun == bugun && x.DelDate == null && x.Aktif)
             .OrderBy(x => x.BaslangicSaati)
             .ToListAsync();
+        
+        // Öğretmen dashboard'ında kullanılan bugunkuDersler değişkenini de doldur
+        bugunkuDersler = bugunkuDerslerOgretmen;
 
         bekleyenTeslimler = await DbContext.OdevTeslimler
             .Include(x => x.Ogrenci)
@@ -862,6 +927,11 @@ else
     void GitDersProgramiListesine()
     {
         NavigationManager.NavigateTo("/admin/ders-programlari");
+    }
+
+    void GitBekleyenHesaplara()
+    {
+        NavigationManager.NavigateTo("/admin/bekleyen-hesaplar");
     }
 
     // Öğrenci yönlendirmeleri

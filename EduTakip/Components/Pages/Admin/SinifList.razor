@@ -1,6 +1,7 @@
 @page "/admin/siniflar"
 @attribute [Authorize(Roles = "Admin")]
 @inject IToastService ToastService
+@inject AuthStateService AuthStateService
 
 	
 	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniSinif" />
@@ -90,14 +91,61 @@
 		bool? result = await DialogService.Confirm($"'{sinif.Adi}' sınıfını silmek istediğinize emin misiniz?", "Sınıf Silme Onayı", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
 		if (result == true)
 		{
-			sinif.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
-			sinif.DelDate = DateTime.UtcNow;
-			sinif.Aktif = false; // Soft delete yapıldığında aktifliği de pasif yap
-			DbContext.Siniflar.Update(sinif);
-			await DbContext.SaveChangesAsync();
-			await Listele();
-			ToastService.ShowSuccess("Başarılı", "Sınıf silindi.");
-			StateHasChanged();
+			try
+			{
+				// O sınıftaki tüm öğrencilerin Sinif_ID alanını null yap (ana sınıf olarak bu sınıfı kullananlar)
+				var ogrenciler = await DbContext.Ogrenciler
+					.Where(x => x.Sinif_ID == sinif.ID && x.DelDate == null)
+					.ToListAsync();
+
+				foreach (var ogrenci in ogrenciler)
+				{
+					ogrenci.Sinif_ID = null;
+					ogrenci.UpdDate = DateTime.UtcNow;
+					ogrenci.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
+					DbContext.Ogrenciler.Update(ogrenci);
+				}
+
+				// SinifKullanicilar tablosundaki kayıtları soft delete yap
+				var sinifKullanicilar = await DbContext.SinifKullanicilar
+					.IgnoreQueryFilters()
+					.Where(x => x.Sinif_ID == sinif.ID && x.DelDate == null)
+					.ToListAsync();
+
+				foreach (var sk in sinifKullanicilar)
+				{
+					sk.DelDate = DateTime.UtcNow;
+					sk.DelUser = AuthStateService.CurrentUser?.ID ?? 0;
+					DbContext.SinifKullanicilar.Update(sk);
+				}
+
+				// SinifOgrenciler tablosundaki kayıtları soft delete yap
+				var sinifOgrenciler = await DbContext.SinifOgrenciler
+					.IgnoreQueryFilters()
+					.Where(x => x.Sinif_ID == sinif.ID && x.DelDate == null)
+					.ToListAsync();
+
+				foreach (var so in sinifOgrenciler)
+				{
+					so.DelDate = DateTime.UtcNow;
+					so.DelUser = AuthStateService.CurrentUser?.ID ?? 0;
+					DbContext.SinifOgrenciler.Update(so);
+				}
+
+				// Sınıfı soft delete yap
+				sinif.DelUser = AuthStateService.CurrentUser?.ID ?? 0;
+				sinif.DelDate = DateTime.UtcNow;
+				sinif.Aktif = false; // Soft delete yapıldığında aktifliği de pasif yap
+				DbContext.Siniflar.Update(sinif);
+
+				await DbContext.SaveChangesAsync();
+				await Listele();
+				ToastService.ShowSuccess("Başarılı", $"Sınıf silindi. {ogrenciler.Count} öğrencinin sınıf bilgisi güncellendi.");
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+			}
 		}
 	}
 }
