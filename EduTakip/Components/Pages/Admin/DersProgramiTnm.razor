@@ -1,4 +1,4 @@
-﻿<RadzenTemplateForm TItem="ItemDersProgrami" Data="@model" Submit="@Kaydet">
+<RadzenTemplateForm TItem="ItemDersProgrami" Data="@model" Submit="@Kaydet">
 	<RadzenFieldset Text="Ders Programi Bilgileri">
 		<div class="row">
 			<div class="col-12 mb-3">
@@ -66,11 +66,12 @@
 			new GunItem { Deger = DayOfWeek.Sunday, Adi = "Pazar" }
 		};
 		dersler = await DbContext.Dersler
+			.Where(d => d.DelDate == null || d.DelDate == default(DateTime))
 			.OrderBy(d => d.Adi)
 			.ToListAsync();
 
 		siniflar = await DbContext.Siniflar
-			.Where(s => s.Aktif)
+			.Where(s => s.Aktif && (s.DelDate == null || s.DelDate == default(DateTime)))
 			.OrderBy(s => s.Adi)
 			.ToListAsync();
 		if (Id.HasValue && Id.Value > 0)
@@ -97,6 +98,34 @@
 	{
 		try
 		{
+			if (item.Ders_ID == 0)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Lütfen bir ders seçin.");
+				return;
+			}
+
+			if (item.SinifID == 0)
+			{
+				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Lütfen bir sınıf seçin.");
+				return;
+			}
+
+			// Seçilen dersin hala mevcut olup olmadığını kontrol et
+			var dersVarMi = await DbContext.Dersler.AnyAsync(d => d.ID == item.Ders_ID && (d.DelDate == null || d.DelDate == default(DateTime)));
+			if (!dersVarMi)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Seçilen ders bulunamadı veya silinmiş. Lütfen geçerli bir ders seçin.");
+				return;
+			}
+
+			// Seçilen sınıfın hala mevcut olup olmadığını kontrol et
+			var sinifVarMi = await DbContext.Siniflar.AnyAsync(s => s.ID == item.SinifID && (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif);
+			if (!sinifVarMi)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", "Seçilen sınıf bulunamadı veya pasif durumda. Lütfen geçerli bir sınıf seçin.");
+				return;
+			}
+
 			if (baslangicSaati >= bitisSaati)
 			{
 				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Başlangıç saati bitiş saatinden büyük veya eşit olamaz.");

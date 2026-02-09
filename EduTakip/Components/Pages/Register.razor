@@ -454,13 +454,13 @@
                 {
                     Severity = NotificationSeverity.Success,
                     Summary = "Kayıt Başarılı",
-                    Detail = "Kayıt başarıyla oluşturuldu. Lütfen e-postanızı kontrol edin ve hesabınızı onaylayın. E-posta onayından sonra admin onayı beklenmektedir.",
+                    Detail = "Kayıt başarıyla oluşturuldu. E-postanıza gönderilen doğrulama kodunu girin. E-posta onayından sonra admin onayı beklenmektedir.",
                     Duration = 5000
                 });
                 
-                // Giriş sayfasına yönlendir
+                // E-posta doğrulama sayfasına yönlendir
                 await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
+                Navigation.NavigateTo($"/confirm-email?email={Uri.EscapeDataString(model.EPosta)}");
             }
             else
             {

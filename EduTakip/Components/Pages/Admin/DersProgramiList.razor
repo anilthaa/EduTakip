@@ -1,4 +1,4 @@
-﻿@page "/admin/ders-programlari"
+@page "/admin/ders-programlari"
 @attribute [Authorize(Roles = "Admin")]
 	
 	<RadzenButton Text="Yeni Ders Programi" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@Yeni" />
@@ -72,11 +72,28 @@
 		list = await DbContext.DersProgramlari
 			.Include(x => x.Ders)
 			.Include(x => x.Sinif)
+			.Where(x => x.DelDate == null || x.DelDate == default(DateTime))
 			.ToListAsync();
 	}
 
 	async Task Yeni()
 	{
+		// Ders var mı kontrolü
+		var dersVarMi = await DbContext.Dersler.AnyAsync(d => d.DelDate == null || d.DelDate == default(DateTime));
+		if (!dersVarMi)
+		{
+			NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Henüz tanımlı ders yok. Lütfen önce bir ders ekleyin.");
+			return;
+		}
+
+		// Sinıf var mı kontrolü
+		var sinifVarMi = await DbContext.Siniflar.AnyAsync(s => (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif);
+		if (!sinifVarMi)
+		{
+			NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Henüz tanımlı aktif sınıf yok. Lütfen önce bir sınıf ekleyin.");
+			return;
+		}
+
 		var result = await DialogService.OpenAsync<DersProgramiTnm>(
 			"Ders Programi",
 			null,

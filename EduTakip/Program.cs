@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using EduTakip.Components;
@@ -59,7 +60,7 @@ builder.Services.AddAuthentication(options =>
         RoleClaimType = ClaimTypes.Role,
         NameClaimType = ClaimTypes.Name
     };
-    
+
     // JWT token'dan role claim'ini map et
     options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
     {
@@ -99,15 +100,15 @@ builder.Services.AddSingleton<IToastService, ToastService>();
 // Büyük dosya yüklemeleri için limitleri artır
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
 {
-	options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50MB
-	options.ValueLengthLimit = 50 * 1024 * 1024; // 50MB
-	options.MultipartHeadersLengthLimit = 50 * 1024 * 1024; // 50MB
+    options.MultipartBodyLengthLimit = 50 * 1024 * 1024; // 50MB
+    options.ValueLengthLimit = 50 * 1024 * 1024; // 50MB
+    options.MultipartHeadersLengthLimit = 50 * 1024 * 1024; // 50MB
 });
 
 // Kestrel için request body size limitini artır
 builder.WebHost.ConfigureKestrel(options =>
 {
-	options.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50MB
+    options.Limits.MaxRequestBodySize = 50 * 1024 * 1024; // 50MB
 });
 
 var app = builder.Build();
@@ -181,7 +182,7 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     var emailRegex = new System.Text.RegularExpressions.Regex(
         @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-    
+
     var email = request.EPosta.Trim().ToLowerInvariant();
     if (!emailRegex.IsMatch(email))
     {
@@ -229,17 +230,8 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
         return Results.Conflict("E-posta zaten kayıtlı.");
     }
 
-    // E-posta onay token'ı oluştur
-    var confirmationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
-        .Replace("+", "-")
-        .Replace("/", "_")
-        .Replace("=", "");
-
-    // Token'ı hashle (SHA256) - veritabanında hash'lenmiş olarak sakla
-    var hashedConfirmationToken = HashToken(confirmationToken);
-    
-    // E-postaya gönderilecek token (hash'lenmemiş, URL-safe)
-    var urlSafeToken = confirmationToken;
+    // E-posta onay kodu oluştur (6 haneli sayısal kod)
+    var confirmationCode = Random.Shared.Next(100000, 1000000).ToString();
 
     var user = new ItemKullanici
     {
@@ -251,8 +243,8 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
         Sifre = hasher.Hash(request.Sifre),
         Aktif = false, // Admin onayı bekliyor
         EmailConfirmed = false,
-        EmailConfirmationToken = hashedConfirmationToken,
-        EmailConfirmationTokenExpiry = DateTime.UtcNow.AddHours(24),
+        EmailConfirmationToken = confirmationCode, // Hash'lemeden düz kod olarak sakla
+        EmailConfirmationTokenExpiry = DateTime.UtcNow.AddMinutes(10), // 10 dakika geçerli
         CreUser = 0,
         CreDate = DateTime.UtcNow
     };
@@ -262,7 +254,7 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
 
     // Kullanıcı tipine göre öğrenci veya öğretmen kaydı oluştur
     var userTypeName = userType.Adi.ToLower();
-    
+
     if (userTypeName.Contains("öğrenci") || userTypeName.Contains("ogrenci") || userTypeName.Contains("student"))
     {
         if (string.IsNullOrWhiteSpace(request.OgrenciNo))
@@ -333,12 +325,9 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
 
     await db.SaveChangesAsync();
 
-    // E-posta onay mesajı gönder - token query string olarak gönderilecek
-    var baseUrl = $"{httpContextAccessor.HttpContext?.Request.Scheme}://{httpContextAccessor.HttpContext?.Request.Host}";
-    var confirmationUrl = $"{baseUrl}/confirm-email?token={Uri.EscapeDataString(urlSafeToken)}";
-    
-    var emailSent = await emailService.SendAccountConfirmationEmailAsync(email, urlSafeToken, confirmationUrl);
-    
+    // E-posta onay kodu gönder
+    var emailSent = await emailService.SendConfirmationCodeEmailAsync(email, confirmationCode);
+
     if (!emailSent)
     {
         // E-posta gönderilemediyse log'a yaz ama kullanıcıyı silme (kullanıcı admin onayı bekleyebilir)
@@ -346,7 +335,7 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     }
 
     var dto = new AuthUserDto(user.ID, user.Adi, user.Soyadi, user.EPosta, user.KullaniciTip.Adi);
-    return Results.Created($"/api/auth/users/{user.ID}", new { message = "Kayıt başarılı. Lütfen e-postanızı kontrol edin ve hesabınızı onaylayın. Ayrıca hesabınızın admin tarafından onaylanması gerekmektedir.", user = dto });
+    return Results.Created($"/api/auth/users/{user.ID}", new { message = "Kayıt başarılı. E-postanıza gönderilen doğrulama kodunu girin. Ayrıca hesabınızın admin tarafından onaylanması gerekmektedir.", user = dto });
 });
 
 authGroup.MapPost("/login", async (LoginRequest request, EduTakipDBContext db, IPasswordHasher hasher, IJwtService jwtService) =>
@@ -407,7 +396,7 @@ authGroup.MapPost("/forgot-password", async (ForgotPasswordRequest request, EduT
     var emailRegex = new System.Text.RegularExpressions.Regex(
         @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-    
+
     var email = request.EPosta.Trim().ToLowerInvariant();
     if (!emailRegex.IsMatch(email))
     {
@@ -433,7 +422,7 @@ authGroup.MapPost("/forgot-password", async (ForgotPasswordRequest request, EduT
 
     // Token'ı hashle (SHA256) - güvenlik için
     var hashedToken = HashToken(token);
-    
+
     // Hash'lenmiş token'ı URL-safe hale getir (Base64 karakterlerini URL-safe yap)
     var urlSafeHashedToken = hashedToken
         .Replace("+", "-")
@@ -449,7 +438,7 @@ authGroup.MapPost("/forgot-password", async (ForgotPasswordRequest request, EduT
     // E-posta gönder - URL'de hash'lenmiş token kullan
     var baseUrl = $"{httpContextAccessor.HttpContext?.Request.Scheme}://{httpContextAccessor.HttpContext?.Request.Host}";
     var resetUrl = $"{baseUrl}/reset-password/{urlSafeHashedToken}";
-    
+
     var emailSent = await emailService.SendPasswordResetEmailAsync(email, urlSafeHashedToken, resetUrl);
 
     if (!emailSent)
@@ -459,7 +448,7 @@ authGroup.MapPost("/forgot-password", async (ForgotPasswordRequest request, EduT
         user.SifreSifirlamaTokenExpiry = null;
         db.Kullanicilar.Update(user);
         await db.SaveChangesAsync();
-        
+
         return Results.BadRequest("E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin.");
     }
 
@@ -494,7 +483,7 @@ authGroup.MapPost("/reset-password", async (ResetPasswordRequest request, EduTak
     var tokenFromUrl = request.Token
         .Replace("-", "+")
         .Replace("_", "/");
-    
+
     // Padding ekle (Base64 için gerekli)
     switch (tokenFromUrl.Length % 4)
     {
@@ -507,7 +496,7 @@ authGroup.MapPost("/reset-password", async (ResetPasswordRequest request, EduTak
 
     // Kullanıcıyı hash'lenmiş token ile bul
     var user = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.SifreSifirlamaToken == hashedToken && 
+        .FirstOrDefaultAsync(x => x.SifreSifirlamaToken == hashedToken &&
                                   x.SifreSifirlamaTokenExpiry.HasValue &&
                                   x.SifreSifirlamaTokenExpiry.Value > DateTime.UtcNow &&
                                   x.Aktif &&
@@ -524,33 +513,110 @@ authGroup.MapPost("/reset-password", async (ResetPasswordRequest request, EduTak
     user.SifreSifirlamaTokenExpiry = null;
     user.UpdDate = DateTime.UtcNow;
     user.UpdUser = user.ID;
-    
+
     db.Kullanicilar.Update(user);
     await db.SaveChangesAsync();
 
     return Results.Ok(new { message = "Şifre başarıyla sıfırlandı." });
 });
 
-// E-posta onayla
-authGroup.MapGet("/confirm-email", async (string? token, EduTakipDBContext db) =>
+// E-posta doğrulama kodu gönder
+authGroup.MapPost("/send-confirmation-code", async (SendConfirmationCodeRequest request, EduTakipDBContext db, IEmailService emailService) =>
 {
-    if (string.IsNullOrWhiteSpace(token))
+    if (string.IsNullOrWhiteSpace(request.Email))
     {
-        return Results.BadRequest("Token gereklidir.");
+        return Results.BadRequest(new { success = false, message = "E-posta gereklidir." });
     }
 
-    // Gelen token hash'lenmemiş, veritabanında hash'lenmiş olarak saklanıyor
-    // Token'ı hash'leyip veritabanındaki hash'lenmiş token ile karşılaştır
-    var hashedToken = HashToken(token);
+    var emailRegex = new System.Text.RegularExpressions.Regex(
+        @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     
+    var email = request.Email.Trim().ToLowerInvariant();
+    if (!emailRegex.IsMatch(email))
+    {
+        return Results.BadRequest(new { success = false, message = "Geçerli bir e-posta adresi giriniz." });
+    }
+
+    // Kullanıcıyı bul
     var user = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.EmailConfirmationToken == hashedToken 
-            && x.EmailConfirmationTokenExpiry.HasValue 
-            && x.EmailConfirmationTokenExpiry.Value > DateTime.UtcNow);
+        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
 
     if (user == null)
     {
-        return Results.BadRequest("Geçersiz veya süresi dolmuş token.");
+        // Güvenlik: Kullanıcı bulunmasa bile başarılı mesajı döndür
+        return Results.Ok(new { success = true, message = "Eğer bu e-posta adresi kayıtlıysa, doğrulama kodu gönderildi." });
+    }
+
+    // E-posta zaten onaylanmış mı kontrol et
+    if (user.EmailConfirmed)
+    {
+        return Results.Ok(new { success = true, message = "E-posta zaten onaylanmış." });
+    }
+
+    // Yeni kod oluştur
+    var confirmationCode = Random.Shared.Next(100000, 1000000).ToString();
+
+    // Kodu veritabanına kaydet
+    user.EmailConfirmationToken = confirmationCode;
+    user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddMinutes(10);
+    db.Kullanicilar.Update(user);
+    await db.SaveChangesAsync();
+
+    // E-posta gönder
+    var emailSent = await emailService.SendConfirmationCodeEmailAsync(email, confirmationCode);
+
+    if (!emailSent)
+    {
+        return Results.BadRequest(new { success = false, message = "E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin." });
+    }
+
+    return Results.Ok(new { success = true, message = "Doğrulama kodu e-postanıza gönderildi." });
+});
+
+// E-posta doğrulama kodunu doğrula
+authGroup.MapPost("/verify-confirmation-code", async (VerifyConfirmationCodeRequest request, EduTakipDBContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return Results.BadRequest(new { success = false, message = "E-posta gereklidir." });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Code))
+    {
+        return Results.BadRequest(new { success = false, message = "Doğrulama kodu gereklidir." });
+    }
+
+    var email = request.Email.Trim().ToLowerInvariant();
+    var code = request.Code.Trim();
+
+    // Kullanıcıyı bul
+    var user = await db.Kullanicilar
+        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+
+    if (user == null)
+    {
+        return Results.BadRequest(new { success = false, message = "Kullanıcı bulunamadı." });
+    }
+
+    // E-posta zaten onaylanmış mı kontrol et
+    if (user.EmailConfirmed)
+    {
+        return Results.Ok(new { success = true, message = "E-posta zaten onaylanmış. Hesabınızın admin tarafından onaylanması gerekmektedir.", alreadyConfirmed = true });
+    }
+
+    // Kod kontrolü (case-insensitive)
+    if (string.IsNullOrWhiteSpace(user.EmailConfirmationToken) || 
+        !user.EmailConfirmationToken.Equals(code, StringComparison.OrdinalIgnoreCase))
+    {
+        return Results.BadRequest(new { success = false, message = "Geçersiz doğrulama kodu." });
+    }
+
+    // Süre kontrolü
+    if (!user.EmailConfirmationTokenExpiry.HasValue || 
+        user.EmailConfirmationTokenExpiry.Value <= DateTime.UtcNow)
+    {
+        return Results.BadRequest(new { success = false, message = "Doğrulama kodu süresi dolmuş. Lütfen yeni bir kod talep edin." });
     }
 
     // E-posta onayını tamamla
@@ -562,17 +628,53 @@ authGroup.MapGet("/confirm-email", async (string? token, EduTakipDBContext db) =
         db.Kullanicilar.Update(user);
         await db.SaveChangesAsync();
 
-        return Results.Redirect("/email-confirmed");
+        return Results.Ok(new { success = true, message = "E-posta başarıyla onaylandı. Hesabınızın admin tarafından onaylanması gerekmektedir.", alreadyConfirmed = false });
     }
     catch (Exception ex)
     {
-        // Veritabanı güncellemesi başarısız olsa bile, eğer EmailConfirmed zaten true ise başarılı say
-        if (user.EmailConfirmed)
-        {
-            return Results.Ok(new { message = "E-posta zaten onaylanmış. Hesabınızın admin tarafından onaylanması gerekmektedir." });
-        }
-        return Results.BadRequest($"E-posta onaylanırken bir hata oluştu: {ex.Message}");
+        return Results.BadRequest(new { success = false, message = $"E-posta onaylanırken bir hata oluştu: {ex.Message}" });
     }
+});
+
+// E-posta onayla (eski token sistemi - geriye dönük uyumluluk için)
+authGroup.MapGet("/confirm-email", async (string? token, EduTakipDBContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.BadRequest("Token gereklidir.");
+    }
+
+    // Gelen token hash'lenmemiş, veritabanında hash'lenmiş olarak saklanıyor
+    // Token'ı hash'leyip veritabanındaki hash'lenmiş token ile karşılaştır
+    var hashedToken = HashToken(token);
+
+    var user = await db.Kullanicilar
+        .FirstOrDefaultAsync(x => x.EmailConfirmationToken == hashedToken
+            && x.EmailConfirmationTokenExpiry.HasValue
+            && x.EmailConfirmationTokenExpiry.Value > DateTime.UtcNow);
+
+    if (user == null)
+    {
+        return Results.BadRequest("Geçersiz veya süresi dolmuş token.");
+    }
+
+    // E-posta onayını tamamla
+    if (!user.EmailConfirmed)
+    {
+        user.EmailConfirmed = true;
+        user.EmailConfirmationToken = null;
+        user.EmailConfirmationTokenExpiry = null;
+        db.Kullanicilar.Update(user);
+        await db.SaveChangesAsync();
+
+
+    }
+
+    return Results.Ok(new
+    {
+        success=true,
+        message = "E-posta başarıyla onaylandı. Hesabınız admin onayı bekliyor."
+    });
 });
 
 // Admin hesap onayı
@@ -610,11 +712,177 @@ authGroup.MapPost("/approve-account/{userId}", async (int userId, EduTakipDBCont
     targetUser.Aktif = true;
     targetUser.UpdDate = DateTime.UtcNow;
     targetUser.UpdUser = int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
-    
+
     db.Kullanicilar.Update(targetUser);
     await db.SaveChangesAsync();
 
     return Results.Ok(new { message = "Hesap başarıyla onaylandı." });
+}).RequireAuthorization();
+
+// Aktifleştirme linki gönder (Admin için)
+authGroup.MapPost("/send-activation-link", async (SendActivationLinkRequest request, EduTakipDBContext db, IEmailService emailService, IHttpContextAccessor httpContextAccessor, HttpContext httpContext) =>
+{
+    // Admin kontrolü
+    var user = httpContext.User;
+    var isAdmin = user.IsInRole("Admin");
+    if (!isAdmin)
+    {
+        return Results.Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return Results.BadRequest(new { success = false, message = "E-posta gereklidir." });
+    }
+
+    var email = request.Email.Trim().ToLowerInvariant();
+    var targetUser = await db.Kullanicilar
+        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+
+    if (targetUser == null)
+    {
+        // Güvenlik: Kullanıcı bulunmasa bile başarılı mesajı döndür
+        return Results.Ok(new { success = true, message = "Eğer bu e-posta adresi kayıtlıysa, aktifleştirme linki gönderildi." });
+    }
+
+    // Aktifleştirme token'ı oluştur
+    var activationToken = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32))
+        .Replace("+", "-")
+        .Replace("/", "_")
+        .Replace("=", "");
+
+    // Token'ı hashle ve veritabanına kaydet
+    var hashedToken = HashToken(activationToken);
+    targetUser.EmailConfirmationToken = hashedToken;
+    targetUser.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddDays(7); // 7 gün geçerli
+    db.Kullanicilar.Update(targetUser);
+    await db.SaveChangesAsync();
+
+    // Aktifleştirme linki oluştur
+    var baseUrl = $"{httpContextAccessor.HttpContext?.Request.Scheme}://{httpContextAccessor.HttpContext?.Request.Host}";
+    var activationUrl = $"{baseUrl}/activate-account?token={Uri.EscapeDataString(activationToken)}";
+
+    // Email gönder (geçici şifre olmadan, sadece link)
+    var emailSent = await emailService.SendAccountActivationEmailAsync(email, "", activationUrl);
+
+    if (!emailSent)
+    {
+        return Results.BadRequest(new { success = false, message = "E-posta gönderilemedi. Lütfen daha sonra tekrar deneyin." });
+    }
+
+    return Results.Ok(new { success = true, message = "Aktifleştirme linki e-postanıza gönderildi." });
+}).RequireAuthorization();
+
+// Aktifleştirme linki ile hesap aktifleştir
+authGroup.MapGet("/activate-account", async (string? token, EduTakipDBContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(token))
+    {
+        return Results.BadRequest(new { success = false, message = "Token gereklidir." });
+    }
+
+    // Token'ı hash'le
+    var hashedToken = HashToken(token);
+
+    // Kullanıcıyı bul
+    var user = await db.Kullanicilar
+        .FirstOrDefaultAsync(x => x.EmailConfirmationToken == hashedToken
+            && x.EmailConfirmationTokenExpiry.HasValue
+            && x.EmailConfirmationTokenExpiry.Value > DateTime.UtcNow
+            && x.DelDate == null);
+
+    if (user == null)
+    {
+        return Results.BadRequest(new { success = false, message = "Geçersiz veya süresi dolmuş token." });
+    }
+
+    // Hesap zaten aktifse
+    if (user.Aktif)
+    {
+        return Results.Ok(new { success = true, message = "Hesap zaten aktif." });
+    }
+
+    // Hesabı aktifleştir
+    try
+    {
+        user.Aktif = true;
+        user.EmailConfirmed = true; // Admin eklediği için email onayı gerekmez
+        user.EmailConfirmationToken = null;
+        user.EmailConfirmationTokenExpiry = null;
+        user.UpdDate = DateTime.UtcNow;
+        
+        db.Kullanicilar.Update(user);
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new { success = true, message = "Hesap başarıyla aktifleştirildi. Artık giriş yapabilirsiniz." });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { success = false, message = $"Hesap aktifleştirilirken bir hata oluştu: {ex.Message}" });
+    }
+});
+
+// Geçici şifre ile hesap aktifleştir (Admin için)
+authGroup.MapPost("/activate-account-with-password", async (ActivateAccountWithPasswordRequest request, EduTakipDBContext db, IPasswordHasher hasher, IEmailService emailService, IHttpContextAccessor httpContextAccessor, HttpContext httpContext) =>
+{
+    // Admin kontrolü
+    var user = httpContext.User;
+    var isAdmin = user.IsInRole("Admin");
+    if (!isAdmin)
+    {
+        return Results.Forbid();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+    {
+        return Results.BadRequest(new { success = false, message = "E-posta gereklidir." });
+    }
+
+    var email = request.Email.Trim().ToLowerInvariant();
+    var targetUser = await db.Kullanicilar
+        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+
+    if (targetUser == null)
+    {
+        return Results.BadRequest(new { success = false, message = "Kullanıcı bulunamadı." });
+    }
+
+    // Hesap zaten aktifse
+    if (targetUser.Aktif)
+    {
+        return Results.Ok(new { success = true, message = "Hesap zaten aktif." });
+    }
+
+    // Geçici şifre oluştur (8-12 karakter, alfanumerik)
+    const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    var random = new Random();
+    var temporaryPassword = new string(Enumerable.Repeat(chars, 10)
+        .Select(s => s[random.Next(s.Length)]).ToArray());
+
+    // Şifreyi hash'le ve veritabanına kaydet
+    targetUser.Sifre = hasher.Hash(temporaryPassword);
+    targetUser.Aktif = true;
+    targetUser.EmailConfirmed = true; // Admin eklediği için email onayı gerekmez
+    targetUser.EmailConfirmationToken = null;
+    targetUser.EmailConfirmationTokenExpiry = null;
+    targetUser.UpdDate = DateTime.UtcNow;
+    targetUser.UpdUser = int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "0");
+    
+    db.Kullanicilar.Update(targetUser);
+    await db.SaveChangesAsync();
+
+    // Email gönder
+    var baseUrl = $"{httpContextAccessor.HttpContext?.Request.Scheme}://{httpContextAccessor.HttpContext?.Request.Host}";
+    var loginUrl = $"{baseUrl}/login";
+    var emailSent = await emailService.SendAccountActivationEmailAsync(email, temporaryPassword, loginUrl);
+
+    if (!emailSent)
+    {
+        // Email gönderilemedi ama hesap aktifleştirildi, kullanıcıya bilgi ver
+        return Results.Ok(new { success = true, message = "Hesap aktifleştirildi ancak e-posta gönderilemedi. Geçici şifre: " + temporaryPassword });
+    }
+
+    return Results.Ok(new { success = true, message = "Hesap başarıyla aktifleştirildi ve geçici şifre e-postanıza gönderildi." });
 }).RequireAuthorization();
 
 // Onay bekleyen hesapları getir (Admin için)
@@ -630,8 +898,8 @@ authGroup.MapGet("/pending-accounts", async (EduTakipDBContext db, HttpContext h
 
     var pendingAccounts = await db.Kullanicilar
         .Include(x => x.KullaniciTip)
-        .Where(x => x.DelDate == null 
-            && x.EmailConfirmed 
+        .Where(x => x.DelDate == null
+            && x.EmailConfirmed
             && !x.Aktif)
         .Select(x => new
         {
@@ -647,6 +915,115 @@ authGroup.MapGet("/pending-accounts", async (EduTakipDBContext db, HttpContext h
     return Results.Ok(pendingAccounts);
 }).RequireAuthorization();
 
+// Profil bilgilerini getir
+authGroup.MapGet("/profile", async (EduTakipDBContext db, HttpContext httpContext) =>
+{
+    var userIdClaim = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    var user = await db.Kullanicilar
+        .Include(x => x.KullaniciTip)
+        .FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+
+    if (user == null)
+    {
+        return Results.NotFound(new { success = false, message = "Kullanıcı bulunamadı." });
+    }
+
+    return Results.Ok(new
+    {
+        success = true,
+        user = new
+        {
+            user.ID,
+            user.Adi,
+            user.Soyadi,
+            user.EPosta,
+            KullaniciTip = user.KullaniciTip?.Adi ?? "",
+            user.Aktif,
+            user.EmailConfirmed,
+            user.Reddedildi,
+            user.CreDate
+        }
+    });
+}).RequireAuthorization();
+
+// Profil güncelle (Ad, Soyad)
+authGroup.MapPut("/update-profile", async (UpdateProfileRequest request, EduTakipDBContext db, HttpContext httpContext) =>
+{
+    var userIdClaim = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.Adi) || string.IsNullOrWhiteSpace(request.Soyadi))
+    {
+        return Results.BadRequest(new { success = false, message = "Ad ve Soyad zorunludur." });
+    }
+
+    var user = await db.Kullanicilar.FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+    if (user == null)
+    {
+        return Results.NotFound(new { success = false, message = "Kullanıcı bulunamadı." });
+    }
+
+    user.Adi = request.Adi.Trim();
+    user.Soyadi = request.Soyadi.Trim();
+    user.UpdDate = DateTime.UtcNow;
+    user.UpdUser = userId;
+
+    db.Kullanicilar.Update(user);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { success = true, message = "Profil başarıyla güncellendi." });
+}).RequireAuthorization();
+
+// Şifre değiştir
+authGroup.MapPost("/change-password", async (ChangePasswordRequest request, EduTakipDBContext db, IPasswordHasher hasher, HttpContext httpContext) =>
+{
+    var userIdClaim = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    if (string.IsNullOrWhiteSpace(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (string.IsNullOrWhiteSpace(request.MevcutSifre) || string.IsNullOrWhiteSpace(request.YeniSifre))
+    {
+        return Results.BadRequest(new { success = false, message = "Mevcut şifre ve yeni şifre zorunludur." });
+    }
+
+    if (request.YeniSifre.Length < 6)
+    {
+        return Results.BadRequest(new { success = false, message = "Yeni şifre en az 6 karakter olmalıdır." });
+    }
+
+    var user = await db.Kullanicilar.FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+    if (user == null)
+    {
+        return Results.NotFound(new { success = false, message = "Kullanıcı bulunamadı." });
+    }
+
+    // Mevcut şifreyi doğrula
+    if (!hasher.Verify(user.Sifre, request.MevcutSifre))
+    {
+        return Results.BadRequest(new { success = false, message = "Mevcut şifre hatalı." });
+    }
+
+    // Yeni şifreyi hash'le ve kaydet
+    user.Sifre = hasher.Hash(request.YeniSifre);
+    user.UpdDate = DateTime.UtcNow;
+    user.UpdUser = userId;
+
+    db.Kullanicilar.Update(user);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(new { success = true, message = "Şifre başarıyla değiştirildi." });
+}).RequireAuthorization();
+
 // Dosya yükleme endpoint'i
 var uploadGroup = app.MapGroup("/api/upload");
 uploadGroup.MapPost("/", async (HttpRequest request) =>
@@ -660,7 +1037,7 @@ uploadGroup.MapPost("/", async (HttpRequest request) =>
 
         // Request body size limitini kontrol et
         const long maxFileSize = 50 * 1024 * 1024; // 50MB
-        
+
         var form = await request.ReadFormAsync();
         var file = form.Files.FirstOrDefault();
 
@@ -705,7 +1082,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<EduTakipDBContext>();
     var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    
+
     // Admin kullanıcı tipini kontrol et ve ekle
     var adminTip = await db.KullaniciTipleri.FirstOrDefaultAsync(x => x.Adi.ToLower() == "admin");
     if (adminTip == null)
@@ -720,7 +1097,7 @@ using (var scope = app.Services.CreateScope())
         db.KullaniciTipleri.Add(adminTip);
         await db.SaveChangesAsync();
     }
-    
+
     // Admin kullanıcısını kontrol et ve ekle
     var adminUser = await db.Kullanicilar.FirstOrDefaultAsync(x => x.EPosta.ToLower() == "admin@edutakip.com");
     if (adminUser == null)

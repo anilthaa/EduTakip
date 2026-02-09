@@ -1,8 +1,12 @@
-﻿@page "/admin/kullanicilar"
+@page "/admin/kullanicilar"
 @using System.Threading.Tasks
+@using System.Net.Http.Json
 @attribute [Authorize(Roles = "Admin")]
 @inject AuthStateService AuthStateService
 @inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
 
 
 <RadzenButton Text="Yeni Kullanici Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
@@ -21,14 +25,32 @@
 			</RadzenDataGridColumn>
 			<RadzenDataGridColumn Title="Durum">
 				<Template Context="item">
-					<RadzenBadge Text="@(item.Aktif ? "Aktif" : "Pasif")" Style="@(item.Aktif ? "background:green" : "background:red")"></RadzenBadge>
+					@{
+						var durum = GetDurum(item);
+						var durumRenk = GetDurumRenk(item);
+					}
+					<RadzenBadge Text="@durum" Style="@($"background:{durumRenk}")"></RadzenBadge>
 				</Template>
 			</RadzenDataGridColumn>
 
 			<RadzenDataGridColumn Title="Islemler">
 				<Template Context="item">
-					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => duzenleKullanici(item))"></RadzenButton>
-					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => silKullanici(item))"></RadzenButton>
+					<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+						<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => duzenleKullanici(item))"></RadzenButton>
+						@if (!item.Aktif)
+						{
+							<RadzenButton Icon="check_circle" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Click="@(() => HesapAktiflestir(item))"></RadzenButton>
+						}
+						@if (item.Aktif && item.EmailConfirmed)
+						{
+							<RadzenButton Icon="undo" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small" Click="@(() => OnayiGeriAl(item))"></RadzenButton>
+						}
+						@if (item.Reddedildi)
+						{
+							<RadzenButton Icon="undo" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" Click="@(() => ReddiGeriAl(item))"></RadzenButton>
+						}
+						<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => silKullanici(item))"></RadzenButton>
+					</div>
 				</Template>
 			</RadzenDataGridColumn>
 		</Columns>
@@ -151,6 +173,123 @@
 			{
 				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Kullanıcı silinirken bir hata oluştu: {ex.Message}");
 			}
+		}
+	}
+
+	string GetDurum(ItemKullanici kullanici)
+	{
+		if (!kullanici.EmailConfirmed)
+		{
+			return "E-posta Onaylanmamış";
+		}
+		if (kullanici.Reddedildi)
+		{
+			return "Reddedilmiş";
+		}
+		if (kullanici.Aktif)
+		{
+			return "Onaylanmış";
+		}
+		return "Bekleyen";
+	}
+
+	string GetDurumRenk(ItemKullanici kullanici)
+	{
+		if (!kullanici.EmailConfirmed)
+		{
+			return "gray";
+		}
+		if (kullanici.Reddedildi)
+		{
+			return "red";
+		}
+		if (kullanici.Aktif)
+		{
+			return "green";
+		}
+		return "orange";
+	}
+
+	async Task OnayiGeriAl(ItemKullanici kullanici)
+	{
+		bool? result = await DialogService.Confirm("Bu hesabın onayını geri almak istediğinize emin misiniz? Kullanıcı tekrar bekleyen duruma dönecek ve giriş yapamayacaktır.", "Onayı Geri Al",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		
+		if (result == true)
+		{
+			try
+			{
+				// Hesap zaten aktif değilse
+				if (!kullanici.Aktif)
+				{
+					NotificationService.Notify(NotificationSeverity.Info, "Bilgi", "Hesap zaten aktif değil.");
+					await Listele();
+					return;
+				}
+
+				// Onayı geri al
+				kullanici.Aktif = false;
+				kullanici.UpdDate = DateTime.UtcNow;
+				kullanici.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
+				
+				DbContext.Kullanicilar.Update(kullanici);
+				await DbContext.SaveChangesAsync();
+
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap onayı başarıyla geri alındı. Kullanıcı tekrar bekleyen duruma döndü.");
+				await Listele();
+			}
+			catch (Exception ex)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			}
+		}
+	}
+
+	async Task ReddiGeriAl(ItemKullanici kullanici)
+	{
+		bool? result = await DialogService.Confirm("Bu hesabın reddini geri almak istediğinize emin misiniz? Kullanıcı tekrar bekleyen duruma dönecek ve onay bekleyecektir.", "Reddi Geri Al",
+			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		
+		if (result == true)
+		{
+			try
+			{
+				// Hesap zaten reddedilmemişse
+				if (!kullanici.Reddedildi)
+				{
+					NotificationService.Notify(NotificationSeverity.Info, "Bilgi", "Hesap zaten reddedilmemiş.");
+					await Listele();
+					return;
+				}
+
+				// Reddi geri al
+				kullanici.Reddedildi = false;
+				kullanici.Aktif = false; // Bekleyen duruma döndürmek için Aktif'i false yap
+				kullanici.UpdDate = DateTime.UtcNow;
+				kullanici.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
+				
+				DbContext.Kullanicilar.Update(kullanici);
+				await DbContext.SaveChangesAsync();
+
+				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap reddi başarıyla geri alındı. Kullanıcı tekrar bekleyen duruma döndü.");
+				await Listele();
+			}
+			catch (Exception ex)
+			{
+				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			}
+		}
+	}
+
+	async Task HesapAktiflestir(ItemKullanici kullanici)
+	{
+		var result = await DialogService.OpenAsync<AccountActivationDialog>("Hesap Aktifleştirme",
+			new Dictionary<string, object>() { { "Kullanici", kullanici } },
+			new DialogOptions() { Width = "500px", Height = "400px" });
+		
+		if (result == true)
+		{
+			await Listele();
 		}
 	}
 }

@@ -1,0 +1,230 @@
+@using System.Net.Http.Json
+@using System.Net.Http.Headers
+@using System.Text.Json.Serialization
+@using Microsoft.JSInterop
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject IJSRuntime JSRuntime
+
+<RadzenCard>
+	<div style="padding: 20px;">
+		<h3 style="margin-bottom: 20px;">Hesap Aktifleştirme</h3>
+		
+		@if (kullanici != null)
+		{
+			<div style="margin-bottom: 20px;">
+				<p><strong>Kullanıcı:</strong> @kullanici.Adi @kullanici.Soyadi</p>
+				<p><strong>E-posta:</strong> @kullanici.EPosta</p>
+			</div>
+
+			<RadzenStack Gap="1rem">
+				<RadzenFormField Text="Aktifleştirme Yöntemi" class="w-100">
+					<RadzenRadioButtonList Data="@activationMethods" @bind-Value="selectedMethod" 
+						TextProperty="Label" ValueProperty="Value" class="w-100" />
+				</RadzenFormField>
+
+				@if (hasError)
+				{
+					<RadzenAlert AlertStyle="AlertStyle.Danger" Title="Hata" Text="@errorMessage" />
+				}
+
+				@if (isProcessing)
+				{
+					<div style="text-align: center; padding: 10px;">
+						<RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+						<p style="margin-top: 10px;">İşlem yapılıyor...</p>
+					</div>
+				}
+
+				<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+					<RadzenButton Text="İptal" ButtonStyle="ButtonStyle.Secondary" 
+						Click="@(() => DialogService.Close(false))" 
+						Disabled="@isProcessing" />
+					<RadzenButton Text="Gönder" ButtonStyle="ButtonStyle.Primary" 
+						Click="@OnSubmit" 
+						Disabled="@(isProcessing || selectedMethod == null)" />
+				</div>
+			</RadzenStack>
+		}
+		else
+		{
+			<p>Kullanıcı bilgisi yükleniyor...</p>
+		}
+	</div>
+</RadzenCard>
+
+@code {
+	[Parameter] public ItemKullanici? Kullanici { get; set; }
+
+	ItemKullanici? kullanici;
+	string? selectedMethod;
+	bool isProcessing = false;
+	bool hasError = false;
+	string errorMessage = string.Empty;
+
+	class ActivationMethod
+	{
+		public string Value { get; set; } = string.Empty;
+		public string Label { get; set; } = string.Empty;
+	}
+
+	List<ActivationMethod> activationMethods = new()
+	{
+		new ActivationMethod { Value = "link", Label = "Aktifleştirme Linki Gönder (Kullanıcı linke tıklayarak aktifleştirecek)" },
+		new ActivationMethod { Value = "password", Label = "Geçici Şifre ile Aktifleştir (Hesap otomatik aktif olur, geçici şifre gönderilir)" }
+	};
+
+	class ApiResponse
+	{
+		[JsonPropertyName("success")]
+		public bool Success { get; set; }
+		
+		[JsonPropertyName("message")]
+		public string? Message { get; set; }
+	}
+
+	protected override Task OnInitializedAsync()
+	{
+		kullanici = Kullanici;
+		return Task.CompletedTask;
+	}
+
+	private async Task OnSubmit()
+	{
+		if (kullanici == null || string.IsNullOrWhiteSpace(selectedMethod))
+		{
+			return;
+		}
+
+		isProcessing = true;
+		hasError = false;
+		StateHasChanged();
+
+		try
+		{
+			// Token'ı localStorage'dan al
+			string? token = null;
+			try
+			{
+				token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+			}
+			catch { }
+
+			var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
+			ApiResponse? result = null;
+
+			// HttpRequestMessage oluştur ve Authorization header ekle
+			HttpRequestMessage CreateRequest(HttpMethod method, string url, object? content = null)
+			{
+				var request = new HttpRequestMessage(method, url);
+				if (!string.IsNullOrWhiteSpace(token))
+				{
+					request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+				}
+				if (content != null)
+				{
+					request.Content = JsonContent.Create(content);
+				}
+				return request;
+			}
+
+			if (selectedMethod == "link")
+			{
+				// Aktifleştirme linki gönder
+				var request = CreateRequest(HttpMethod.Post, $"{baseUrl}/api/auth/send-activation-link", new { Email = kullanici.EPosta });
+				var response = await Http.SendAsync(request);
+				
+				if (response.IsSuccessStatusCode)
+				{
+					try
+					{
+						result = await response.Content.ReadFromJsonAsync<ApiResponse>();
+					}
+					catch (System.Text.Json.JsonException)
+					{
+						// JSON parse hatası - muhtemelen boş veya geçersiz yanıt
+						result = new ApiResponse { Success = true, Message = "İşlem başarıyla tamamlandı." };
+					}
+				}
+				else
+				{
+					try
+					{
+						result = await response.Content.ReadFromJsonAsync<ApiResponse>();
+						hasError = true;
+					}
+					catch (System.Text.Json.JsonException)
+					{
+						// JSON parse hatası - muhtemelen HTML yanıt (401/403)
+						result = new ApiResponse { Success = false, Message = $"Sunucu hatası: {response.StatusCode}. Lütfen giriş yaptığınızdan emin olun." };
+						hasError = true;
+					}
+				}
+			}
+			else if (selectedMethod == "password")
+			{
+				// Geçici şifre ile aktifleştir
+				var request = CreateRequest(HttpMethod.Post, $"{baseUrl}/api/auth/activate-account-with-password", new { Email = kullanici.EPosta });
+				var response = await Http.SendAsync(request);
+				
+				if (response.IsSuccessStatusCode)
+				{
+					try
+					{
+						result = await response.Content.ReadFromJsonAsync<ApiResponse>();
+					}
+					catch (System.Text.Json.JsonException)
+					{
+						// JSON parse hatası - muhtemelen boş veya geçersiz yanıt
+						result = new ApiResponse { Success = true, Message = "İşlem başarıyla tamamlandı." };
+					}
+				}
+				else
+				{
+					try
+					{
+						result = await response.Content.ReadFromJsonAsync<ApiResponse>();
+						hasError = true;
+					}
+					catch (System.Text.Json.JsonException)
+					{
+						// JSON parse hatası - muhtemelen HTML yanıt (401/403)
+						result = new ApiResponse { Success = false, Message = $"Sunucu hatası: {response.StatusCode}. Lütfen giriş yaptığınızdan emin olun." };
+						hasError = true;
+					}
+				}
+			}
+
+			if (result != null)
+			{
+				if (result.Success)
+				{
+					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", result.Message ?? "İşlem başarıyla tamamlandı.");
+					DialogService.Close(true);
+				}
+				else
+				{
+					hasError = true;
+					errorMessage = result.Message ?? "İşlem sırasında bir hata oluştu.";
+				}
+			}
+			else
+			{
+				hasError = true;
+				errorMessage = "Sunucudan yanıt alınamadı.";
+			}
+		}
+		catch (Exception ex)
+		{
+			hasError = true;
+			errorMessage = $"Bir hata oluştu: {ex.Message}";
+		}
+		finally
+		{
+			isProcessing = false;
+			StateHasChanged();
+		}
+	}
+}
