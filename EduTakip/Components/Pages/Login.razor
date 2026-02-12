@@ -7,49 +7,49 @@
 @inject NavigationManager Navigation
 @inject NotificationService NotificationService
 
-<PageTitle>Giriş Yap</PageTitle>    
+<PageTitle>Giriş Yap</PageTitle>
 
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
-            <h2>Giriş Yap</h2>
+            <h2>EduTakip</h2>
             <p>Hesabınıza giriş yapın</p>
         </div>
 
         <RadzenTemplateForm Data="@loginModel" TItem="LoginModel" Submit="@OnLogin" class="auth-form">
-            <RadzenFieldset Text="Giriş Bilgileri" class="w-100">
-                <RadzenStack Gap="1.5rem">
-                    <RadzenFormField Text="E-posta" Style="width:100%">
-                        <RadzenTextBox @bind-Value="loginModel.EPosta" Placeholder="ornek@email.com" />
-                        <RadzenFormFieldValidator />
-                    </RadzenFormField>
+            <div class="auth-form-inner">
+                <RadzenFormField Text="E-Posta" Style="width:100%;">
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="loginModel.EPosta" Placeholder="ornek@email.com" Style="width:100%;" />
+                    </ChildContent>
+                </RadzenFormField>
 
-                    <RadzenFormField Text="Şifre" class="w-100">
-                        <RadzenPassword @bind-Value="loginModel.Sifre" Placeholder="Şifrenizi girin" class="w-100" />
-                        <RadzenFormFieldValidator />
-                    </RadzenFormField>
+                <RadzenFormField Text="Şifre" Style="width:100%;">
+                    <ChildContent>
+                        <RadzenPassword @bind-Value="loginModel.Sifre" Placeholder="Şifrenizi girin" Style="width:100%;" />
+                    </ChildContent>
+                </RadzenFormField>
 
-                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
-                        <RadzenButton ButtonType="ButtonType.Submit" 
-                                     Text="Giriş Yap" 
-                                     Icon="login" 
-                                     IsBusy="@isLoading"
-                                     ButtonStyle="ButtonStyle.Primary" 
-                                     class="w-100"
-                                      Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
-                    </RadzenStack>
+                <div class="auth-forgot">
+                    <RadzenLink Path="/forgot-password" Text="Şifremi Unuttum" />
+                </div>
 
-                    <div class="text-center w-100" style="margin-top:5px;">
-                        <RadzenLink Path="/forgot-password" Text="Şifremi Unuttum" Style="font-size: 0.9rem; color: #667eea;" />
-                    </div>
-
-                    <div class="text-center w-100" style="margin-top:5px;">
-                        <span>Hesabınız yok mu? </span>
-                        <RadzenLink Path="/register" Text="Kayıt Ol" />
-                    </div>
-                </RadzenStack>
-            </RadzenFieldset>
+                <div class="auth-actions">
+                    <RadzenButton ButtonType="ButtonType.Submit"
+                                  Text="Giriş Yap"
+                                  Icon="login"
+                                  IsBusy="@isLoading"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  class="w-100"
+                                  Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
+                </div>
+            </div>
         </RadzenTemplateForm>
+
+        <div class="auth-footer">
+            <span>Hesabınız yok mu? </span>
+            <RadzenLink Path="/register" Text="Kayıt Ol" />
+        </div>
     </div>
 </div>
 
@@ -94,16 +94,16 @@
 
         isLoading = true;
         StateHasChanged();
-        
+
         try
         {
             var loginRequest = new LoginRequest(model.EPosta, model.Sifre);
             var response = await AuthService.LoginAsync(loginRequest);
-            
+
             if (response != null && !string.IsNullOrEmpty(response.Token))
             {
                 var success = await AuthStateService.LoginAsync(response.Token, response.Kullanici);
-                
+
                 if (success)
                 {
                     NotificationService.Notify(new NotificationMessage
@@ -113,7 +113,7 @@
                         Detail = "Giriş yapıldı",
                         Duration = 2000
                     });
-                    
+
                     await Task.Delay(500);
                     Navigation.NavigateTo("/dashboard");
                 }
