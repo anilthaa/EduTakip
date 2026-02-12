@@ -1,11 +1,4 @@
-﻿@inject EduTakipDBContext DbContext
-@inject AuthStateService AuthStateService
-@inject NotificationService NotificationService
-@inject DialogService DialogService
-@inject HttpClient HttpClient
-@inject NavigationManager NavigationManager
-
-<RadzenTemplateForm Data="@model" TItem="ItemOdevTeslim" Submit="@Kaydet">
+﻿<RadzenTemplateForm Data="@model" TItem="ItemOdevTeslim" Submit="@Kaydet">
 	<div class="mb-3">
 		<RadzenLabel Text="Dosya Seçin"></RadzenLabel>
 		<InputFile OnChange="OnDosyaSecildi" 
@@ -60,7 +53,7 @@
 		}
 
 		// Büyük dosyalar için HttpClient timeout'unu artir (5 dakika)
-		HttpClient.Timeout = TimeSpan.FromMinutes(5);
+		Http.Timeout = TimeSpan.FromMinutes(5);
 
 		// Ögrenci ID'sini bul
 		ogrenciId = await DbContext.Ogrenciler
@@ -147,7 +140,7 @@
 			
 			// Büyük dosyalar için timeout ayarla (5 dakika)
 			using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-			var response = await HttpClient.PostAsync(uploadUrl, content, cts.Token);
+			var response = await Http.PostAsync(uploadUrl, content, cts.Token);
 
 			if (response.IsSuccessStatusCode)
 			{

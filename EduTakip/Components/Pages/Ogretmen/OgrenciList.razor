@@ -1,11 +1,6 @@
 @page "/ogretmen/ogrenciler"
-@rendermode InteractiveServer
+
 @attribute [Authorize(Roles = "Öğretmen")]
-@inject EduTakipDBContext DbContext
-@inject AuthStateService AuthStateService
-@inject NavigationManager NavigationManager
-@inject DialogService DialogService
-@inject IToastService ToastService
 
 <PageTitle>Öğrenci Listesi</PageTitle>
 
@@ -179,7 +174,7 @@
 
             if (!ogretmenDersleri.Any())
             {
-                ToastService.ShowWarning("Uyarı", "Bu öğrenci sizin derslerinize kayıtlı değil.");
+                NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Bu öğretmenin aktif dersleri bulunmamaktadır.");
                 return;
             }
 
@@ -195,7 +190,7 @@
 
             if (!katilimlar.Any())
             {
-                ToastService.ShowInfo("Bilgi", $"Bu öğrenci sizin derslerinize kayıtlı değil. (Kullanıcı ID: {kullaniciId}, Öğretmen Ders Sayısı: {ogretmenDersleri.Count})");
+                NotificationService.Notify(NotificationSeverity.Info, "Bilgi", $"Bu öğrenci sizin derslerinize kayıtlı değil. (Kullanıcı ID: {kullaniciId}, Öğretmen Ders Sayısı: {ogretmenDersleri.Count})");
                 return;
             }
 
@@ -216,8 +211,7 @@
 
             if (saveResult > 0 && cikarilanDersSayisi > 0)
             {
-                ToastService.ShowSuccess("Başarılı", 
-                    $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenci {cikarilanDersSayisi} dersten çıkarıldı.");
+                NotificationService.Notify(NotificationSeverity.Success, "Başarılı", $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenci {cikarilanDersSayisi} dersten çıkarıldı.");
 
                 // Listeyi yenile
                 await YukleOgrenciler();
@@ -225,12 +219,12 @@
             }
             else
             {
-                ToastService.ShowWarning("Uyarı", $"Öğrenci çıkarılamadı. (SaveResult: {saveResult}, Katılım Sayısı: {cikarilanDersSayisi})");
+                NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", $"Öğrenci çıkarılamadı. (SaveResult: {saveResult}, Katılım Sayısı: {cikarilanDersSayisi})");
             }
         }
         catch (Exception ex)
         {
-            ToastService.ShowError("Hata", $"Öğrenci sınıftan çıkarılırken bir hata oluştu: {ex.Message}\n\nDetay: {ex.InnerException?.Message ?? "Yok"}");
+            NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Öğrenci sınıftan çıkarılırken bir hata oluştu: {ex.Message}");
         }
     }
 }

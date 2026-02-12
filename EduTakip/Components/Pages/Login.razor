@@ -1,11 +1,7 @@
 @page "/"
 @page "/login"
-@rendermode InteractiveServer
+
 @layout EmptyLayout
-@inject IAuthService AuthService
-@inject AuthStateService AuthStateService
-@inject NavigationManager Navigation
-@inject NotificationService NotificationService
 
 <PageTitle>Giriş Yap</PageTitle>
 
@@ -115,7 +111,7 @@
                     });
 
                     await Task.Delay(500);
-                    Navigation.NavigateTo("/dashboard");
+                    NavigationManager.NavigateTo("/dashboard");
                 }
                 else
                 {

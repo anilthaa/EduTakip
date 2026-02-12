@@ -403,9 +403,9 @@ authGroup.MapPost("/forgot-password", async (ForgotPasswordRequest request, EduT
         return Results.BadRequest("Geçerli bir e-posta adresi giriniz.");
     }
 
-    // Kullanıcıyı bul
+    // Kullanıcıyı bul (aktif olmasa bile şifre sıfırlama yapabilmeli)
     var user = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.EPosta == email && x.Aktif && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.EPosta == email && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     // Güvenlik: Kullanıcı bulunmasa bile başarılı mesajı döndür (email enumeration saldırısını önlemek için)
     if (user == null)
