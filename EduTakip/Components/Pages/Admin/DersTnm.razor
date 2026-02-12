@@ -33,6 +33,9 @@
 		{
 			ogretmenler = await DbContext.Ogretmenler
 				.Include(o => o.Kullanici)
+				.Where(o => (o.DelDate == null || o.DelDate == default(DateTime)) 
+					&& (o.Kullanici.DelDate == null || o.Kullanici.DelDate == default(DateTime)) 
+					&& o.Kullanici.Aktif)
 				.OrderBy(o => o.Kullanici.Adi)
 				.ToListAsync();
 			if (DersId.HasValue && DersId.Value > 0)

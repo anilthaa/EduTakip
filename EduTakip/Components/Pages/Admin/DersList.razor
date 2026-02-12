@@ -42,6 +42,7 @@
 		dersler = await DbContext.Dersler
 			.Include(d => d.Ogretmen)
 			.ThenInclude(o => o.Kullanici)
+			.Where(d => d.DelDate == null || d.DelDate == default(DateTime))
 			.OrderBy(x => x.Adi)
 			.ToListAsync();
 	}

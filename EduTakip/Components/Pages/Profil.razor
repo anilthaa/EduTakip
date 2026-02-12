@@ -1,0 +1,259 @@
+@page "/profil"
+@attribute [Authorize]
+@inject IPasswordHasher PasswordHasher
+
+<PageTitle>Profilim - EduTakip</PageTitle>
+
+<div class="container" style="max-width: 800px; margin: 0 auto; padding: 20px;">
+    <h3 style="margin-bottom: 24px;">Profilim</h3>
+
+    @if (kullanici == null)
+    {
+        <div style="text-align: center; padding: 40px;">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            <p style="margin-top: 10px;">Profil bilgileri yükleniyor...</p>
+        </div>
+    }
+    else
+    {
+        @* Hesap Durumu *@
+        <RadzenCard Style="margin-bottom: 20px;">
+            <h4 style="margin-bottom: 16px;">Hesap Durumu</h4>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <RadzenBadge Text="@(kullanici.Aktif ? "Aktif" : "Pasif")"
+                             Style="@($"background: {(kullanici.Aktif ? "#4caf50" : "#f44336")}; font-size: 14px; padding: 6px 14px;")" />
+                <RadzenBadge Text="@(kullanici.EmailConfirmed ? "E-posta Onaylı" : "E-posta Onaylanmadı")"
+                             Style="@($"background: {(kullanici.EmailConfirmed ? "#4caf50" : "#ff9800")}; font-size: 14px; padding: 6px 14px;")" />
+                @if (kullanici.Reddedildi)
+                {
+                    <RadzenBadge Text="Reddedildi" Style="background: #f44336; font-size: 14px; padding: 6px 14px;" />
+                }
+                <RadzenBadge Text="@($"Kullanıcı Tipi: {kullaniciTipAdi}")"
+                             Style="background: #667eea; font-size: 14px; padding: 6px 14px;" />
+            </div>
+            @if (kullanici.CreDate != default)
+            {
+                <p style="margin-top: 12px; color: #999; font-size: 13px;">
+                    Kayıt tarihi: @kullanici.CreDate.ToString("dd.MM.yyyy HH:mm")
+                </p>
+            }
+        </RadzenCard>
+
+        @* Profil Bilgileri *@
+        <RadzenCard Style="margin-bottom: 20px;">
+            <h4 style="margin-bottom: 16px;">Profil Bilgileri</h4>
+            <RadzenTemplateForm Data="@profilModel" TItem="ProfilFormModel" Submit="@OnProfilKaydet">
+                <RadzenStack Gap="1rem">
+                    <RadzenFormField Text="Ad" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenTextBox @bind-Value="profilModel.Adi" Style="width: 100%;" Name="Adi" />
+                        </ChildContent>
+                    </RadzenFormField>
+                    <RadzenRequiredValidator Component="Adi" Text="Ad zorunludur." Style="color: red;" />
+
+                    <RadzenFormField Text="Soyad" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenTextBox @bind-Value="profilModel.Soyadi" Style="width: 100%;" Name="Soyadi" />
+                        </ChildContent>
+                    </RadzenFormField>
+                    <RadzenRequiredValidator Component="Soyadi" Text="Soyad zorunludur." Style="color: red;" />
+
+                    <RadzenFormField Text="E-posta" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenTextBox Value="@kullanici.EPosta" Style="width: 100%;" ReadOnly="true" />
+                        </ChildContent>
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Kullanıcı Tipi" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenTextBox Value="@kullaniciTipAdi" Style="width: 100%;" ReadOnly="true" />
+                        </ChildContent>
+                    </RadzenFormField>
+
+                    <div style="text-align: right; margin-top: 8px;">
+                        <RadzenButton Text="Bilgileri Güncelle" ButtonType="ButtonType.Submit"
+                                      ButtonStyle="ButtonStyle.Primary" Icon="save"
+                                      Disabled="@profilKaydediliyor" />
+                    </div>
+                </RadzenStack>
+            </RadzenTemplateForm>
+        </RadzenCard>
+
+        @* Şifre Değiştirme *@
+        <RadzenCard>
+            <h4 style="margin-bottom: 16px;">Şifre Değiştir</h4>
+            <RadzenTemplateForm Data="@sifreModel" TItem="SifreFormModel" Submit="@OnSifreDegistir">
+                <RadzenStack Gap="1rem">
+                    <RadzenFormField Text="Mevcut Şifre" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenPassword @bind-Value="sifreModel.MevcutSifre" Style="width: 100%;" Name="MevcutSifre" />
+                        </ChildContent>
+                    </RadzenFormField>
+                    <RadzenRequiredValidator Component="MevcutSifre" Text="Mevcut şifre zorunludur." Style="color: red;" />
+
+                    <RadzenFormField Text="Yeni Şifre" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenPassword @bind-Value="sifreModel.YeniSifre" Style="width: 100%;" Name="YeniSifre" />
+                        </ChildContent>
+                    </RadzenFormField>
+                    <RadzenRequiredValidator Component="YeniSifre" Text="Yeni şifre zorunludur." Style="color: red;" />
+
+                    <RadzenFormField Text="Yeni Şifre (Tekrar)" Style="width: 100%;">
+                        <ChildContent>
+                            <RadzenPassword @bind-Value="sifreModel.YeniSifreTekrar" Style="width: 100%;" Name="YeniSifreTekrar" />
+                        </ChildContent>
+                    </RadzenFormField>
+                    <RadzenRequiredValidator Component="YeniSifreTekrar" Text="Yeni şifre tekrarı zorunludur." Style="color: red;" />
+
+                    <div style="text-align: right; margin-top: 8px;">
+                        <RadzenButton Text="Şifreyi Değiştir" ButtonType="ButtonType.Submit"
+                                      ButtonStyle="ButtonStyle.Warning" Icon="lock"
+                                      Disabled="@sifreDegistiriliyor" />
+                    </div>
+                </RadzenStack>
+            </RadzenTemplateForm>
+        </RadzenCard>
+    }
+</div>
+
+@code {
+    ItemKullanici? kullanici;
+    string kullaniciTipAdi = string.Empty;
+    ProfilFormModel profilModel = new();
+    SifreFormModel sifreModel = new();
+    bool profilKaydediliyor = false;
+    bool sifreDegistiriliyor = false;
+
+    class ProfilFormModel
+    {
+        public string Adi { get; set; } = string.Empty;
+        public string Soyadi { get; set; } = string.Empty;
+    }
+
+    class SifreFormModel
+    {
+        public string MevcutSifre { get; set; } = string.Empty;
+        public string YeniSifre { get; set; } = string.Empty;
+        public string YeniSifreTekrar { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentUser = AuthStateService.CurrentUser;
+        if (currentUser == null)
+        {
+            NavigationManager.NavigateTo("/login");
+            return;
+        }
+
+        kullanici = await DbContext.Kullanicilar
+            .Include(k => k.KullaniciTip)
+            .FirstOrDefaultAsync(k => k.ID == currentUser.ID && k.DelDate == null);
+
+        if (kullanici != null)
+        {
+            kullaniciTipAdi = kullanici.KullaniciTip?.Adi ?? "";
+            profilModel.Adi = kullanici.Adi;
+            profilModel.Soyadi = kullanici.Soyadi;
+        }
+        else
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Hata", "Kullanıcı bilgileri yüklenemedi.");
+            NavigationManager.NavigateTo("/dashboard");
+        }
+    }
+
+    async Task OnProfilKaydet()
+    {
+        if (kullanici == null) return;
+
+        if (string.IsNullOrWhiteSpace(profilModel.Adi) || string.IsNullOrWhiteSpace(profilModel.Soyadi))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Ad ve Soyad alanları boş olamaz.");
+            return;
+        }
+
+        profilKaydediliyor = true;
+        StateHasChanged();
+
+        try
+        {
+            kullanici.Adi = profilModel.Adi.Trim();
+            kullanici.Soyadi = profilModel.Soyadi.Trim();
+            kullanici.UpdDate = DateTime.UtcNow;
+            kullanici.UpdUser = kullanici.ID;
+
+            DbContext.Kullanicilar.Update(kullanici);
+            await DbContext.SaveChangesAsync();
+
+            NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Profil bilgileri güncellendi.");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Profil güncellenirken hata oluştu: {ex.Message}");
+        }
+        finally
+        {
+            profilKaydediliyor = false;
+            StateHasChanged();
+        }
+    }
+
+    async Task OnSifreDegistir()
+    {
+        if (kullanici == null) return;
+
+        if (string.IsNullOrWhiteSpace(sifreModel.MevcutSifre))
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Mevcut şifre zorunludur.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(sifreModel.YeniSifre) || sifreModel.YeniSifre.Length < 6)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Yeni şifre en az 6 karakter olmalıdır.");
+            return;
+        }
+
+        if (sifreModel.YeniSifre != sifreModel.YeniSifreTekrar)
+        {
+            NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Yeni şifreler eşleşmiyor.");
+            return;
+        }
+
+        sifreDegistiriliyor = true;
+        StateHasChanged();
+
+        try
+        {
+            // Mevcut şifreyi doğrula
+            if (!PasswordHasher.Verify(kullanici.Sifre, sifreModel.MevcutSifre))
+            {
+                NotificationService.Notify(NotificationSeverity.Error, "Hata", "Mevcut şifre hatalı.");
+                return;
+            }
+
+            // Yeni şifreyi hash'le ve kaydet
+            kullanici.Sifre = PasswordHasher.Hash(sifreModel.YeniSifre);
+            kullanici.UpdDate = DateTime.UtcNow;
+            kullanici.UpdUser = kullanici.ID;
+
+            DbContext.Kullanicilar.Update(kullanici);
+            await DbContext.SaveChangesAsync();
+
+            // Formu temizle
+            sifreModel = new SifreFormModel();
+
+            NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Şifre başarıyla değiştirildi.");
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Şifre değiştirilirken hata oluştu: {ex.Message}");
+        }
+        finally
+        {
+            sifreDegistiriliyor = false;
+            StateHasChanged();
+        }
+    }
+}

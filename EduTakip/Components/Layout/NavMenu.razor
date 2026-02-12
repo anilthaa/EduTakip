@@ -1,4 +1,4 @@
-﻿@rendermode InteractiveServer
+@rendermode InteractiveServer
 @inject AuthStateService AuthStateService
 @inject NavigationManager Navigation
 
@@ -113,14 +113,16 @@
                 </NavLink>
             </div>
         }
-        <div class="nav-item px-3" style="margin-top:auto; display:flex; justify-content:center;align-items:center;">
+        <div class="nav-item px-3" style="margin-top:auto; display:flex; flex-direction:column; gap:8px; align-items:stretch;">
         @if (AuthStateService.CurrentUser != null)
         {
-                <div style="margin-left: auto; color: white; display: flex; align-items: center; gap: 10px; margin-bottom:0 !important">
-                    <span>@AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi</span>
-                    <RadzenButton Text="Çıkış" Icon="logout" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-                                  Click="@Logout" />
-            </div>
+            <a href="/profil" style="color: white; display: flex; align-items: center; gap: 8px; text-decoration: none; padding: 6px 0; cursor: pointer;"
+               title="Profili Görüntüle">
+                <RadzenIcon Icon="account_circle" Style="font-size: 24px;" />
+                <span>@AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi</span>
+            </a>
+            <RadzenButton Text="Çıkış" Icon="logout" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                          Click="@Logout" Style="width: 100%;" />
         }
         </div>
         

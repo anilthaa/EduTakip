@@ -26,5 +26,26 @@ namespace EduTakip.Models
     public record ResetPasswordRequest(
         [property: Required] string Token,
         [property: Required, MinLength(6)] string YeniSifre);
+
+    public record SendConfirmationCodeRequest(
+        [property: Required, EmailAddress] string Email);
+
+    public record VerifyConfirmationCodeRequest(
+        [property: Required, EmailAddress] string Email,
+        [property: Required] string Code);
+
+    public record SendActivationLinkRequest(
+        [property: Required, EmailAddress] string Email);
+
+    public record ActivateAccountWithPasswordRequest(
+        [property: Required, EmailAddress] string Email);
+
+    public record ChangePasswordRequest(
+        [property: Required] string MevcutSifre,
+        [property: Required, MinLength(6)] string YeniSifre);
+
+    public record UpdateProfileRequest(
+        [property: Required] string Adi,
+        [property: Required] string Soyadi);
 }
 

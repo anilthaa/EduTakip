@@ -9,86 +9,85 @@
 
 <PageTitle>Kayıt Ol</PageTitle>
 
-<style>
-    html, body {
-        overflow: hidden !important;
-        height: 100% !important;
-    }
-</style>
-
 <div class="auth-container">
     <div class="auth-card">
+
         <div class="auth-header">
-            <h2>Kayıt Ol</h2>
-            <p>Yeni hesap oluşturun</p>
+            <h2>Hesap Oluştur</h2>
+            <p>EduTakip'e katılın</p>
         </div>
 
-        <RadzenTabs SelectedIndex="@selectedUserTypeIndex" SelectedIndexChanged="@OnSelectedIndexChanged" class="w-100" Style="margin-bottom: 0.75rem; margin-top: 0;">
-            <Tabs>
-                <RadzenTabsItem Text="Öğrenci" />
-                <RadzenTabsItem Text="Öğretmen" />
-            </Tabs>
-        </RadzenTabs>
+        <div class="auth-tabs">
+            <RadzenTabs SelectedIndex="@selectedUserTypeIndex" SelectedIndexChanged="@OnSelectedIndexChanged" class="w-100">
+                <Tabs>
+                    <RadzenTabsItem Text="Öğrenci" />
+                    <RadzenTabsItem Text="Öğretmen" />
+                </Tabs>
+            </RadzenTabs>
+        </div>
 
         <RadzenTemplateForm Data="@registerModel" TItem="RegisterModel" Submit="@OnRegister" class="auth-form">
-            <RadzenFieldset Text="Kayıt Bilgileri" class="w-100">
-                <RadzenStack Gap="1rem">
-                        <RadzenFormField Text="Ad" class="w-100">
-                            <RadzenTextBox @bind-Value="registerModel.Adi" Placeholder="Adınızı girin" class="w-100" />
-                            <RadzenFormFieldValidator />
-                        </RadzenFormField>
-                   
-                        <RadzenFormField Text="Soyad" class="w-100">
-                            <RadzenTextBox @bind-Value="registerModel.Soyadi" Placeholder="Soyadınızı girin" class="w-100" />
-                            <RadzenFormFieldValidator />
-                        </RadzenFormField>
-                    
-                        <RadzenFormField Text="E-posta" class="w-100">
-                            <RadzenTextBox @bind-Value="registerModel.EPosta" Placeholder="ornek@email.com" class="w-100" />
-                            <RadzenFormFieldValidator />
-                        </RadzenFormField>
-                   
-                        <RadzenFormField Text="Şifre" class="w-100">
-                            <RadzenPassword @bind-Value="registerModel.Sifre" Placeholder="En az 6 karakter" class="w-100" />
-                            <RadzenFormFieldValidator />
-                        </RadzenFormField>
-                    
+            <div class="auth-form-inner">
+                <RadzenFormField Text="Ad" Style="width:100%;">
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="registerModel.Adi" Placeholder="Adınızı girin" Style="width:100%;" />
+                    </ChildContent>
+                </RadzenFormField>
 
-                    @if (selectedUserType == "ogrenci")
-                    {
-                            <RadzenFormField Text="Öğrenci No" class="w-100">
-                                <RadzenTextBox @bind-Value="registerModel.OgrenciNo" Placeholder="Öğrenci numaranızı girin" class="w-100" />
-                                <RadzenFormFieldValidator />
-                            </RadzenFormField>
-                    }
+                <RadzenFormField Text="Soyad" Style="width:100%;">
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="registerModel.Soyadi" Placeholder="Soyadınızı girin" Style="width:100%;" />
+                    </ChildContent>
+                </RadzenFormField>
 
-                    @if (selectedUserType == "ogretmen")
-                    {
-                            <RadzenFormField Text="Birim" class="w-100">
-                                <RadzenDropDown Data="@birimler" TextProperty="Adi" ValueProperty="ID" 
-                                               @bind-Value="registerModel.Birim_ID" 
-                                               Placeholder="Birim seçin" class="w-100" />
-                                <RadzenFormFieldValidator />
-                            </RadzenFormField>
-                    }
+                <RadzenFormField Text="E-posta" Style="width:100%;">
+                    <ChildContent>
+                        <RadzenTextBox @bind-Value="registerModel.EPosta" Placeholder="ornek@email.com" Style="width:100%;" />
+                    </ChildContent>
+                </RadzenFormField>
 
-                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="w-100">
-                        <RadzenButton ButtonType="ButtonType.Submit" 
-                                     Text="Kayıt Ol" 
-                                     Icon="person_add" 
-                                     IsBusy="@isLoading"
-                                     ButtonStyle="ButtonStyle.Primary" 
-                                     class="w-100"
-                                      Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
-                    </RadzenStack>
+                <RadzenFormField Text="Şifre" Style="width:100%;">
+                    <ChildContent>
+                        <RadzenPassword @bind-Value="registerModel.Sifre" Placeholder="En az 6 karakter" Style="width:100%;" />
+                    </ChildContent>
+                </RadzenFormField>
 
-                    <div class="text-center w-100" style="margin-top: 0.5rem;">
-                        <span>Zaten hesabınız var mı? </span>
-                        <RadzenLink Path="/login" Text="Giriş Yap" />
-                    </div>
-                </RadzenStack>
-            </RadzenFieldset>
+                @if (selectedUserType == "ogrenci")
+                {
+                    <RadzenFormField Text="Öğrenci No" Style="width:100%;">
+                        <ChildContent>
+                            <RadzenTextBox @bind-Value="registerModel.OgrenciNo" Placeholder="Öğrenci numaranızı girin" Style="width:100%;" />
+                        </ChildContent>
+                    </RadzenFormField>
+                }
+
+                @if (selectedUserType == "ogretmen")
+                {
+                    <RadzenFormField Text="Birim" Style="width:100%;">
+                        <ChildContent>
+                            <RadzenDropDown Data="@birimler" TextProperty="Adi" ValueProperty="ID"
+                                           @bind-Value="registerModel.Birim_ID"
+                                           Placeholder="Birim seçin" Style="width:100%;" />
+                        </ChildContent>
+                    </RadzenFormField>
+                }
+
+                <div class="auth-actions">
+                    <RadzenButton ButtonType="ButtonType.Submit"
+                                  Text="Kayıt Ol"
+                                  Icon="person_add"
+                                  IsBusy="@isLoading"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  class="w-100"
+                                  Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
+                </div>
+            </div>
         </RadzenTemplateForm>
+
+        <div class="auth-footer">
+            <span>Zaten hesabınız var mı? </span>
+            <RadzenLink Path="/login" Text="Giriş Yap" />
+        </div>
     </div>
 </div>
 
@@ -454,13 +453,13 @@
                 {
                     Severity = NotificationSeverity.Success,
                     Summary = "Kayıt Başarılı",
-                    Detail = "Kayıt başarıyla oluşturuldu. Lütfen e-postanızı kontrol edin ve hesabınızı onaylayın. E-posta onayından sonra admin onayı beklenmektedir.",
+                    Detail = "Kayıt başarıyla oluşturuldu. E-postanıza gönderilen doğrulama kodunu girin. E-posta onayından sonra admin onayı beklenmektedir.",
                     Duration = 5000
                 });
                 
-                // Giriş sayfasına yönlendir
+                // E-posta doğrulama sayfasına yönlendir
                 await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
+                Navigation.NavigateTo($"/confirm-email?email={Uri.EscapeDataString(model.EPosta)}");
             }
             else
             {
