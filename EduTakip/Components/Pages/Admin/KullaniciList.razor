@@ -1,13 +1,6 @@
 @page "/admin/kullanicilar"
-@using System.Threading.Tasks
-@using System.Net.Http.Json
-@attribute [Authorize(Roles = "Admin")]
-@inject AuthStateService AuthStateService
-@inject NotificationService NotificationService
-@inject DialogService DialogService
-@inject HttpClient Http
-@inject NavigationManager NavigationManager
 
+@attribute [Authorize(Roles = "Admin")]
 
 <RadzenButton Text="Yeni Kullanici Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
 

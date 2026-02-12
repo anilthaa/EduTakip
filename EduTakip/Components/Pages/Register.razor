@@ -1,11 +1,6 @@
 @page "/register"
-@rendermode InteractiveServer
+
 @layout EmptyLayout
-@inject IAuthService AuthService
-@inject AuthStateService AuthStateService
-@inject NavigationManager Navigation
-@inject NotificationService NotificationService
-@inject EduTakipDBContext DbContext
 
 <PageTitle>Kayıt Ol</PageTitle>
 
@@ -121,7 +116,7 @@
             
             if (AuthStateService.IsAuthenticated)
             {
-                Navigation.NavigateTo("/dashboard");
+                NavigationManager.NavigateTo("/dashboard");
                 return;
             }
             
@@ -459,7 +454,7 @@
                 
                 // E-posta doğrulama sayfasına yönlendir
                 await Task.Delay(2000);
-                Navigation.NavigateTo($"/confirm-email?email={Uri.EscapeDataString(model.EPosta)}");
+                NavigationManager.NavigateTo($"/confirm-email?email={Uri.EscapeDataString(model.EPosta)}");
             }
             else
             {

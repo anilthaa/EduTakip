@@ -1,8 +1,5 @@
 @page "/admin/siniflar"
 @attribute [Authorize(Roles = "Admin")]
-@inject IToastService ToastService
-@inject AuthStateService AuthStateService
-
 	
 	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniSinif" />
 <RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
@@ -140,7 +137,7 @@
 
 				await DbContext.SaveChangesAsync();
 				await Listele();
-				ToastService.ShowSuccess("Başarılı", $"Sınıf silindi. {ogrenciler.Count} öğrencinin sınıf bilgisi güncellendi.");
+                NotificationService.Notify(NotificationSeverity.Success, "Başarılı", $"Sınıf silindi. {ogrenciler.Count} öğrencinin sınıf bilgisi güncellendi.");
 				StateHasChanged();
 			}
 			catch (Exception ex)
