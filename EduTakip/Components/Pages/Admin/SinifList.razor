@@ -1,32 +1,45 @@
 @page "/admin/siniflar"
 @attribute [Authorize(Roles = "Admin")]
-	
-	<RadzenButton Text="Yeni Sınıf Ekle" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniSinif" />
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Sınıflar</h3>
-	<RadzenDataGrid TItem="ItemSinif" Data="@siniflar" AllowPaging="true" PageSize="10">
-		<Columns>
-			<RadzenDataGridColumn TItem="ItemSinif" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemSinif" Property="Adi" Title="Sınıf Adı" />
-			<RadzenDataGridColumn TItem="ItemSinif" Title="Aktif">
-				<Template Context="item">
-					<span 
-						class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
-						@onclick="@(() => ToggleAktif(item))">
-						@(item.Aktif ? "Aktif" : "Pasif")
-					</span>
-				</Template>
-			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemSinif" Title="İşlemler">
-				<Template Context="item">
-					<RadzenButton Icon="edit"  Size="ButtonSize.Small" Click="@(() => EditSinif(item))" Style="margin-right: 10px; background-color:green;" />
-					<RadzenButton Icon="delete"  Size="ButtonSize.Small" Click="@(() => DeleteSinif(item))" Style="background-color:red;" />
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
-</RadzenCard>
+<button class="btn btn-success btn-sm" style="margin-bottom:15px; border-radius:10px;" @onclick="YeniSinif"><span class="material-icons">add</span> Yeni Sınıf Ekle</button>
+
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Sınıflar</h3>
+		<div class="data-table-wrapper">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th style="width:80px">ID</th>
+						<th>Sınıf Adı</th>
+						<th>Aktif</th>
+						<th>İşlemler</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var item in siniflar)
+					{
+						<tr>
+							<td>@item.ID</td>
+							<td>@item.Adi</td>
+							<td>
+								<span
+									class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
+									@onclick="@(() => ToggleAktif(item))">
+									@(item.Aktif ? "Aktif" : "Pasif")
+								</span>
+							</td>
+							<td>
+								<button class="btn btn-sm" style="margin-right: 10px; background-color:green; color:white;" @onclick="@(() => EditSinif(item))"><span class="material-icons">edit</span></button>
+								<button class="btn btn-sm" style="background-color:red; color:white;" @onclick="@(() => DeleteSinif(item))"><span class="material-icons">delete</span></button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 
 @code {
 	List<ItemSinif> siniflar = new();
@@ -39,17 +52,18 @@
 	async Task Listele()
 	{
 		siniflar = await DbContext.Siniflar
+			.Where(x => x.DelDate == null || x.DelDate == default(DateTime))
 			.OrderBy(x => x.Adi)
 			.ToListAsync();
 	}
 
 	async Task YeniSinif()
 	{
-		var result = await DialogService.OpenAsync<SinifTnm>("Yeni Sınıf Ekle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<SinifTnm>("Yeni Sınıf Ekle", new Dictionary<string, object>()
 		{
 			{ "SinifId", 0 }
-		}, new DialogOptions() { Width = "600px"});
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -58,11 +72,11 @@
 
 	async Task EditSinif(ItemSinif sinif)
 	{
-		var result = await DialogService.OpenAsync<SinifTnm>("Sınıf Düzenle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<SinifTnm>("Sınıf Düzenle", new Dictionary<string, object>()
 		{
 			{ "SinifId", sinif.ID }
-		}, new DialogOptions() { Width = "600px"});
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -74,25 +88,25 @@
 		var yeniDurum = !sinif.Aktif;
 		sinif.Aktif = yeniDurum;
 		sinif.UpdDate = DateTime.UtcNow;
-		sinif.UpdUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+		sinif.UpdUser = AuthStateService.CurrentUser?.ID;
 		DbContext.Siniflar.Update(sinif);
 
 		await DbContext.SaveChangesAsync();
 		await Listele();
-		NotificationService.Notify(NotificationSeverity.Success,"Başarılı", $"Sınıf durumu {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
+		ToastService.Notify(ToastSeverity.Success, "Başarılı", $"Sınıf durumu {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
 		StateHasChanged();
 	}
 
 	async Task DeleteSinif(ItemSinif sinif)
 	{
-		bool? result = await DialogService.Confirm($"'{sinif.Adi}' sınıfını silmek istediğinize emin misiniz?", "Sınıf Silme Onayı", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
-		if (result == true)
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"'{sinif.Adi}' sınıfını silmek istediğinize emin misiniz?");
+		if (confirmed)
 		{
 			try
 			{
 				// O sınıftaki tüm öğrencilerin Sinif_ID alanını null yap (ana sınıf olarak bu sınıfı kullananlar)
 				var ogrenciler = await DbContext.Ogrenciler
-					.Where(x => x.Sinif_ID == sinif.ID && x.DelDate == null)
+					.Where(x => x.Sinif_ID == sinif.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 					.ToListAsync();
 
 				foreach (var ogrenci in ogrenciler)
@@ -106,7 +120,7 @@
 				// SinifKullanicilar tablosundaki kayıtları soft delete yap
 				var sinifKullanicilar = await DbContext.SinifKullanicilar
 					.IgnoreQueryFilters()
-					.Where(x => x.Sinif_ID == sinif.ID && x.DelDate == null)
+					.Where(x => x.Sinif_ID == sinif.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 					.ToListAsync();
 
 				foreach (var sk in sinifKullanicilar)
@@ -119,7 +133,7 @@
 				// SinifOgrenciler tablosundaki kayıtları soft delete yap
 				var sinifOgrenciler = await DbContext.SinifOgrenciler
 					.IgnoreQueryFilters()
-					.Where(x => x.Sinif_ID == sinif.ID && x.DelDate == null)
+					.Where(x => x.Sinif_ID == sinif.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 					.ToListAsync();
 
 				foreach (var so in sinifOgrenciler)
@@ -132,12 +146,12 @@
 				// Sınıfı soft delete yap
 				sinif.DelUser = AuthStateService.CurrentUser?.ID ?? 0;
 				sinif.DelDate = DateTime.UtcNow;
-				sinif.Aktif = false; // Soft delete yapıldığında aktifliği de pasif yap
+				sinif.Aktif = false;
 				DbContext.Siniflar.Update(sinif);
 
 				await DbContext.SaveChangesAsync();
 				await Listele();
-                NotificationService.Notify(NotificationSeverity.Success, "Başarılı", $"Sınıf silindi. {ogrenciler.Count} öğrencinin sınıf bilgisi güncellendi.");
+                ToastService.Notify(ToastSeverity.Success, "Başarılı", $"Sınıf silindi. {ogrenciler.Count} öğrencinin sınıf bilgisi güncellendi.");
 				StateHasChanged();
 			}
 			catch (Exception ex)
@@ -146,4 +160,3 @@
 		}
 	}
 }
-

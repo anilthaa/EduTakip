@@ -1,0 +1,41 @@
+@inject ModalService ModalService
+@implements IDisposable
+
+@if (ModalService.IsOpen && ModalService.ComponentType != null)
+{
+    <div class="modal-overlay" @onclick="OnOverlayClick">
+        <div class="modal-container @ModalService.CssClass" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3 class="modal-title">@ModalService.Title</h3>
+                <button class="modal-close" @onclick="CloseModal">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <DynamicComponent Type="@ModalService.ComponentType" Parameters="@ModalService.Parameters" />
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        ModalService.OnChange += StateHasChanged;
+    }
+
+    private void OnOverlayClick()
+    {
+        ModalService.Close(null);
+    }
+
+    private void CloseModal()
+    {
+        ModalService.Close(null);
+    }
+
+    public void Dispose()
+    {
+        ModalService.OnChange -= StateHasChanged;
+    }
+}

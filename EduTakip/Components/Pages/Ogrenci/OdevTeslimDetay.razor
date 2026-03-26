@@ -1,74 +1,76 @@
-<RadzenCard>
-	<h4>Ödev Teslim Detayı</h4>
+<div class="card">
+	<div class="card-body">
+		<h4>Ödev Teslim Detayı</h4>
 
-	@if (teslim == null)
-	{
-		<p>Yükleniyor...</p>
-	}
-	else
-	{
-		<div style="padding: 20px;">
-			<div class="mb-3">
-				<RadzenLabel Text="Ödev Başlığı:" Style="font-weight: bold;"></RadzenLabel>
-				<p>@teslim.Odev?.Baslik</p>
-			</div>
+		@if (teslim == null)
+		{
+			<p>Yükleniyor...</p>
+		}
+		else
+		{
+			<div style="padding: 20px;">
+				<div class="mb-3">
+					<label class="form-label" style="font-weight: bold;">Ödev Başlığı:</label>
+					<p>@teslim.Odev?.Baslik</p>
+				</div>
 
-			<div class="mb-3">
-				<RadzenLabel Text="Ders:" Style="font-weight: bold;"></RadzenLabel>
-				<p>@teslim.Odev?.Ders?.Adi</p>
-			</div>
+				<div class="mb-3">
+					<label class="form-label" style="font-weight: bold;">Ders:</label>
+					<p>@teslim.Odev?.Ders?.Adi</p>
+				</div>
 
-			<div class="mb-3">
-				<RadzenLabel Text="Teslim Tarihi:" Style="font-weight: bold;"></RadzenLabel>
-				<p>@teslim.TeslimTarihi.ToString("dd.MM.yyyy HH:mm")</p>
-			</div>
+				<div class="mb-3">
+					<label class="form-label" style="font-weight: bold;">Teslim Tarihi:</label>
+					<p>@teslim.TeslimTarihi.ToString("dd.MM.yyyy HH:mm")</p>
+				</div>
 
-			<div class="mb-3">
-				<RadzenLabel Text="Dosya:" Style="font-weight: bold;"></RadzenLabel>
-				@if (!string.IsNullOrEmpty(teslim.DosyaYolu))
-				{
-					<div>
-						<RadzenButton Icon="download" Text="Dosyayı İndir" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => DosyaIndir(teslim.DosyaYolu))"></RadzenButton>
-					</div>
-				}
-				else
-				{
-					<p style="color: gray;">Dosya bulunamadı</p>
-				}
-			</div>
+				<div class="mb-3">
+					<label class="form-label" style="font-weight: bold;">Dosya:</label>
+					@if (!string.IsNullOrEmpty(teslim.DosyaYolu))
+					{
+						<div>
+							<button class="btn btn-primary btn-sm" @onclick="@(() => DosyaIndir(teslim.DosyaYolu))"><span class="material-icons">download</span> Dosyayı İndir</button>
+						</div>
+					}
+					else
+					{
+						<p style="color: gray;">Dosya bulunamadı</p>
+					}
+				</div>
 
-			<div class="mb-3">
-				<RadzenLabel Text="Not:" Style="font-weight: bold;"></RadzenLabel>
-				@if (teslim.Not.HasValue)
-				{
-					<p style="font-size: 18px; font-weight: bold; color: #4caf50;">@teslim.Not</p>
-				}
-				else
-				{
-					<p style="color: gray;">Henüz not verilmedi</p>
-				}
-			</div>
+				<div class="mb-3">
+					<label class="form-label" style="font-weight: bold;">Not:</label>
+					@if (teslim.Not.HasValue)
+					{
+						<p style="font-size: 18px; font-weight: bold; color: #4caf50;">@teslim.Not</p>
+					}
+					else
+					{
+						<p style="color: gray;">Henüz not verilmedi</p>
+					}
+				</div>
 
-			<div class="mb-3">
-				<RadzenLabel Text="Öğretmen Yorumu:" Style="font-weight: bold;"></RadzenLabel>
-				@if (!string.IsNullOrEmpty(teslim.OgretmenYorumu))
-				{
-					<RadzenCard Style="background-color: #f5f5f5; padding: 15px; margin-top: 10px;">
-						<p style="margin: 0;">@teslim.OgretmenYorumu</p>
-					</RadzenCard>
-				}
-				else
-				{
-					<p style="color: gray;">Henüz yorum yapılmadı</p>
-				}
-			</div>
+				<div class="mb-3">
+					<label class="form-label" style="font-weight: bold;">Öğretmen Yorumu:</label>
+					@if (!string.IsNullOrEmpty(teslim.OgretmenYorumu))
+					{
+						<div class="card" style="background-color: #f5f5f5; padding: 15px; margin-top: 10px;">
+							<p style="margin: 0;">@teslim.OgretmenYorumu</p>
+						</div>
+					}
+					else
+					{
+						<p style="color: gray;">Henüz yorum yapılmadı</p>
+					}
+				</div>
 
-			<div class="mt-4 text-center">
-				<RadzenButton Text="Kapat" ButtonStyle="ButtonStyle.Secondary" Click="@(() => DialogService.Close(false))"></RadzenButton>
+				<div class="mt-4 text-center">
+					<button class="btn btn-outline btn-sm" @onclick="@(() => ModalService.Close(false))">Kapat</button>
+				</div>
 			</div>
-		</div>
-	}
-</RadzenCard>
+		}
+	</div>
+</div>
 
 @code {
 	ItemOdevTeslim? teslim;
@@ -78,21 +80,21 @@
 	{
 		if (AuthStateService.CurrentUser == null)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", "Kullanıcı bilgisi bulunamadı.");
-			DialogService.Close(false);
+			ToastService.Notify(ToastSeverity.Error, "Hata", "Kullanıcı bilgisi bulunamadı.");
+			ModalService.Close(false);
 			return;
 		}
 
 		teslim = await DbContext.OdevTeslimler
 			.Include(x => x.Odev)
 				.ThenInclude(o => o.Ders)
-			.Where(x => x.Odev_ID == OdevId && x.Ogrenci_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Where(x => x.Odev_ID == OdevId && x.Ogrenci_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.FirstOrDefaultAsync();
 
 		if (teslim == null)
 		{
-			NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Teslim bilgisi bulunamadı.");
-			DialogService.Close(false);
+			ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Teslim bilgisi bulunamadı.");
+			ModalService.Close(false);
 			return;
 		}
 	}

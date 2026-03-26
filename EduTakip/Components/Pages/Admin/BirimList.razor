@@ -1,39 +1,56 @@
-﻿@page "/admin/birimler"
+@page "/admin/birimler"
 @attribute [Authorize(Roles ="Admin")]
 
-<RadzenButton Text="Yeni Birim Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:15px; border-radius:10px;" Click="@YeniBirim" />
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Birimler</h3>
-	@if (birimler==null || !birimler.Any())
-	{
-		<p style="text-align:center;">Veri yükleniyor... Veya birim eklenmemis</p>	
-	}
-	else
-	{
-		<RadzenDataGrid TItem="ItemBirim" Data="@birimler" AllowPaging="true" PageSize="10">
-			<Columns>
-				<RadzenDataGridColumn TItem="ItemBirim" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemBirim" Property="Adi" Title="Birim Adi" />
-				<RadzenDataGridColumn TItem="ItemBirim" Title="Aktif">
-					<Template Context="item">
-						<span class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
-							  @onclick="@(() => ToggleAktif(item))">
-							@(item.Aktif ? "Aktif" : "Pasif")
-						</span>
-					</Template>
-				</RadzenDataGridColumn>
-
-				<RadzenDataGridColumn TItem="ItemBirim" Title="Islemler">
-					<Template Context="item">
-						<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditBirim(item))" Style="margin-right: 10px;" />
-						<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
-					</Template>
-				</RadzenDataGridColumn>
-			</Columns>
-		</RadzenDataGrid>
-	}
-	
-</RadzenCard>
+<button class="btn btn-success btn-sm" style="margin-bottom:15px; border-radius:10px;" @onclick="YeniBirim">
+	<span class="material-icons">add</span> Yeni Birim Ekle
+</button>
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Birimler</h3>
+		@if (birimler == null || !birimler.Any())
+		{
+			<p style="text-align:center;">Veri yükleniyor... Veya birim eklenmemis</p>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th style="width:80px;">ID</th>
+							<th>Birim Adi</th>
+							<th>Aktif</th>
+							<th>Islemler</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in birimler)
+						{
+							<tr>
+								<td>@item.ID</td>
+								<td>@item.Adi</td>
+								<td>
+									<span class="status-badge @(item.Aktif ? "status-active" : "status-inactive")"
+										  @onclick="@(() => ToggleAktif(item))">
+										@(item.Aktif ? "Aktif" : "Pasif")
+									</span>
+								</td>
+								<td>
+									<button class="btn btn-primary btn-sm" @onclick="@(() => EditBirim(item))" style="margin-right: 10px;">
+										<span class="material-icons">edit</span>
+									</button>
+									<button class="btn btn-danger btn-sm" @onclick="@(() => DeleteBirim(item))">
+										<span class="material-icons">delete</span>
+									</button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
 
 @code {
 
@@ -45,18 +62,19 @@
 
 	async Task Listele()
 	{
-		
 		birimler = await DbContext.Birimler
+			.Where(x => x.DelDate == null || x.DelDate == default(DateTime))
 			.OrderBy(x => x.Adi)
 			.ToListAsync();
 	}
+
 	async Task YeniBirim()
 	{
-		var result = await DialogService.OpenAsync<BirimTnm>("Yeni Birim Ekle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<BirimTnm>("Yeni Birim Ekle", new Dictionary<string, object>()
 		{
 			{ "BirimId", 0 }
-		}, new DialogOptions() { Width = "600px" });
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -65,11 +83,11 @@
 
 	async Task EditBirim(ItemBirim birim)
 	{
-		var result = await DialogService.OpenAsync<BirimTnm>("Birim Düzenle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<BirimTnm>("Birim Düzenle", new Dictionary<string, object>()
 		{
 			{ "BirimId", birim.ID }
-		}, new DialogOptions() { Width = "600px" });
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -81,26 +99,26 @@
 		var yeniDurum = !birim.Aktif;
 		birim.Aktif = yeniDurum;
 		birim.UpdDate = DateTime.UtcNow;
-		birim.UpdUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
+		birim.UpdUser = AuthStateService.CurrentUser?.ID;
 		DbContext.Birimler.Update(birim);
 		await DbContext.SaveChangesAsync();
 		await Listele();
-		NotificationService.Notify(NotificationSeverity.Success,"Başarılı", $"Birim {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
+		ToastService.Notify(ToastSeverity.Success, "Başarılı", $"Birim {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
 		StateHasChanged();
 	}
 
 	async Task DeleteBirim(ItemBirim birim)
 	{
-		bool? result = await DialogService.Confirm($"'{birim.Adi}' birimini silmek istediginize emin misiniz?", "Birim Silme Onayi", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
-		if (result == true)
+		var result = await JSRuntime.InvokeAsync<bool>("confirm", $"'{birim.Adi}' birimini silmek istediginize emin misiniz?");
+		if (result)
 		{
-			birim.DelUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
+			birim.DelUser = AuthStateService.CurrentUser?.ID;
 			birim.DelDate = DateTime.UtcNow;
 			birim.Aktif = false;
 			DbContext.Birimler.Update(birim);
 			await DbContext.SaveChangesAsync();
 			await Listele();
-			NotificationService.Notify(NotificationSeverity.Success,"Başarılı", "Birim silindi.");
+			ToastService.Notify(ToastSeverity.Success, "Başarılı", "Birim silindi.");
 			StateHasChanged();
 		}
 	}

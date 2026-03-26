@@ -1,35 +1,40 @@
-@inject EduTakipDBContext DbContext
-@inject IToastService ToastService
-@inject DialogService DialogService
-
-<RadzenStack Gap="1.5rem">
-    <RadzenLabel Text="Katılmak istediğiniz sınıfı seçin:" />
+<div class="flex-stack gap-md">
+    <label class="form-label">Katılmak istediğiniz sınıfı seçin:</label>
     
-    <RadzenDataGrid Data="@siniflar" TItem="ItemSinif" AllowPaging="true" PageSize="10" 
-                   Style="max-height: 400px;">
-        <Columns>
-            <RadzenDataGridColumn Title="Sınıf Adı" Property="Adi"></RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="Durum">
-                <Template Context="item">
-                    <RadzenBadge Text="@(item.Aktif ? "Aktif" : "Pasif")" 
-                               Style="@(item.Aktif ? "background-color: #28a745; color: white;" : "background-color: #dc3545; color: white;")">
-                    </RadzenBadge>
-                </Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="İşlem">
-                <Template Context="item">
-                    <RadzenButton Text="Katıl" Icon="add" Size="ButtonSize.Small" 
-                                 ButtonStyle="ButtonStyle.Success" 
-                                 Click="@(() => OnSinifSecildi(item))" />
-                </Template>
-            </RadzenDataGridColumn>
-        </Columns>
-    </RadzenDataGrid>
+    <div class="data-table-wrapper" style="max-height: 400px; overflow-y: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Sınıf Adı</th>
+                    <th>Durum</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in siniflar)
+                {
+                    <tr>
+                        <td>@item.Adi</td>
+                        <td>
+                            <span class="badge" style="@(item.Aktif ? "background-color: #28a745; color: white;" : "background-color: #dc3545; color: white;")">
+                                @(item.Aktif ? "Aktif" : "Pasif")
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-success btn-sm" @onclick="@(() => OnSinifSecildi(item))">
+                                <span class="material-icons">add</span> Katıl
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
-    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
-        <RadzenButton Text="İptal" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(false))" />
-    </RadzenStack>
-</RadzenStack>
+    <div class="flex-row gap-sm" style="justify-content:flex-end;">
+        <button class="btn btn-outline btn-sm" @onclick="@(() => ModalService.Close(false))">İptal</button>
+    </div>
+</div>
 
 @code {
     [Parameter] public int KullaniciId { get; set; }
@@ -46,13 +51,13 @@
     {
         // Kullanıcının zaten katıldığı sınıfları al
         var katildigiSiniflar = await DbContext.SinifKullanicilar
-            .Where(x => x.Kullanici_ID == KullaniciId && x.DelDate == null)
+            .Where(x => x.Kullanici_ID == KullaniciId && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.Sinif_ID)
             .ToListAsync();
 
         // Katılmadığı aktif sınıfları göster
         siniflar = await DbContext.Siniflar
-            .Where(s => s.Aktif && s.DelDate == null && !katildigiSiniflar.Contains(s.ID))
+            .Where(s => s.Aktif && (s.DelDate == null || s.DelDate == default(DateTime)) && !katildigiSiniflar.Contains(s.ID))
             .OrderBy(s => s.Adi)
             .ToListAsync();
     }
@@ -68,7 +73,7 @@
                 !string.IsNullOrEmpty(KullaniciTip))
             {
                 var ogrenci = await DbContext.Ogrenciler
-                    .Where(x => x.Kullanici_ID == KullaniciId && x.DelDate == null)
+                    .Where(x => x.Kullanici_ID == KullaniciId && (x.DelDate == null || x.DelDate == default(DateTime)))
                     .FirstOrDefaultAsync();
 
                 if (ogrenci != null && !ogrenci.Sinif_ID.HasValue)
@@ -94,13 +99,12 @@
             DbContext.SinifKullanicilar.Add(yeniKayit);
             await DbContext.SaveChangesAsync();
 
-            ToastService.ShowSuccess("Başarılı", $"{sinif.Adi} sınıfına başarıyla katıldınız.");
-            DialogService.Close(true);
+            ToastService.Notify(ToastSeverity.Success, "Başarılı", $"{sinif.Adi} sınıfına başarıyla katıldınız.");
+            ModalService.Close(true);
         }
         catch (Exception ex)
         {
-            ToastService.ShowError("Hata", $"Sınıfa katılırken bir hata oluştu: {ex.Message}");
+            ToastService.Notify(ToastSeverity.Error, "Hata", $"Sınıfa katılırken bir hata oluştu: {ex.Message}");
         }
     }
 }
-

@@ -1,43 +1,58 @@
-﻿@page "/ogretmen/odevler"
+@page "/ogretmen/odevler"
 @attribute [Authorize(Roles = "Öğretmen")]
 
 
-<RadzenButton Icon="add" Text="Yeni Ödev Ekle" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:10px; border-radius:10px;" Click="yeniOdev" Title="Yeni Ödev">
-</RadzenButton>
+<button class="btn btn-success btn-sm" style="margin-bottom:10px; border-radius:10px;" @onclick="yeniOdev">
+	<span class="material-icons">add</span> Yeni Ödev Ekle
+</button>
 
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center" class="mb-3">Ödevlerim</h3>
-	@if (list == null || !list.Any())
-	{
-		<div style="text-align:center; padding:50px">
-			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
-		</div>
-	}
-	else
-	{
-		<RadzenDataGrid Data="@list" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-			<Columns>
-				<RadzenDataGridColumn TItem="ItemOdev" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemOdev" Property="Baslik" Title="Baslik"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemOdev" Title="Son Teslim">
-					<Template Context="item">
-						@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
-					</Template>
-				</RadzenDataGridColumn>
-
-
-				<RadzenDataGridColumn TItem="ItemOdev" Title="İşlemler">
-					<Template Context="item">
-						<RadzenButton Icon="edit" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Style="margin-right:10px;" Click="@(args => duzenleOdev(item))" Title="Düzenle"></RadzenButton>
-						<RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Style="margin-right:10px;" Click="@(args => silOdev(item))" Title="Sil"></RadzenButton>
-						<RadzenButton Icon="folder_open" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Primary" Click="@(() => GitTeslimlere(item.ID))" Title="Teslimler"></RadzenButton>
-					</Template>
-				</RadzenDataGridColumn>
-			</Columns>
-		</RadzenDataGrid>
-	}
-
-</RadzenCard>
+<div class="card" style="margin:0; margin-left:0; padding:0; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body" style="padding:20px;">
+		<h3 style="text-align:center" class="mb-3">Ödevlerim</h3>
+		@if (list == null || !list.Any())
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+			</div>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Ders</th>
+							<th>Baslik</th>
+							<th>Son Teslim</th>
+							<th>İşlemler</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in list)
+						{
+							<tr>
+								<td>@item.Ders.Adi</td>
+								<td>@item.Baslik</td>
+								<td>@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+								<td>
+									<button class="btn btn-success btn-sm" style="margin-right:10px;" @onclick="@(() => duzenleOdev(item))" title="Düzenle">
+										<span class="material-icons">edit</span>
+									</button>
+									<button class="btn btn-danger btn-sm" style="margin-right:10px;" @onclick="@(() => silOdev(item))" title="Sil">
+										<span class="material-icons">delete</span>
+									</button>
+									<button class="btn btn-primary btn-sm" @onclick="@(() => GitTeslimlere(item.ID))" title="Teslimler">
+										<span class="material-icons">folder_open</span>
+									</button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
 
 
 @code {
@@ -55,38 +70,36 @@
 	{
 		list = await DbContext.Odevler
 			.Include(x => x.Ders)
-			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == null)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.OrderByDescending(x => x.VerilisTarihi)
 			.ToListAsync();
 	}
 
 	async Task yeniOdev()
 	{
-		var result = await DialogService.OpenAsync<OdevTnm>("Yeni Odev", new Dictionary<string, object>(),
-
-			new DialogOptions() { Width = "600px", Height = "400px" });
-		if (result == true)
+		var result = await ModalService.OpenAsync<OdevTnm>("Yeni Odev", new Dictionary<string, object>(),
+			new ModalOptions() { CssClass = "modal-md" });
+		if (result is true)
 			await Listele();
 	}
 
 	async Task duzenleOdev(ItemOdev item)
 	{
-		var result = await DialogService.OpenAsync<OdevTnm>("Ödev Düzenle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<OdevTnm>("Ödev Düzenle", new Dictionary<string, object>()
 		{
 			{ "OdevId", item.ID }
-		}, new DialogOptions() { Width = "600px", Height = "400px" });
-		if (result == true)
+		}, new ModalOptions() { CssClass = "modal-md" });
+		if (result is true)
 			await Listele();
 	}
 
 	async Task silOdev(ItemOdev item)
 	{
-		bool? result = await DialogService.Confirm("Ödevi silmek istediğinize emin misiniz?", "Onay",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
-		if (result == true)
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Ödevi silmek istediğinize emin misiniz?");
+		if (confirmed)
 		{
 			item.DelDate = DateTime.Now;
-			item.DelUser = 0; // TODO: Gerçek kullanıcı ID'si kullanılacak
+			item.DelUser = 0;
 			DbContext.Odevler.Update(item);
 			await DbContext.SaveChangesAsync();
 			await Listele();

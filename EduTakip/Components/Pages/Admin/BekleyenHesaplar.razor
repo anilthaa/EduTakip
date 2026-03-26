@@ -1,43 +1,58 @@
 @page "/admin/bekleyen-hesaplar"
-@using System.Threading.Tasks
 @attribute [Authorize(Roles = "Admin")]
-@inject AuthStateService AuthStateService
-@inject NotificationService NotificationService
-@inject DialogService DialogService
 
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Onay Bekleyen Hesaplar</h3>
-	<RadzenDataGrid Data="@bekleyenHesaplar" TItem="ItemKullanici" AllowPaging="true" PageSize="10" AllowSorting="true">
-		<Columns>
-			<RadzenDataGridColumn Property="Adi" Title="Ad" Sortable="true"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="Soyadi" Title="Soyad" Sortable="true"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="EPosta" Title="E-Posta" Sortable="true"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Title="Kullanıcı Tipi" Sortable="true">
-				<Template Context="item">
-					@(item.KullaniciTip?.Adi ?? "")
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="CreDate" Title="Kayıt Tarihi" Sortable="true">
-				<Template Context="item">
-					@item.CreDate.ToString("dd.MM.yyyy HH:mm")
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn Title="İşlemler">
-				<Template Context="item">
-					<div style="display: flex; gap: 8px;">
-						<RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Click="@(() => OnaylaHesap(item))"></RadzenButton>
-						<RadzenButton Icon="close" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => ReddetHesap(item))"></RadzenButton>
-					</div>
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-		<EmptyTemplate>
-			<div style="text-align: center; padding: 20px;">
-				<p>Onay bekleyen hesap bulunmamaktadır.</p>
-			</div>
-		</EmptyTemplate>
-	</RadzenDataGrid>
-</RadzenCard>
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Onay Bekleyen Hesaplar</h3>
+		<div class="data-table-wrapper">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Ad</th>
+						<th>Soyad</th>
+						<th>E-Posta</th>
+						<th>Kullanıcı Tipi</th>
+						<th>Kayıt Tarihi</th>
+						<th>İşlemler</th>
+					</tr>
+				</thead>
+				<tbody>
+					@if (bekleyenHesaplar.Any())
+					{
+						@foreach (var item in bekleyenHesaplar)
+						{
+							<tr>
+								<td>@item.Adi</td>
+								<td>@item.Soyadi</td>
+								<td>@item.EPosta</td>
+								<td>@(item.KullaniciTip?.Adi ?? "")</td>
+								<td>@item.CreDate.ToString("dd.MM.yyyy HH:mm")</td>
+								<td>
+									<div style="display: flex; gap: 8px;">
+										<button class="btn btn-success btn-sm" @onclick="@(() => OnaylaHesap(item))">
+											<span class="material-icons">check</span>
+										</button>
+										<button class="btn btn-danger btn-sm" @onclick="@(() => ReddetHesap(item))">
+											<span class="material-icons">close</span>
+										</button>
+									</div>
+								</td>
+							</tr>
+						}
+					}
+					else
+					{
+						<tr>
+							<td colspan="6" style="text-align: center; padding: 20px;">
+								<p>Onay bekleyen hesap bulunmamaktadır.</p>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 
 @code {
 	List<ItemKullanici> bekleyenHesaplar = new();
@@ -53,7 +68,7 @@
 		{
 			bekleyenHesaplar = await DbContext.Kullanicilar
 				.Include(k => k.KullaniciTip)
-				.Where(k => k.DelDate == null 
+				.Where(k => (k.DelDate == null || k.DelDate == default(DateTime))
 					&& k.EmailConfirmed 
 					&& !k.Aktif
 					&& !k.Reddedildi)
@@ -62,35 +77,31 @@
 		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
 		}
 	}
 
 	async Task OnaylaHesap(ItemKullanici kullanici)
 	{
-		bool? result = await DialogService.Confirm("Bu hesabı onaylamak istediğinize emin misiniz?", "Onay",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		var result = await JSRuntime.InvokeAsync<bool>("confirm", "Bu hesabı onaylamak istediğinize emin misiniz?");
 		
-		if (result == true)
+		if (result)
 		{
 			try
 			{
-				// E-posta onayı kontrolü
 				if (!kullanici.EmailConfirmed)
 				{
-					NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Kullanıcının önce e-postasını onaylaması gerekmektedir.");
+					ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Kullanıcının önce e-postasını onaylaması gerekmektedir.");
 					return;
 				}
 
-				// Hesap zaten aktifse
 				if (kullanici.Aktif)
 				{
-					NotificationService.Notify(NotificationSeverity.Info, "Bilgi", "Hesap zaten aktif.");
+					ToastService.Notify(ToastSeverity.Info, "Bilgi", "Hesap zaten aktif.");
 					await Listele();
 					return;
 				}
 
-				// Hesabı aktifleştir
 				kullanici.Aktif = true;
 				kullanici.UpdDate = DateTime.UtcNow;
 				kullanici.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
@@ -98,26 +109,24 @@
 				DbContext.Kullanicilar.Update(kullanici);
 				await DbContext.SaveChangesAsync();
 
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap başarıyla onaylandı.");
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Hesap başarıyla onaylandı.");
 				await Listele();
 			}
 			catch (Exception ex)
 			{
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
 			}
 		}
 	}
 
 	async Task ReddetHesap(ItemKullanici kullanici)
 	{
-		bool? result = await DialogService.Confirm("Bu hesabı reddetmek istediğinize emin misiniz? Reddedilen kullanıcı giriş yapamayacaktır.", "Reddet",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		var result = await JSRuntime.InvokeAsync<bool>("confirm", "Bu hesabı reddetmek istediğinize emin misiniz? Reddedilen kullanıcı giriş yapamayacaktır.");
 		
-		if (result == true)
+		if (result)
 		{
 			try
 			{
-				// Hesabı reddet
 				kullanici.Reddedildi = true;
 				kullanici.UpdDate = DateTime.UtcNow;
 				kullanici.UpdUser = AuthStateService.CurrentUser?.ID ?? 0;
@@ -125,12 +134,12 @@
 				DbContext.Kullanicilar.Update(kullanici);
 				await DbContext.SaveChangesAsync();
 
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap başarıyla reddedildi.");
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Hesap başarıyla reddedildi.");
 				await Listele();
 			}
 			catch (Exception ex)
 			{
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
 			}
 		}
 	}

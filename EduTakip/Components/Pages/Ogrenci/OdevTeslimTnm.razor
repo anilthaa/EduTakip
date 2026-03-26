@@ -1,6 +1,6 @@
-﻿<RadzenTemplateForm Data="@model" TItem="ItemOdevTeslim" Submit="@Kaydet">
+<form @onsubmit="Kaydet" @onsubmit:preventDefault>
 	<div class="mb-3">
-		<RadzenLabel Text="Dosya Seçin"></RadzenLabel>
+		<label class="form-label">Dosya Seçin</label>
 		<InputFile OnChange="OnDosyaSecildi" 
 		           accept=".pdf,.doc,.docx,.txt,.zip,.rar" 
 		           class="form-control" 
@@ -10,30 +10,29 @@
 	@if (!string.IsNullOrEmpty(secilenDosyaAdi))
 	{
 		<div class="mt-2 mb-2">
-			<RadzenBadge Text="@($"Dosya seçildi: {secilenDosyaAdi} ({FormatDosyaBoyutu(dosyaBoyutu)})")" 
-			             Style="@(dosyaBoyutu > 50 * 1024 * 1024 ? "background-color: #dc3545; color: white;" : "background-color: #28a745; color: white;")"></RadzenBadge>
+			<span class="badge" style="@(dosyaBoyutu > 50 * 1024 * 1024 ? "background-color: #dc3545; color: white;" : "background-color: #28a745; color: white;")">Dosya seçildi: @secilenDosyaAdi (@FormatDosyaBoyutu(dosyaBoyutu))</span>
 		</div>
 	}
 	@if (dosyaBoyutu > 50 * 1024 * 1024)
 	{
 		<div class="mt-2 mb-2">
-			<RadzenBadge Text="Dosya boyutu 50MB'i asiyor! Lütfen daha küçük bir dosya seçin." Style="background-color: #dc3545; color: white;"></RadzenBadge>
+			<span class="badge" style="background-color: #dc3545; color: white;">Dosya boyutu 50MB'i asiyor! Lütfen daha küçük bir dosya seçin.</span>
 		</div>
 	}
 	
 	@if (yukleniyor)
 	{
 		<div class="mt-2 mb-2">
-			<RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Style="width: 20px; height: 20px;"></RadzenProgressBarCircular>
+			<div class="spinner" style="width: 20px; height: 20px; display:inline-block; vertical-align:middle;"></div>
 			<span class="ml-2">Dosya yükleniyor...</span>
 		</div>
 	}
 
 	<div class="mt-3 text-center">
-		<RadzenButton Text="Teslim Et" ButtonType="ButtonType.Submit" Style="background-color:green; margin-right:10px;"></RadzenButton>
-		<RadzenButton Text="Iptal" Style="background-color:red" Click="@(args=>DialogService.Close(false))"></RadzenButton>
+		<button type="submit" class="btn btn-success btn-sm" style="margin-right:10px;">Teslim Et</button>
+		<button type="button" class="btn btn-danger btn-sm" @onclick="@(() => ModalService.Close(false))">Iptal</button>
 	</div>
-</RadzenTemplateForm>
+</form>
 
 @code {
 	ItemOdevTeslim model = new();
@@ -57,14 +56,14 @@
 
 		// Ögrenci ID'sini bul
 		ogrenciId = await DbContext.Ogrenciler
-			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.ID)
 			.FirstOrDefaultAsync();
 
 		if (!ogrenciId.HasValue)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", "Öğrenci bilgisi bulunamadı.");
-			DialogService.Close(false);
+			ToastService.Notify(ToastSeverity.Error, "Hata", "Öğrenci bilgisi bulunamadı.");
+			ModalService.Close(false);
 			return;
 		}
 
@@ -86,7 +85,7 @@
 			// Dosya boyutu kontrolü
 			if (dosyaBoyutu > maxDosyaBoyutu)
 			{
-				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", 
+				ToastService.Notify(ToastSeverity.Warning, "Uyarı", 
 					$"Dosya boyutu {FormatDosyaBoyutu(dosyaBoyutu)} - Maksimum 50MB olmalıdır. Lütfen daha küçük bir dosya seçin.");
 				secilenDosya = null;
 				secilenDosyaAdi = null;
@@ -122,7 +121,7 @@
 			// Dosya boyutu kontrolü
 			if (secilenDosya.Size > maxDosyaBoyutu)
 			{
-				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", 
+				ToastService.Notify(ToastSeverity.Warning, "Uyarı", 
 					$"Dosya boyutu {FormatDosyaBoyutu(secilenDosya.Size)} - Maksimum 50MB olmalıdır.");
 				return;
 			}
@@ -148,25 +147,25 @@
 				if (result != null && !string.IsNullOrEmpty(result.fileName))
 				{
 					model.DosyaYolu = result.fileName;
-					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Dosya başarıyla yüklendi.");
+					ToastService.Notify(ToastSeverity.Success, "Başarılı", "Dosya başarıyla yüklendi.");
 				}
 				else
 				{
 					// Response'dan dosya yolunu alamazsak, dosya adindan olustur
 					var dosyaAdi = $"{DateTime.UtcNow:yyyyMMddHHmmss}_{secilenDosya.Name}";
 					model.DosyaYolu = $"/uploads/{dosyaAdi}";
-					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Dosya seçildi.");
+					ToastService.Notify(ToastSeverity.Success, "Başarılı", "Dosya seçildi.");
 				}
 			}
 			else
 			{
 				var errorMessage = await response.Content.ReadAsStringAsync();
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Dosya yüklenirken hata oluştu: {errorMessage}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Dosya yüklenirken hata oluştu: {errorMessage}");
 			}
 		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Dosya yüklenirken hata oluştu: {ex.Message}");
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Dosya yüklenirken hata oluştu: {ex.Message}");
 		}
 		finally
 		{
@@ -186,14 +185,14 @@
 		{
 			if (string.IsNullOrEmpty(model.DosyaYolu))
 			{
-				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Lütfen bir dosya seçin.");
+				ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Lütfen bir dosya seçin.");
 				return;
 			}
 
 			// Dosya boyutu kontrolü
 			if (dosyaBoyutu > maxDosyaBoyutu)
 			{
-				NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", 
+				ToastService.Notify(ToastSeverity.Warning, "Uyarı", 
 					$"Dosya boyutu {FormatDosyaBoyutu(dosyaBoyutu)} - Maksimum 50MB olmalıdır. Lütfen daha küçük bir dosya seçin.");
 				return;
 			}
@@ -206,7 +205,7 @@
 
 			// Zaten teslim edilmis mi kontrol et
 			var mevcutTeslim = await DbContext.OdevTeslimler
-				.Where(x => x.Odev_ID == model.Odev_ID && x.Ogrenci_ID == model.Ogrenci_ID && x.DelDate == null)
+				.Where(x => x.Odev_ID == model.Odev_ID && x.Ogrenci_ID == model.Ogrenci_ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 				.FirstOrDefaultAsync();
 
 			if (mevcutTeslim != null)
@@ -231,8 +230,8 @@
 			}
 
 			await DbContext.SaveChangesAsync();
-			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ödev başarıyla teslim edildi.");
-			DialogService.Close(true);
+			ToastService.Notify(ToastSeverity.Success, "Başarılı", "Ödev başarıyla teslim edildi.");
+			ModalService.Close(true);
 		}
 		catch (Microsoft.EntityFrameworkCore.DbUpdateException dbEx)
 		{
@@ -241,7 +240,7 @@
 			{
 				errorMessage += $" | Inner: {dbEx.InnerException.Message}";
 			}
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Veritabanı hatası: {errorMessage}");
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Veritabanı hatası: {errorMessage}");
 		}
 		catch (Exception ex)
 		{
@@ -250,7 +249,7 @@
 			{
 				errorMessage += $" | Inner: {ex.InnerException.Message}";
 			}
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {errorMessage}");
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {errorMessage}");
 		}
 	}
 }

@@ -1,26 +1,31 @@
-<RadzenTemplateForm Data="@model" TItem="ItemDers" Submit="@Kaydet">
-	<RadzenFieldset Text="Ders Bilgileri">
+<form @onsubmit="Kaydet" @onsubmit:preventDefault>
+	<fieldset class="border rounded p-3">
+		<legend class="w-auto px-2 fs-6">Ders Bilgileri</legend>
 		<div class="mb-3">
-			<RadzenLabel Text="Ders Adı" />
-			<RadzenTextBox @bind-Value="model.Adi" Name="Adi" Style="width:100%" />
-			<RadzenRequiredValidator Component="Adi" Text="Birim Adı zorunludur." Style="color:red" />
+			<label class="form-label">Ders Adı</label>
+			<input type="text" class="form-control" @bind="model.Adi" required />
 		</div>
 		<div class="mb-3">
-			<RadzenLabel Text="Açıklama" />
-			<RadzenTextArea @bind-Value="model.Aciklama" Style="width:100%" />
+			<label class="form-label">Açıklama</label>
+			<textarea class="form-control" @bind="model.Aciklama"></textarea>
 		</div>
 		<div class="mb-3">
-			<RadzenLabel Text="Öğretmen" />
-			<RadzenDropDown Name="Ogretmen" Data="@ogretmenler" TextProperty="Kullanici.Adi" ValueProperty="ID" @bind-Value="model.Ogretmen_ID" Style="width:100%"></RadzenDropDown>
-			<RadzenRequiredValidator Component="Ogretmen" Text="Zorunlu Alan"></RadzenRequiredValidator>
+			<label class="form-label">Öğretmen</label>
+			<select class="form-select" @bind="model.Ogretmen_ID" required>
+				<option value="">Öğretmen Seçin</option>
+				@foreach (var o in ogretmenler)
+				{
+					<option value="@o.ID">@o.Kullanici?.Adi</option>
+				}
+			</select>
 		</div>
-	</RadzenFieldset>
+	</fieldset>
 
 	<div class="mt-3 text-center">
-		<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
-		<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+		<button type="submit" class="btn btn-success" style="margin-right:10px;">Kaydet</button>
+		<button type="button" class="btn btn-danger" @onclick="@(() => ModalService.Close(false))">İptal</button>
 	</div>
-</RadzenTemplateForm>
+</form>
 
 @code {
 	[Parameter] public int? DersId { get; set; }
@@ -44,8 +49,8 @@
 					.FirstOrDefaultAsync(x => x.ID == DersId.Value);
 				if (model == null)
 				{
-					NotificationService.Notify(NotificationSeverity.Error, "Hata", "Ders bulunamadı veya silinmiş.");
-					DialogService.Close(false);
+					ToastService.Notify(ToastSeverity.Error, "Hata", "Ders bulunamadı veya silinmiş.");
+					ModalService.Close(false);
 					return;
 				}
 			}
@@ -57,8 +62,8 @@
 		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
-			DialogService.Close(false);
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			ModalService.Close(false);
 		}
 	}
 
@@ -71,23 +76,23 @@
 				if (model.ID == 0)
 				{
 					model.CreDate = DateTime.UtcNow;
-					model.CreUser = 0;
+					model.CreUser = AuthStateService.CurrentUser?.ID ?? 0;
 					DbContext.Dersler.Add(model);
 				}
 				else
 				{
 					model.UpdDate = DateTime.UtcNow;
-					model.UpdUser = 0;
+					model.UpdUser = AuthStateService.CurrentUser?.ID;
 					DbContext.Dersler.Update(model);
 				}
 				await DbContext.SaveChangesAsync();
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ders başarıyla kaydedildi.");
-				DialogService.Close(true);
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Ders başarıyla kaydedildi.");
+				ModalService.Close(true);
 			}
 		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
 		}
 	}
 }

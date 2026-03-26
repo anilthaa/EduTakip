@@ -6,53 +6,55 @@
 
 <h3>Sınıflarımdaki Öğrenciler</h3>
 
-<RadzenCard class="mb-3">
-    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
-        <RadzenLabel Text="Sınıf Filtresi:" />
-        <RadzenDropDown Data="@siniflar" TextProperty="Adi" ValueProperty="ID" 
-                       @bind-Value="seciliSinifId" 
-                       Placeholder="Tüm Sınıflar" 
-                       Style="width: 200px;"
-                       Change="@OnSinifFiltreDegisti" />
-        <RadzenButton Text="Filtreyi Temizle" Icon="clear" ButtonStyle="ButtonStyle.Light" 
-                     Size="ButtonSize.Small" Click="@FiltreyiTemizle" />
-    </RadzenStack>
-</RadzenCard>
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="flex-row gap-sm items-center">
+            <label>Sınıf Filtresi:</label>
+            <select class="form-select" style="width: 200px;" @bind="seciliSinifId" @bind:after="OnSinifFiltreDegisti">
+                <option value="">Tüm Sınıflar</option>
+                @foreach (var s in siniflar)
+                {
+                    <option value="@s.ID">@s.Adi</option>
+                }
+            </select>
+            <button class="btn btn-outline btn-sm" @onclick="FiltreyiTemizle"><span class="material-icons">clear</span> Filtreyi Temizle</button>
+        </div>
+    </div>
+</div>
 
-<RadzenCard>
-    <RadzenDataGrid Data="@filtrelenmisOgrenciler" TItem="ItemOgrenci" AllowPaging="true" PageSize="20">
-        <Columns>
-            <RadzenDataGridColumn Title="Öğrenci No" Property="OgrenciNo"></RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="Ad">
-                <Template Context="item">
-                    @item.Kullanici.Adi
-                </Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="Soyad">
-                <Template Context="item">
-                    @item.Kullanici.Soyadi
-                </Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="E-Posta">
-                <Template Context="item">
-                    @item.Kullanici.EPosta
-                </Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="Sınıf">
-                <Template Context="item">
-                    @item.Sinif?.Adi
-                </Template>
-            </RadzenDataGridColumn>
-            <RadzenDataGridColumn Title="İşlemler">
-                <Template Context="item">
-                    <RadzenButton Text="Sınıftan Çıkar" Icon="person_remove" Size="ButtonSize.Small" 
-                                 ButtonStyle="ButtonStyle.Danger" 
-                                 Click="@(() => OgrenciyiSiniftanCikar(item))" />
-                </Template>
-            </RadzenDataGridColumn>
-        </Columns>
-    </RadzenDataGrid>
-</RadzenCard>
+<div class="card">
+    <div class="card-body">
+        <div class="data-table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Öğrenci No</th>
+                        <th>Ad</th>
+                        <th>Soyad</th>
+                        <th>E-Posta</th>
+                        <th>Sınıf</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in filtrelenmisOgrenciler)
+                    {
+                        <tr>
+                            <td>@item.OgrenciNo</td>
+                            <td>@item.Kullanici.Adi</td>
+                            <td>@item.Kullanici.Soyadi</td>
+                            <td>@item.Kullanici.EPosta</td>
+                            <td>@item.Sinif?.Adi</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" @onclick="@(() => OgrenciyiSiniftanCikar(item))"><span class="material-icons">person_remove</span> Sınıftan Çıkar</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 @code {
     private int? ogretmenId;
@@ -71,7 +73,7 @@
 
         // Öğretmen ID'sini bul
         ogretmenId = await DbContext.Ogretmenler
-            .Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+            .Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.ID)
             .FirstOrDefaultAsync();
 
@@ -89,7 +91,7 @@
         // Öğretmenin ders programlarındaki sınıf ID'lerini bul
         var ogretmenSinifIdleri = await DbContext.DersProgramlari
             .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.Sinif_ID)
             .Distinct()
             .ToListAsync();
@@ -98,7 +100,7 @@
         ogrenciler = await DbContext.Ogrenciler
             .Include(x => x.Kullanici)
             .Include(x => x.Sinif)
-            .Where(x => x.DelDate == null && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
+            .Where(x => (x.DelDate == null || x.DelDate == default(DateTime)) && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
             .OrderBy(x => x.Sinif != null ? x.Sinif.Adi : "")
             .ThenBy(x => x.Kullanici.Adi)
             .ThenBy(x => x.Kullanici.Soyadi)
@@ -112,19 +114,19 @@
         // Öğretmenin ders programlarındaki sınıf ID'lerini bul
         var ogretmenSinifIdleri = await DbContext.DersProgramlari
             .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && x.DelDate == null)
+            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.Sinif_ID)
             .Distinct()
             .ToListAsync();
 
         // Bu sınıfları getir
         siniflar = await DbContext.Siniflar
-            .Where(s => ogretmenSinifIdleri.Contains(s.ID) && s.DelDate == null && s.Aktif)
+            .Where(s => ogretmenSinifIdleri.Contains(s.ID) && (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif)
             .OrderBy(s => s.Adi)
             .ToListAsync();
     }
 
-    void OnSinifFiltreDegisti(object? value)
+    void OnSinifFiltreDegisti()
     {
         Filtrele();
     }
@@ -154,12 +156,10 @@
         if (!ogretmenId.HasValue) return;
 
         // Onay dialogu
-        var result = await DialogService.Confirm(
-            $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenciyi sınıftan çıkarmak istediğinize emin misiniz?",
-            "Öğrenciyi Sınıftan Çıkar",
-            new ConfirmOptions { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+        var result = await JSRuntime.InvokeAsync<bool>("confirm",
+            $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenciyi sınıftan çıkarmak istediğinize emin misiniz?");
 
-        if (result != true) return;
+        if (!result) return;
 
         try
         {
@@ -168,13 +168,13 @@
 
             // Öğretmenin derslerini bul
             var ogretmenDersleri = await DbContext.Dersler
-                .Where(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
+                .Where(x => x.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
                 .Select(x => x.ID)
                 .ToListAsync();
 
             if (!ogretmenDersleri.Any())
             {
-                NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Bu öğretmenin aktif dersleri bulunmamaktadır.");
+                ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Bu öğretmenin aktif dersleri bulunmamaktadır.");
                 return;
             }
 
@@ -185,12 +185,12 @@
                 .IgnoreQueryFilters()
                 .Where(x => x.Ogrenci_ID == kullaniciId && 
                            ogretmenDersleri.Contains(x.Ders_ID) && 
-                           x.DelDate == null)
+                           (x.DelDate == null || x.DelDate == default(DateTime)))
                 .ToListAsync();
 
             if (!katilimlar.Any())
             {
-                NotificationService.Notify(NotificationSeverity.Info, "Bilgi", $"Bu öğrenci sizin derslerinize kayıtlı değil. (Kullanıcı ID: {kullaniciId}, Öğretmen Ders Sayısı: {ogretmenDersleri.Count})");
+                ToastService.Notify(ToastSeverity.Info, "Bilgi", $"Bu öğrenci sizin derslerinize kayıtlı değil. (Kullanıcı ID: {kullaniciId}, Öğretmen Ders Sayısı: {ogretmenDersleri.Count})");
                 return;
             }
 
@@ -211,7 +211,7 @@
 
             if (saveResult > 0 && cikarilanDersSayisi > 0)
             {
-                NotificationService.Notify(NotificationSeverity.Success, "Başarılı", $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenci {cikarilanDersSayisi} dersten çıkarıldı.");
+                ToastService.Notify(ToastSeverity.Success, "Başarılı", $"{ogrenci.Kullanici.Adi} {ogrenci.Kullanici.Soyadi} adlı öğrenci {cikarilanDersSayisi} dersten çıkarıldı.");
 
                 // Listeyi yenile
                 await YukleOgrenciler();
@@ -219,13 +219,12 @@
             }
             else
             {
-                NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", $"Öğrenci çıkarılamadı. (SaveResult: {saveResult}, Katılım Sayısı: {cikarilanDersSayisi})");
+                ToastService.Notify(ToastSeverity.Warning, "Uyarı", $"Öğrenci çıkarılamadı. (SaveResult: {saveResult}, Katılım Sayısı: {cikarilanDersSayisi})");
             }
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Öğrenci sınıftan çıkarılırken bir hata oluştu: {ex.Message}");
+            ToastService.Notify(ToastSeverity.Error, "Hata", $"Öğrenci sınıftan çıkarılırken bir hata oluştu: {ex.Message}");
         }
     }
 }
-

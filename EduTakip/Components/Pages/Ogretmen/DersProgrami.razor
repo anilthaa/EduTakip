@@ -1,37 +1,43 @@
-﻿@page "/ogretmen/dersprogrami"
+@page "/ogretmen/dersprogrami"
 @attribute [Authorize(Roles ="Öğretmen")]
 
-
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box; margin-top:20px">
-	<h3 style="text-align:center;" class="mb-4">Ders Programım</h3>
-	@if (list==null ||!list.Any())
-	{
-		<div style="text-align:center; padding:50px">
-			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
-		</div>
-	}
-	else
-	{
-		<RadzenDataGrid Data="@list" TItem="ItemDersProgrami" AllowPaging="true" PageSize="10">
-			<Columns>
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
-					<Template Context="item">
-						@GetGunAdi(item.Gun)
-					</Template>
-				</RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
-					<Template Context="x">
-						@x.BaslangicSaati - @x.BitisSaati
-					</Template>
-				</RadzenDataGridColumn>
-
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif.Adi" Title="Sınıf"></RadzenDataGridColumn>
-			</Columns>
-		</RadzenDataGrid>
-	}
-	
-</RadzenCard>
+<div class="card" style="margin-top:20px">
+	<div class="card-body">
+		<h3 style="text-align:center;" class="mb-4">Ders Programım</h3>
+		@if (list==null ||!list.Any())
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+			</div>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Gün</th>
+							<th>Saat</th>
+							<th>Ders</th>
+							<th>Sınıf</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in list)
+						{
+							<tr>
+								<td>@GetGunAdi(item.Gun)</td>
+								<td>@item.BaslangicSaati - @item.BitisSaati</td>
+								<td>@item.Ders?.Adi</td>
+								<td>@item.Sinif?.Adi</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
 
 @code {
 
@@ -59,7 +65,7 @@
 		list = await DbContext.DersProgramlari
 			.Include(x => x.Ders)
 			.Include(x => x.Sinif)
-			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && x.DelDate == null && x.Aktif)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && (x.DelDate == null || x.DelDate == default(DateTime)) && x.Aktif)
 			.OrderBy(x => x.Gun)
 			.ThenBy(x => x.BaslangicSaati)
 			.ToListAsync();

@@ -114,11 +114,12 @@
         {
             <a href="/profil" style="color: white; display: flex; align-items: center; gap: 8px; text-decoration: none; padding: 6px 0; cursor: pointer;"
                title="Profili Görüntüle">
-                <RadzenIcon Icon="account_circle" Style="font-size: 24px;" />
+                <span class="material-icons" style="font-size: 24px;">account_circle</span>
                 <span>@AuthStateService.CurrentUser.Adi @AuthStateService.CurrentUser.Soyadi</span>
             </a>
-            <RadzenButton Text="Çıkış" Icon="logout" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-                          Click="@Logout" Style="width: 100%;" />
+            <button class="btn btn-danger btn-sm btn-block" @onclick="Logout" style="width:100%;">
+                <span class="material-icons" style="font-size:16px;">logout</span> Çıkış
+            </button>
         }
         </div>
         

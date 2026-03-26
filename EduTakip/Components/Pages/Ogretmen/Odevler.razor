@@ -1,32 +1,42 @@
-﻿@page "/ogretmen/sinif/{sinifId:int}/odevler"
+@page "/ogretmen/sinif/{sinifId:int}/odevler"
 @attribute [Authorize(Roles ="Öğretmen")]
 
 <h3>Sınıf Ödevleri</h3>
 
-<RadzenButton Text="Yeni Ödev Ver" Icon="add" ButtonStyle="ButtonStyle.Primary" class="mb-3" Click="@YeniOdev"></RadzenButton>
+<button class="btn btn-primary btn-sm mb-3" @onclick="@YeniOdev">
+	<span class="material-icons">add</span> Yeni Ödev Ver
+</button>
 
-<RadzenDataGrid Data="@odevler" TItem="SinifOdevListDto" AllowPaging="true" PageSize="10">
-	<Columns>
-		<RadzenDataGridColumn Property="Baslik" Title="Ödev Başlığı"></RadzenDataGridColumn>
-		<RadzenDataGridColumn Title="Son Teslim">
-			<Template Context="item">
-				@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
-			</Template>
-		</RadzenDataGridColumn>
+<div class="data-table-wrapper">
+	<table class="data-table">
+		<thead>
+			<tr>
+				<th>Ödev Başlığı</th>
+				<th>Son Teslim</th>
+				<th>Teslim Durumu</th>
+				<th>İşlem</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in odevler)
+			{
+				<tr>
+					<td>@item.Baslik</td>
+					<td>@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+					<td>
+						<span class="badge badge-info">@($"{item.TeslimEden}/{item.ToplamOgrenci}")</span>
+					</td>
+					<td>
+						<button class="btn btn-info btn-sm" @onclick="@(() => Teslimler(item.OdevId))">
+							<span class="material-icons">visibility</span>
+						</button>
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+</div>
 
-		<RadzenDataGridColumn Title="Teslim Durumu">
-			<Template Context="item">
-				<RadzenBadge Text="@($"{item.TeslimEden}/{item.ToplamOgrenci}")" Style="background-color:17a2b8; color:white"></RadzenBadge>
-			</Template>
-		</RadzenDataGridColumn>
-
-		<RadzenDataGridColumn Title="İşlem">
-			<Template Context="item">
-				<RadzenButton Icon="visibility" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Info" Click="@(()=>Teslimler(item.OdevId))"></RadzenButton>
-			</Template>
-		</RadzenDataGridColumn>
-	</Columns>
-</RadzenDataGrid>
 @code {
 	[Parameter] public int sinifId { get; set; }
 	List<SinifOdevListDto> odevler = new();
@@ -38,16 +48,16 @@
 	async Task Yukle()
 	{
 		int toplamOgrenci = await DbContext.SinifKullanicilar
-			.CountAsync(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && x.DelDate == null);
+			.CountAsync(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)));
 		odevler = await DbContext.Odevler
-			.Where(o => o.ID == sinifId && o.DelDate == null)
+			.Where(o => o.ID == sinifId && (o.DelDate == null || o.DelDate == default(DateTime)))
 			.Select(o => new SinifOdevListDto
 			{
 				OdevId = o.ID,
 				Baslik = o.Baslik,
 				SonTeslimTarihi = o.SonTeslimTarihi,
 				ToplamOgrenci = toplamOgrenci,
-				TeslimEden = DbContext.OdevTeslimler.Count(t => t.Odev_ID == o.ID && t.DelDate == null)
+				TeslimEden = DbContext.OdevTeslimler.Count(t => t.Odev_ID == o.ID && (t.DelDate == null || t.DelDate == default(DateTime)))
 			})
 			.OrderByDescending(o => o.SonTeslimTarihi)
 			.ToListAsync();

@@ -7,19 +7,18 @@
     <base href="/" />
     <ResourcePreloader />
     <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="@Assets["css/components.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["EduTakip.styles.css"]" />
-    <link rel="stylesheet" href="_content/Radzen.Blazor/css/default.css" />
     <ImportMap />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <RadzenTheme Theme="material dark" @rendermode="InteractiveServer"></RadzenTheme>
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     <ReconnectModal />
-    <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 

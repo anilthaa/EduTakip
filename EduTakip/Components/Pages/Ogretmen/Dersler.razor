@@ -1,31 +1,41 @@
-﻿@page "/ogretmen/dersler"
+@page "/ogretmen/dersler"
 @attribute [Authorize(Roles ="Öğretmen")]
 
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Derslerim</h3>
-	@if (list == null || !list.Any())
-	{
-		<div style="text-align:center; padding:50px">
-			<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
-		</div>
-	}
-	else
-	{
-		<RadzenDataGrid Data="@list" TItem="ItemDers" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-			<Columns>
-				<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adi"></RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemDers" Property="Aciklama" Title="Açıklama"></RadzenDataGridColumn>
-
-				<RadzenDataGridColumn TItem="ItemDers" Title="Öğrenci Sayısı">
-					<Template Context="x">
-						@((dersOgrenciSayilari.TryGetValue(x.ID, out var sayi) ? sayi : 0))
-					</Template>
-				</RadzenDataGridColumn>
-			</Columns>
-		</RadzenDataGrid>
-	}
-	
-</RadzenCard>
+<div class="card">
+	<div class="card-body">
+		<h3 style="text-align:center;">Derslerim</h3>
+		@if (list == null || !list.Any())
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d; font-style:italic">Kayıt Bulunamadı.</p>
+			</div>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Ders Adi</th>
+							<th>Açıklama</th>
+							<th>Öğrenci Sayısı</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in list)
+						{
+							<tr>
+								<td>@item.Adi</td>
+								<td>@item.Aciklama</td>
+								<td>@((dersOgrenciSayilari.TryGetValue(item.ID, out var sayi) ? sayi : 0))</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
 
 
 @code {
@@ -45,7 +55,7 @@
 
 		// Giriş yapan kullanıcının öğretmen ID'sini bul
 		ogretmenId = await DbContext.Ogretmenler
-			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.ID)
 			.FirstOrDefaultAsync();
 
@@ -56,7 +66,7 @@
 
 		// Öğretmenin derslerini getir
 		list = await DbContext.Dersler
-			.Where(x => x.Ogretmen_ID == ogretmenId.Value && x.DelDate == null)
+			.Where(x => x.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.OrderBy(x => x.Adi)
 			.ToListAsync();
 
@@ -73,9 +83,9 @@
 			from dp in DbContext.DersProgramlari
 			join ogr in DbContext.Ogrenciler on dp.Sinif_ID equals ogr.Sinif_ID
 			where dersIdleri.Contains(dp.Ders_ID)
-				  && dp.DelDate == null
+				  && (dp.DelDate == null || dp.DelDate == default(DateTime))
 				  && dp.Aktif
-				  && ogr.DelDate == null
+				  && (ogr.DelDate == null || ogr.DelDate == default(DateTime))
 			group ogr by dp.Ders_ID into g
 			select new
 			{
