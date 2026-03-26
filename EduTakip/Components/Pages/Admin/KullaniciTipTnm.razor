@@ -1,24 +1,24 @@
 @if (model != null)
 {
-	<RadzenTemplateForm Data="@model" TItem="ItemKullaniciTip" Submit="@Kaydet">
-		<RadzenFieldset Text="Kullanıcı Tip Bilgileri">
+	<form @onsubmit="Kaydet" @onsubmit:preventDefault>
+		<fieldset class="border rounded p-3">
+			<legend class="w-auto px-2 fs-6">Kullanıcı Tip Bilgileri</legend>
 			<div class="mb-3">
-				<RadzenLabel Text="Kullanıcı Tip Adı" Component="Adi" />
-				<RadzenTextBox @bind-Value="model.Adi" Name="Adi" Style="width:100%" />
-				<RadzenRequiredValidator Component="Adi" Text="Kullanıcı Tip Adı zorunludur." Style="color:red" />
+				<label class="form-label">Kullanıcı Tip Adı</label>
+				<input type="text" class="form-control" @bind="model.Adi" required />
 			</div>
 
-			<div style="display:flex; align-items:center; margin-bottom:15px; margin-top:10px">
-				<RadzenCheckBox @bind-Value="model.Aktif" Name="Aktif"></RadzenCheckBox>
-				<RadzenLabel Text="Aktif" Component="Aktif" Style="margin-left:10px;" />
+			<div class="form-check" style="margin-bottom:15px; margin-top:10px">
+				<input type="checkbox" class="form-check-input" @bind="model.Aktif" id="chkAktif" />
+				<label class="form-check-label" for="chkAktif">Aktif</label>
 			</div>
-		</RadzenFieldset>
+		</fieldset>
 
 		<div class="mt-3 text-center">
-			<RadzenButton Text="Kaydet" ButtonType="ButtonType.Submit" Style="margin-right:10px; background-color:green;" />
-			<RadzenButton Text="İptal" Style="background-color:red;" Click="@(args => DialogService.Close(false))" />
+			<button type="submit" class="btn btn-success" style="margin-right:10px;">Kaydet</button>
+			<button type="button" class="btn btn-danger" @onclick="@(() => ModalService.Close(false))">İptal</button>
 		</div>
-	</RadzenTemplateForm>
+	</form>
 }
 
 @code {
@@ -35,8 +35,8 @@
 					.FirstOrDefaultAsync(k => k.ID == KullaniciTipId.Value);
 				if (model == null)
 				{
-					NotificationService.Notify(NotificationSeverity.Error, "Hata", "Kullanıcı Tipi bulunamadı veya silinmiş.");
-					DialogService.Close(false);
+					ToastService.Notify(ToastSeverity.Error, "Hata", "Kullanıcı Tipi bulunamadı veya silinmiş.");
+					ModalService.Close(false);
 					return;
 				}
 			}
@@ -47,7 +47,7 @@
 					Adi = string.Empty,
 					Aktif = true,
 					ID = 0,
-					CreUser = 0,
+					CreUser = AuthStateService.CurrentUser?.ID ?? 0,
 					CreDate = DateTime.UtcNow
 				};
 			}
@@ -55,34 +55,34 @@
 		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
-			DialogService.Close(false);
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+			ModalService.Close(false);
 		}
 	}
 
-	async Task Kaydet(ItemKullaniciTip item)
+	async Task Kaydet()
 	{
 		try
 		{
-			if (item.ID == 0)
+			if (model.ID == 0)
 			{
-				item.CreDate = DateTime.UtcNow;
-				item.CreUser = 1; // TODO: Gerçek kullanıcı ID'si kullanılacak
-				DbContext.KullaniciTipleri.Add(item);
+				model.CreDate = DateTime.UtcNow;
+				model.CreUser = AuthStateService.CurrentUser?.ID ?? 0;
+				DbContext.KullaniciTipleri.Add(model);
 			}
 			else
 			{
-				item.UpdDate = DateTime.UtcNow;
-				item.UpdUser = 1; // TODO: Gerçek kullanıcı ID'si kullanılacak
-				DbContext.KullaniciTipleri.Update(item);
+				model.UpdDate = DateTime.UtcNow;
+				model.UpdUser = AuthStateService.CurrentUser?.ID;
+				DbContext.KullaniciTipleri.Update(model);
 			}
 			await DbContext.SaveChangesAsync();
-			NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Kayıt kaydedildi.");
-			DialogService.Close(true);
+			ToastService.Notify(ToastSeverity.Success, "Başarılı", "Kayıt kaydedildi.");
+			ModalService.Close(true);
 		}
 		catch (Exception ex)
 		{
-			NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Kayıt kaydedilirken bir hata oluştu: {ex.Message}");
+			ToastService.Notify(ToastSeverity.Error, "Hata", $"Kayıt kaydedilirken bir hata oluştu: {ex.Message}");
 		}
 	}
 }

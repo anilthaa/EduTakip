@@ -15,392 +15,506 @@ else
     @if (kullaniciTip.Contains("admin"))
     {
         @* Admin Dashboard *@
-        <h3>Admin Dashboard</h3>
-        <div style="width: 100%; margin-top: 20px;">
-            <RadzenRow Gap="10px" Style="width: 100%; margin: 0; display: flex; flex-wrap: nowrap; box-sizing: border-box;">
-                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
-                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid blue; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitSinifListesine">
-                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Toplam Sınıf</h5>
-                        <h3 style="margin: 0; font-size: 1.75rem;">@toplamSinif</h3>
-                    </RadzenCard>
-                </RadzenColumn>
+        <h3 style="margin-bottom: 1rem; font-weight: 700; color: #1f2937;">Admin Dashboard</h3>
+        <div class="dashboard-stats cols-6">
+            <div class="stat-card blue" @onclick="GitSinifListesine">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">school</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Toplam Sınıf</span>
+                    <p class="stat-value">@toplamSinif</p>
+                </div>
+            </div>
 
-                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
-                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid red; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitKullaniciListesine">
-                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Toplam Öğretmen</h5>
-                        <h3 style="margin: 0; font-size: 1.75rem;">@toplamOgretmen</h3>
-                    </RadzenCard>
-                </RadzenColumn>
+            <div class="stat-card red" @onclick="GitKullaniciListesine">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">person</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Toplam Öğretmen</span>
+                    <p class="stat-value">@toplamOgretmen</p>
+                </div>
+            </div>
 
-                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
-                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid yellow; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitKullaniciListesine">
-                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Toplam Öğrenci</h5>
-                        <h3 style="margin: 0; font-size: 1.75rem;">@toplamOgrenci</h3>
-                    </RadzenCard>
-                </RadzenColumn>
+            <div class="stat-card yellow" @onclick="GitKullaniciListesine">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">groups</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Toplam Öğrenci</span>
+                    <p class="stat-value">@toplamOgrenci</p>
+                </div>
+            </div>
 
-                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
-                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid green; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitDersProgramiListesine">
-                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Bugünkü Katılım %</h5>
-                        <h3 style="margin: 0; font-size: 1.75rem;">@bugunkuKatilimYuzdesi.ToString("F1")%</h3>
-                    </RadzenCard>
-                </RadzenColumn>
+            <div class="stat-card green" @onclick="GitDersProgramiListesine">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">trending_up</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Bugünkü Katılım</span>
+                    <p class="stat-value">%@bugunkuKatilimYuzdesi.ToString("F1")</p>
+                </div>
+            </div>
 
-                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
-                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid purple; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitDersProgramiListesine">
-                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Aktif Ders Programı</h5>
-                        <h3 style="margin: 0; font-size: 1.75rem;">@aktifDersProgrami</h3>
-                    </RadzenCard>
-                </RadzenColumn>
+            <div class="stat-card purple" @onclick="GitDersProgramiListesine">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">calendar_today</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Aktif Ders Programı</span>
+                    <p class="stat-value">@aktifDersProgrami</p>
+                </div>
+            </div>
 
-                <RadzenColumn Style="flex: 1 1 0; min-width: 0; padding: 0 5px;">
-                    <RadzenCard class="admin-stat-card" Style="border-left:4px solid orange; cursor: pointer; padding: 1rem; width: 100%; box-sizing: border-box;" @onclick="GitBekleyenHesaplara">
-                        <h5 style="margin: 0 0 0.5rem 0; font-size: 0.9rem;">Onay Bekleyen</h5>
-                        <h3 style="margin: 0; font-size: 1.75rem;">@onayBekleyenHesapSayisi</h3>
-                    </RadzenCard>
-                </RadzenColumn>
-            </RadzenRow>
+            <div class="stat-card orange" @onclick="GitBekleyenHesaplara">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">pending_actions</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Onay Bekleyen</span>
+                    <p class="stat-value">@onayBekleyenHesapSayisi</p>
+                </div>
+            </div>
         </div>
 
         @* Grafikler *@
-        <RadzenRow Gap="20px" Style="margin-top: 30px;">
-            <RadzenColumn Size="6">
-                <RadzenCard>
-                    <h4 style="margin-bottom: 1rem;">Son 7 Gün Katılım Grafiği</h4>
-                    <RadzenChart>
-                        <RadzenLineSeries Data="@son7GunKatilim" CategoryProperty="Tarih" ValueProperty="KatilimYuzdesi" Title="Katılım %">
-                            <RadzenMarkers />
-                        </RadzenLineSeries>
-                        <RadzenCategoryAxis Padding="20" />
-                        <RadzenValueAxis>
-                            <RadzenGridLines />
-                            <RadzenAxisTitle Text="Katılım %" />
-                        </RadzenValueAxis>
-                    </RadzenChart>
-                </RadzenCard>
-            </RadzenColumn>
+        <div class="grid grid-2" style="margin-top: 30px; gap: 20px;">
+            <div>
+                <div class="card">
+                    <div class="card-body">
+                        <h4 style="margin-bottom: 1rem;">Son 7 Gün Katılım Grafiği</h4>
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Tarih</th>
+                                        <th>Katılım %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in son7GunKatilim)
+                                    {
+                                        <tr>
+                                            <td>@item.Tarih</td>
+                                            <td>@item.KatilimYuzdesi.ToString("F1")%</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            <RadzenColumn Size="6">
-                <RadzenCard>
-                    <h4 style="margin-bottom: 1rem;">Sınıf Bazlı Öğrenci Dağılımı</h4>
-                    <RadzenChart>
-                        <RadzenPieSeries Data="@sinifBazliOgrenciDagilimi" CategoryProperty="SinifAdi" ValueProperty="OgrenciSayisi" />
-                        <RadzenLegend />
-                    </RadzenChart>
-                </RadzenCard>
-            </RadzenColumn>
-        </RadzenRow>
+            <div>
+                <div class="card">
+                    <div class="card-body">
+                        <h4 style="margin-bottom: 1rem;">Sınıf Bazlı Öğrenci Dağılımı</h4>
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Sınıf Adı</th>
+                                        <th>Öğrenci Sayısı</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in sinifBazliOgrenciDagilimi)
+                                    {
+                                        <tr>
+                                            <td>@item.SinifAdi</td>
+                                            <td>@item.OgrenciSayisi</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         @* Uyarı Tablosu *@
-        <RadzenCard Style="margin-top: 30px;">
-            <h4 style="margin-bottom: 1rem;">Sistem Uyarıları</h4>
-            <RadzenRow Gap="20px">
-                <RadzenColumn Size="4">
-                    <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Öğretmeni Olmayan Dersler</h5>
-                    @if (toplamDers == 0)
-                    {
-                        <p style="color: #999; font-style: italic; padding: 10px;">Henüz ders tanımlanmamış</p>
-                    }
-                    else if (ogretmeniOlmayanDersler.Any())
-                    {
-                        <RadzenDataGrid Data="@ogretmeniOlmayanDersler" TItem="ItemDers" AllowPaging="false" Style="max-height: 200px;">
-                            <Columns>
-                                <RadzenDataGridColumn Property="Adi" Title="Ders Adı" />
-                            </Columns>
-                        </RadzenDataGrid>
-                    }
-                    else
-                    {
-                        <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm derslerin öğretmeni var</p>
-                    }
-                </RadzenColumn>
+        <div class="card" style="margin-top: 30px;">
+            <div class="card-body">
+                <h4 style="margin-bottom: 1rem;">Sistem Uyarıları</h4>
+                <div class="grid grid-3" style="gap: 20px;">
+                    <div>
+                        <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Öğretmeni Olmayan Dersler</h5>
+                        @if (toplamDers == 0)
+                        {
+                            <p style="color: #999; font-style: italic; padding: 10px;">Henüz ders tanımlanmamış</p>
+                        }
+                        else if (ogretmeniOlmayanDersler.Any())
+                        {
+                            <div class="data-table-wrapper" style="max-height: 200px; overflow-y: auto;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Ders Adı</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in ogretmeniOlmayanDersler)
+                                        {
+                                            <tr>
+                                                <td>@item.Adi</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm derslerin öğretmeni var</p>
+                        }
+                    </div>
 
-                <RadzenColumn Size="4">
-                    <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Öğrencisi Olmayan Sınıflar</h5>
-                    @if (toplamSinif == 0)
-                    {
-                        <p style="color: #999; font-style: italic; padding: 10px;">Henüz sınıf tanımlanmamış</p>
-                    }
-                    else if (ogrencisiOlmayanSiniflar.Any())
-                    {
-                        <RadzenDataGrid Data="@ogrencisiOlmayanSiniflar" TItem="ItemSinif" AllowPaging="false" Style="max-height: 200px;">
-                            <Columns>
-                                <RadzenDataGridColumn Property="Adi" Title="Sınıf Adı" />
-                            </Columns>
-                        </RadzenDataGrid>
-                    }
-                    else
-                    {
-                        <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm sınıflarda öğrenci var</p>
-                    }
-                </RadzenColumn>
+                    <div>
+                        <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Öğrencisi Olmayan Sınıflar</h5>
+                        @if (toplamSinif == 0)
+                        {
+                            <p style="color: #999; font-style: italic; padding: 10px;">Henüz sınıf tanımlanmamış</p>
+                        }
+                        else if (ogrencisiOlmayanSiniflar.Any())
+                        {
+                            <div class="data-table-wrapper" style="max-height: 200px; overflow-y: auto;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Sınıf Adı</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in ogrencisiOlmayanSiniflar)
+                                        {
+                                            <tr>
+                                                <td>@item.Adi</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm sınıflarda öğrenci var</p>
+                        }
+                    </div>
 
-                <RadzenColumn Size="4">
-                    <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Ders Programı Olmayan Sınıflar</h5>
-                    @if (toplamSinif == 0)
-                    {
-                        <p style="color: #999; font-style: italic; padding: 10px;">Henüz sınıf tanımlanmamış</p>
-                    }
-                    else if (dersProgramiOlmayanSiniflar.Any())
-                    {
-                        <RadzenDataGrid Data="@dersProgramiOlmayanSiniflar" TItem="ItemSinif" AllowPaging="false" Style="max-height: 200px;">
-                            <Columns>
-                                <RadzenDataGridColumn Property="Adi" Title="Sınıf Adı" />
-                            </Columns>
-                        </RadzenDataGrid>
-                    }
-                    else
-                    {
-                        <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm sınıfların ders programı var</p>
-                    }
-                </RadzenColumn>
-            </RadzenRow>
-        </RadzenCard>
+                    <div>
+                        <h5 style="margin-bottom: 0.75rem; color: #ff9800;">Ders Programı Olmayan Sınıflar</h5>
+                        @if (toplamSinif == 0)
+                        {
+                            <p style="color: #999; font-style: italic; padding: 10px;">Henüz sınıf tanımlanmamış</p>
+                        }
+                        else if (dersProgramiOlmayanSiniflar.Any())
+                        {
+                            <div class="data-table-wrapper" style="max-height: 200px; overflow-y: auto;">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Sınıf Adı</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in dersProgramiOlmayanSiniflar)
+                                        {
+                                            <tr>
+                                                <td>@item.Adi</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p style="color: #4caf50; font-style: italic; padding: 10px;">Tüm sınıfların ders programı var</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
 
         @* Bugünkü Dersler Tablosu *@
-        <RadzenCard Style="margin-top: 30px; margin-bottom:20px">
-            <h4 style="margin-bottom: 1rem;">Bugünkü Dersler</h4>
-            @if (bugunkuDerslerAdmin.Any())
-            {
-                <RadzenDataGrid Data="@bugunkuDerslerAdmin" TItem="ItemDersProgrami" AllowPaging="true" PageSize="10">
-                    <Columns>
-                        <RadzenDataGridColumn Title="Ders">
-                            <Template Context="item">
-                                @item.Ders.Adi
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="Sınıf">
-                            <Template Context="item">
-                                @item.Sinif.Adi
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="Başlangıç Saati">
-                            <Template Context="item">
-                                @item.BaslangicSaati.ToString(@"hh\:mm")
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="Bitiş Saati">
-                            <Template Context="item">
-                                @item.BitisSaati.ToString(@"hh\:mm")
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn Property="Aktif" Title="Aktif">
-                            <Template Context="item">
-                                @if (item.Aktif)
+        <div class="card" style="margin-top: 30px; margin-bottom:20px">
+            <div class="card-body">
+                <h4 style="margin-bottom: 1rem;">Bugünkü Dersler</h4>
+                @if (bugunkuDerslerAdmin.Any())
+                {
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ders</th>
+                                    <th>Sınıf</th>
+                                    <th>Başlangıç Saati</th>
+                                    <th>Bitiş Saati</th>
+                                    <th>Aktif</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in bugunkuDerslerAdmin)
                                 {
-                                    <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Aktif" />
+                                    <tr>
+                                        <td>@item.Ders.Adi</td>
+                                        <td>@item.Sinif.Adi</td>
+                                        <td>@item.BaslangicSaati.ToString(@"hh\:mm")</td>
+                                        <td>@item.BitisSaati.ToString(@"hh\:mm")</td>
+                                        <td>
+                                            @if (item.Aktif)
+                                            {
+                                                <span class="badge badge-success">Aktif</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">Pasif</span>
+                                            }
+                                        </td>
+                                    </tr>
                                 }
-                                else
-                                {
-                                    <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="Pasif" />
-                                }
-                            </Template>
-                        </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-            }
-            else
-            {
-                <p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Bugün ders bulunmamaktadır</p>
-            }
-        </RadzenCard>
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <p style="color: #666; font-style: italic; padding: 20px; text-align: center;">Bugün ders bulunmamaktadır</p>
+                }
+            </div>
+        </div>
     }
     else if (kullaniciTip.Contains("öğrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
     {
         @* Öğrenci Dashboard *@
-        <RadzenRow Gap="20px" Style="margin-bottom:15px;">
-            <RadzenColumn Size="3">
-                <RadzenCard Style="background:#f44336; color:white; cursor: pointer;" @onclick="GitOdevlerime">
-                    <h5>Bekleyen Ödevler</h5>
-                    <h2>@bekleyenOdevSayisi</h2>
-                </RadzenCard>
-            </RadzenColumn>
+        <div class="dashboard-stats cols-4">
+            <div class="stat-card red" @onclick="GitOdevlerime">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">assignment_late</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Bekleyen Ödevler</span>
+                    <p class="stat-value">@bekleyenOdevSayisi</p>
+                </div>
+            </div>
 
-            <RadzenColumn Size="3">
-                <RadzenCard Style="background:#ff9800; color:white; cursor: pointer;" @onclick="GitOdevlerime">
-                    <h5>Yaklaşan Teslimler</h5>
-                    <h2>@yaklasanTeslimSayisi</h2>
-                </RadzenCard>
-            </RadzenColumn>
+            <div class="stat-card orange" @onclick="GitOdevlerime">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">schedule</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Yaklaşan Teslimler</span>
+                    <p class="stat-value">@yaklasanTeslimSayisi</p>
+                </div>
+            </div>
 
-            <RadzenColumn Size="3">
-                <RadzenCard Style="background:#2196f3; color:white; cursor: pointer;" @onclick="GitDersProgramima">
-                    <h5>Bugünkü Dersler</h5>
-                    <h2>@bugunkuDersSayisi</h2>
-                </RadzenCard>
-            </RadzenColumn>
+            <div class="stat-card blue" @onclick="GitDersProgramima">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">menu_book</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Bugünkü Dersler</span>
+                    <p class="stat-value">@bugunkuDersSayisi</p>
+                </div>
+            </div>
 
-            <RadzenColumn Size="3">
-                <RadzenCard Style="background:#4caf50; color:white; cursor: pointer;" @onclick="GitNotlarima">
-                    <h5>Not Ortalaması</h5>
-                    <h2>@ortalamaNot.ToString("F2")</h2>
-                </RadzenCard>
-            </RadzenColumn>
-        </RadzenRow>
+            <div class="stat-card green" @onclick="GitNotlarima">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">grade</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Not Ortalaması</span>
+                    <p class="stat-value">@ortalamaNot.ToString("F2")</p>
+                </div>
+            </div>
+        </div>
 
-       @*  <RadzenRow Gap="20px" Style="margin-bottom: 20px;">
-            <RadzenColumn Size="12">
-                <RadzenButton Text="Sınıfa Katıl" Icon="group_add" ButtonStyle="ButtonStyle.Success" 
-                             Size="ButtonSize.Large" Click="@GitSinifaKatil" 
-                             Style="width: 100%; padding: 1rem;" />
-            </RadzenColumn>
-        </RadzenRow> *@
+        @*  <div style="margin-bottom: 20px;">
+            <button class="btn btn-success" @onclick="GitSinifaKatil" style="width: 100%; padding: 1rem;">
+                <span class="material-icons">group_add</span> Sınıfa Katıl
+            </button>
+        </div> *@
 
-        <RadzenRow Gap="20px">
-            <RadzenColumn Size="6">
-                <RadzenCard>
-                    <h4>Bugünkü Ders Programı</h4>
-                    <RadzenDataGrid TItem="ItemDersProgrami" Data="@bugunkuDersler" AllowPaging="true" PageSize="5">
-                        <Columns>
-                            <RadzenDataGridColumn Title="Ders">
-                                <Template Context="item">
-                                    @item.Ders.Adi
-                                </Template>
-                            </RadzenDataGridColumn>
-                            <RadzenDataGridColumn Title="Saat">
-                                <Template Context="item">
-                                    @item.BaslangicSaati.ToString(@"hh\:mm") - @item.BitisSaati.ToString(@"hh\:mm")
-                                </Template>
-                            </RadzenDataGridColumn>
-                        </Columns>
-                    </RadzenDataGrid>
-                </RadzenCard>
-            </RadzenColumn>
-            <RadzenColumn Size="6">
-                <RadzenCard>
-                    <h4>Son Ödevler</h4>
-                    <RadzenDataGrid TItem="ItemOdev" Data="@sonOdevler" AllowPaging="true" PageSize="5">
-                        <Columns>
-                            <RadzenDataGridColumn Title="Ödev Adı" Property="Baslik"></RadzenDataGridColumn>
-                            <RadzenDataGridColumn Title="Teslim Tarihi">
-                                <Template Context="item">
-                                    @item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
-                                </Template>
-                            </RadzenDataGridColumn>
-                        </Columns>
-                    </RadzenDataGrid>
-                </RadzenCard>
-            </RadzenColumn>
-        </RadzenRow>
+        <div class="grid grid-2" style="gap: 20px;">
+            <div>
+                <div class="card">
+                    <div class="card-body">
+                        <h4>Bugünkü Ders Programı</h4>
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ders</th>
+                                        <th>Saat</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in bugunkuDersler)
+                                    {
+                                        <tr>
+                                            <td>@item.Ders.Adi</td>
+                                            <td>@item.BaslangicSaati.ToString(@"hh\:mm") - @item.BitisSaati.ToString(@"hh\:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="card">
+                    <div class="card-body">
+                        <h4>Son Ödevler</h4>
+                        <div class="data-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ödev Adı</th>
+                                        <th>Teslim Tarihi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in sonOdevler)
+                                    {
+                                        <tr>
+                                            <td>@item.Baslik</td>
+                                            <td>@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     }
     else if (kullaniciTip.Contains("öğretmen") || kullaniciTip.Contains("ogretmen") || kullaniciTip.Contains("teacher"))
     {
         @* Öğretmen Dashboard *@
-        <RadzenRow Gap="20px" class="mb-4">
-            <RadzenColumn Size="3">
-                <RadzenCard class="stat-card" Style="border-left:4px solid aqua; cursor: pointer;" @onclick="GitDerslerime">
-                    <div class="stat-content">
-                        <div>
-                            <h6>Dersler</h6>
-                            <h2>@dersSayisi</h2>
-                        </div>
-                        <RadzenIcon Icon="menu_book" class="stat-icon"></RadzenIcon>
+        <div class="dashboard-stats cols-4">
+            <div class="stat-card cyan" @onclick="GitDerslerime">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">menu_book</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Dersler</span>
+                    <p class="stat-value">@dersSayisi</p>
+                </div>
+            </div>
+
+            <div class="stat-card green" @onclick="GitOdevlerimeOgretmen">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">assignment</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Ödevler</span>
+                    <p class="stat-value">@odevSayisi</p>
+                </div>
+            </div>
+
+            <div class="stat-card orange" @onclick="GitBekleyenTeslimlere">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">hourglass_empty</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Bekleyen Teslimler</span>
+                    <p class="stat-value">@bekleyenTeslim</p>
+                </div>
+            </div>
+
+            <div class="stat-card purple" @onclick="GitOgrenciListesine">
+                <div class="stat-icon-wrap">
+                    <span class="material-icons">groups</span>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-label">Sınıflarımdaki Öğrenciler</span>
+                    <p class="stat-value">@ogrenciSayisi</p>
+                </div>
+            </div>
+        </div>
+
+        @* <div style="margin-bottom: 20px; margin-top: 20px;">
+            <button class="btn btn-success" @onclick="GitSinifaKatil" style="width: 100%; padding: 1rem;">
+                <span class="material-icons">group_add</span> Sınıfa Katıl
+            </button>
+        </div> *@
+
+        <div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box; border-left:4px solid aqua">
+            <div class="card-body">
+                <h5>Bugünkü Dersler</h5>
+                @if (bugunkuDersler.Any())
+                {
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ders Adı</th>
+                                    <th>Sınıf</th>
+                                    <th>Başlangıç Saati</th>
+                                    <th>Bitiş Saati</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in bugunkuDersler)
+                                {
+                                    <tr>
+                                        <td>@item.Ders.Adi</td>
+                                        <td>@item.Sinif?.Adi</td>
+                                        <td>@item.BaslangicSaati.ToString(@"hh\:mm")</td>
+                                        <td>@item.BitisSaati.ToString(@"hh\:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
-                </RadzenCard>
-            </RadzenColumn>
+                }
+                else
+                {
+                    <p class="text-muted text-center" style="font-style:italic; padding:10px">Bugün Dersiniz Yok</p>
+                }
+            </div>
+        </div>
 
-            <RadzenColumn Size="3">
-                <RadzenCard class="stat-card" Style="border-left:4px solid green; cursor: pointer;" @onclick="GitOdevlerimeOgretmen">
-                    <div class="stat-content">
-                        <div>
-                            <h6>Odevler</h6>
-                            <h2>@odevSayisi</h2>
-                        </div>
-                        <RadzenIcon Icon="assignment" class="stat-icon"></RadzenIcon>
+        <div class="card" style="margin:0; margin-left:0; margin-top:30px; padding:20px; width:100%; max-width:none; box-sizing:border-box; border-left:4px solid orange">
+            <div class="card-body">
+                <h5>Not Bekleyen Teslimler</h5>
+                @if (bekleyenTeslimler.Any())
+                {
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Öğrenci</th>
+                                    <th>Ödev</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in bekleyenTeslimler)
+                                {
+                                    <tr>
+                                        <td>@item.Ogrenci.Adi @item.Ogrenci.Soyadi</td>
+                                        <td>@item.Odev.Baslik</td>
+                                        <td>
+                                            <button class="btn btn-primary" @onclick="@(() => GitTeslimlere(item.Odev_ID))">Not Ver</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
-                </RadzenCard>
-            </RadzenColumn>
-
-            <RadzenColumn Size="3">
-                <RadzenCard class="stat-card" Style="border-left:4px solid orange; cursor: pointer;" @onclick="GitBekleyenTeslimlere">
-                    <div class="stat-content">
-                        <div>
-                            <h6>Bekleyen Teslimler</h6>
-                            <h2>@bekleyenTeslim</h2>
-                        </div>
-                        <RadzenIcon Icon="hourglass_empty" class="stat-icon" />
-                    </div>
-                </RadzenCard>
-            </RadzenColumn>
-
-            <RadzenColumn Size="3">
-                <RadzenCard class="stat-card" Style="cursor: pointer; border-left:4px solid purple" @onclick="GitOgrenciListesine">
-                    <div class="stat-content">
-                        <div>
-                            <h6>Sınıflarımdaki Öğrenciler</h6>
-                            <h2>@ogrenciSayisi</h2>
-                        </div>
-                        <RadzenIcon Icon="groups" class="stat-icon" />
-                    </div>
-                </RadzenCard>
-            </RadzenColumn>
-        </RadzenRow>
-
-        @* <RadzenRow Gap="20px" Style="margin-bottom: 20px; margin-top: 20px;">
-            <RadzenColumn Size="12">
-                <RadzenButton Text="Sınıfa Katıl" Icon="group_add" ButtonStyle="ButtonStyle.Success" 
-                             Size="ButtonSize.Large" Click="@GitSinifaKatil" 
-                             Style="width: 100%; padding: 1rem;" />
-            </RadzenColumn>
-        </RadzenRow> *@
-
-        <RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box; border-left:4px solid aqua">
-            <h5>Bugünkü Dersler</h5>
-            @if (bugunkuDersler.Any())
-            {
-                <RadzenDataGrid Data="@bugunkuDersler" TItem="ItemDersProgrami">
-                    <Columns>
-                        <RadzenDataGridColumn Property="Ders.Adi" Title="Ders Adı"></RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="Sınıf">
-                            <Template Context="item">
-                                @item.Sinif?.Adi
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="Başlangıç Saati">
-                            <Template Context="item">
-                                @item.BaslangicSaati.ToString(@"hh\:mm")
-                            </Template>
-                        </RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="Bitiş Saati">
-                            <Template Context="item">
-                                @item.BitisSaati.ToString(@"hh\:mm")
-                            </Template>
-                        </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-            }
-            else
-            {
-                <p class="text-muted text-center" style="font-style:italic; padding:10px">Bugün Dersiniz Yok</p>
-            }
-        </RadzenCard>
-
-        <RadzenCard Style="margin:0; margin-left:0; margin-top:30px; padding:20px; width:100%; max-width:none; box-sizing:border-box; border-left:4px solid orange">
-            <h5>Not Bekleyen Teslimler</h5>
-            @if (bekleyenTeslimler.Any())
-            {
-                <RadzenDataGrid Data="@bekleyenTeslimler" TItem="ItemOdevTeslim">
-                    <Columns>
-                        <RadzenDataGridColumn Title="Öğrenci">
-                            <Template Context="item">
-                                @item.Ogrenci.Adi @item.Ogrenci.Soyadi
-                            </Template>
-                        </RadzenDataGridColumn>
-
-                        <RadzenDataGridColumn Property="Odev.Baslik" Title="Ödev"></RadzenDataGridColumn>
-                        <RadzenDataGridColumn Title="İşlem">
-                            <Template Context="item">
-                                <RadzenButton Text="Not Ver" Size="ButtonSize.Small" Click="@(() => GitTeslimlere(item.Odev_ID))"></RadzenButton>
-                            </Template>
-                        </RadzenDataGridColumn>
-                    </Columns>
-                </RadzenDataGrid>
-            }
-            else
-            {
-                <p class="text-muted text-center" style="font-style:italic; padding:10px">Not Bekleyen Teslim Yok</p>
-            }
-        </RadzenCard>
+                }
+                else
+                {
+                    <p class="text-muted text-center" style="font-style:italic; padding:10px">Not Bekleyen Teslim Yok</p>
+                }
+            </div>
+        </div>
     }
     else
     {

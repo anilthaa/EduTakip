@@ -1,0 +1,97 @@
+@using EduTakip.Services
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="notify-container">
+    @foreach (var toast in ToastService.Toasts.ToList())
+    {
+        var severityClass = toast.Severity switch
+        {
+            ToastSeverity.Success => "notify-success",
+            ToastSeverity.Error => "notify-error",
+            ToastSeverity.Warning => "notify-warning",
+            ToastSeverity.Info => "notify-info",
+            _ => "notify-info"
+        };
+        var icon = toast.Severity switch
+        {
+            ToastSeverity.Success => "check_circle",
+            ToastSeverity.Error => "error",
+            ToastSeverity.Warning => "warning",
+            ToastSeverity.Info => "info",
+            _ => "info"
+        };
+
+        <div class="notify-item @severityClass @(toast.IsExiting ? "notify-exit" : "")" @key="toast.Id">
+            <span class="notify-icon material-icons">@icon</span>
+            <div class="notify-content">
+                <div class="notify-title">@toast.Summary</div>
+                @if (!string.IsNullOrEmpty(toast.Detail))
+                {
+                    <div class="notify-message">@toast.Detail</div>
+                }
+            </div>
+            <button class="notify-close" @onclick="() => RemoveToast(toast.Id)">&times;</button>
+        </div>
+    }
+</div>
+
+@code {
+    private HashSet<string> _scheduledRemovals = new();
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnChange += OnToastChanged;
+    }
+
+    private void OnToastChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        foreach (var toast in ToastService.Toasts.ToList())
+        {
+            if (toast.Duration > 0 && !toast.IsExiting && !_scheduledRemovals.Contains(toast.Id))
+            {
+                _scheduledRemovals.Add(toast.Id);
+                _ = ScheduleRemoval(toast);
+            }
+        }
+    }
+
+    private async Task ScheduleRemoval(ToastItem toast)
+    {
+        await Task.Delay(toast.Duration);
+        toast.IsExiting = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(300);
+        _scheduledRemovals.Remove(toast.Id);
+        ToastService.Remove(toast.Id);
+    }
+
+    private void RemoveToast(string id)
+    {
+        var toast = ToastService.Toasts.FirstOrDefault(t => t.Id == id);
+        if (toast != null)
+        {
+            toast.IsExiting = true;
+            StateHasChanged();
+            _ = Task.Delay(300).ContinueWith(_ =>
+            {
+                InvokeAsync(() =>
+                {
+                    _scheduledRemovals.Remove(id);
+                    ToastService.Remove(id);
+                    StateHasChanged();
+                });
+            });
+        }
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnChange -= OnToastChanged;
+    }
+}

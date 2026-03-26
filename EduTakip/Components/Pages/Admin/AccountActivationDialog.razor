@@ -1,10 +1,7 @@
-@using System.Net.Http.Json
 @using System.Net.Http.Headers
-@using System.Text.Json.Serialization
-@using Microsoft.JSInterop
 
-<RadzenCard>
-	<div style="padding: 20px;">
+<div class="card">
+	<div class="card-body" style="padding: 20px;">
 		<h3 style="margin-bottom: 20px;">Hesap Aktifleştirme</h3>
 		
 		@if (kullanici != null)
@@ -14,41 +11,52 @@
 				<p><strong>E-posta:</strong> @kullanici.EPosta</p>
 			</div>
 
-			<RadzenStack Gap="1rem">
-				<RadzenFormField Text="Aktifleştirme Yöntemi" class="w-100">
-					<RadzenRadioButtonList Data="@activationMethods" @bind-Value="selectedMethod" 
-						TextProperty="Label" ValueProperty="Value" class="w-100" />
-				</RadzenFormField>
+			<div style="display: flex; flex-direction: column; gap: 1rem;">
+				<div class="form-group">
+					<label class="form-label">Aktifleştirme Yöntemi</label>
+					@foreach (var method in activationMethods)
+					{
+						<div class="form-check">
+							<input class="form-check-input" type="radio" name="activationMethod"
+								   id="@method.Value" value="@method.Value"
+								   checked="@(selectedMethod == method.Value)"
+								   @onchange="@(() => selectedMethod = method.Value)" />
+							<label class="form-check-label" for="@method.Value">@method.Label</label>
+						</div>
+					}
+				</div>
 
 				@if (hasError)
 				{
-					<RadzenAlert AlertStyle="AlertStyle.Danger" Title="Hata" Text="@errorMessage" />
+					<div class="alert alert-danger">
+						<strong>Hata:</strong> @errorMessage
+					</div>
 				}
 
 				@if (isProcessing)
 				{
 					<div style="text-align: center; padding: 10px;">
-						<RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+						<div class="spinner"></div>
 						<p style="margin-top: 10px;">İşlem yapılıyor...</p>
 					</div>
 				}
 
 				<div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-					<RadzenButton Text="İptal" ButtonStyle="ButtonStyle.Secondary" 
-						Click="@(() => DialogService.Close(false))" 
-						Disabled="@isProcessing" />
-					<RadzenButton Text="Gönder" ButtonStyle="ButtonStyle.Primary" 
-						Click="@OnSubmit" 
-						Disabled="@(isProcessing || selectedMethod == null)" />
+					<button class="btn btn-outline btn-sm" @onclick="@(() => ModalService.Close(false))" disabled="@isProcessing">
+						İptal
+					</button>
+					<button class="btn btn-primary btn-sm" @onclick="OnSubmit" disabled="@(isProcessing || selectedMethod == null)">
+						Gönder
+					</button>
 				</div>
-			</RadzenStack>
+			</div>
 		}
 		else
 		{
 			<p>Kullanıcı bilgisi yükleniyor...</p>
 		}
 	</div>
-</RadzenCard>
+</div>
 
 @code {
 	[Parameter] public ItemKullanici? Kullanici { get; set; }
@@ -99,7 +107,6 @@
 
 		try
 		{
-			// Token'ı localStorage'dan al
 			string? token = null;
 			try
 			{
@@ -110,7 +117,6 @@
 			var baseUrl = NavigationManager.BaseUri.TrimEnd('/');
 			ApiResponse? result = null;
 
-			// HttpRequestMessage oluştur ve Authorization header ekle
 			HttpRequestMessage CreateRequest(HttpMethod method, string url, object? content = null)
 			{
 				var request = new HttpRequestMessage(method, url);
@@ -127,7 +133,6 @@
 
 			if (selectedMethod == "link")
 			{
-				// Aktifleştirme linki gönder
 				var request = CreateRequest(HttpMethod.Post, $"{baseUrl}/api/auth/send-activation-link", new { Email = kullanici.EPosta });
 				var response = await Http.SendAsync(request);
 				
@@ -139,7 +144,6 @@
 					}
 					catch (System.Text.Json.JsonException)
 					{
-						// JSON parse hatası - muhtemelen boş veya geçersiz yanıt
 						result = new ApiResponse { Success = true, Message = "İşlem başarıyla tamamlandı." };
 					}
 				}
@@ -152,7 +156,6 @@
 					}
 					catch (System.Text.Json.JsonException)
 					{
-						// JSON parse hatası - muhtemelen HTML yanıt (401/403)
 						result = new ApiResponse { Success = false, Message = $"Sunucu hatası: {response.StatusCode}. Lütfen giriş yaptığınızdan emin olun." };
 						hasError = true;
 					}
@@ -160,7 +163,6 @@
 			}
 			else if (selectedMethod == "password")
 			{
-				// Geçici şifre ile aktifleştir
 				var request = CreateRequest(HttpMethod.Post, $"{baseUrl}/api/auth/activate-account-with-password", new { Email = kullanici.EPosta });
 				var response = await Http.SendAsync(request);
 				
@@ -172,7 +174,6 @@
 					}
 					catch (System.Text.Json.JsonException)
 					{
-						// JSON parse hatası - muhtemelen boş veya geçersiz yanıt
 						result = new ApiResponse { Success = true, Message = "İşlem başarıyla tamamlandı." };
 					}
 				}
@@ -185,7 +186,6 @@
 					}
 					catch (System.Text.Json.JsonException)
 					{
-						// JSON parse hatası - muhtemelen HTML yanıt (401/403)
 						result = new ApiResponse { Success = false, Message = $"Sunucu hatası: {response.StatusCode}. Lütfen giriş yaptığınızdan emin olun." };
 						hasError = true;
 					}
@@ -196,8 +196,8 @@
 			{
 				if (result.Success)
 				{
-					NotificationService.Notify(NotificationSeverity.Success, "Başarılı", result.Message ?? "İşlem başarıyla tamamlandı.");
-					DialogService.Close(true);
+					ToastService.Notify(ToastSeverity.Success, "Başarılı", result.Message ?? "İşlem başarıyla tamamlandı.");
+					ModalService.Close(true);
 				}
 				else
 				{

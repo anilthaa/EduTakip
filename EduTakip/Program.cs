@@ -8,8 +8,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Radzen;
-
 var builder = WebApplication.CreateBuilder(args);
 
 string connectionString;
@@ -32,7 +30,6 @@ if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException("Jwt:Key configuration is missing.");
 }
 
-builder.Services.AddRadzenComponents();
 builder.Services.Configure<JwtOptions>(jwtSection);
 builder.Services.AddSingleton<IJwtService, JwtService>();
 builder.Services.AddSingleton<IPasswordHasher, PasswordHasher>();
@@ -88,14 +85,9 @@ builder.Services.AddHttpClient<IAuthService, AuthService>();
 builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<AuthStateService>());
 
-builder.Services.AddScoped<ThemeService>();
-builder.Services.AddScoped<DialogService>();
-builder.Services.AddScoped<NotificationService>();
-builder.Services.AddScoped<ContextMenuService>();
-builder.Services.AddScoped<TooltipService>();
+builder.Services.AddScoped<ToastService>();
+builder.Services.AddScoped<ModalService>();
 
-// Toast Notification Service
-builder.Services.AddSingleton<IToastService, ToastService>();
 
 // Büyük dosya yüklemeleri için limitleri artır
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
@@ -224,8 +216,11 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     }
 
     // E-posta tekrar kontrolü
-    var exists = await db.Kullanicilar.AnyAsync(x => x.EPosta == email);
-    if (exists)
+    // Not: Silinmemiş (DelDate null veya default) kayıtlar çakışma sayılır,
+    // silinmiş kayıt varsa aynı satır yeniden kullanılacak.
+    var existingUser = await db.Kullanicilar
+        .FirstOrDefaultAsync(x => x.EPosta == email);
+    if (existingUser != null && (existingUser.DelDate == null || existingUser.DelDate == default(DateTime)))
     {
         return Results.Conflict("E-posta zaten kayıtlı.");
     }
@@ -233,23 +228,47 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     // E-posta onay kodu oluştur (6 haneli sayısal kod)
     var confirmationCode = Random.Shared.Next(100000, 1000000).ToString();
 
-    var user = new ItemKullanici
+    ItemKullanici user;
+    if (existingUser != null && existingUser.DelDate != null && existingUser.DelDate != default(DateTime))
     {
-        Adi = request.Adi.Trim(),
-        Soyadi = request.Soyadi.Trim(),
-        EPosta = email,
-        KullaniciTip_ID = request.KullaniciTip_ID.Value,
-        KullaniciTip = userType,
-        Sifre = hasher.Hash(request.Sifre),
-        Aktif = false, // Admin onayı bekliyor
-        EmailConfirmed = false,
-        EmailConfirmationToken = confirmationCode, // Hash'lemeden düz kod olarak sakla
-        EmailConfirmationTokenExpiry = DateTime.UtcNow.AddMinutes(10), // 10 dakika geçerli
-        CreUser = 0,
-        CreDate = DateTime.UtcNow
-    };
+        // Daha once silinmis kaydi yeniden kullan
+        user = existingUser;
+        user.Adi = request.Adi.Trim();
+        user.Soyadi = request.Soyadi.Trim();
+        user.EPosta = email;
+        user.KullaniciTip_ID = request.KullaniciTip_ID.Value;
+        user.KullaniciTip = userType;
+        user.Sifre = hasher.Hash(request.Sifre);
+        user.Aktif = false; // Admin onayı bekliyor
+        user.EmailConfirmed = false;
+        user.EmailConfirmationToken = confirmationCode;
+        user.EmailConfirmationTokenExpiry = DateTime.UtcNow.AddMinutes(10);
+        user.DelDate = null;
+        user.DelUser = null;
+        user.Reddedildi = false;
+        user.UpdDate = DateTime.UtcNow;
+        user.UpdUser = 0;
+    }
+    else
+    {
+        user = new ItemKullanici
+        {
+            Adi = request.Adi.Trim(),
+            Soyadi = request.Soyadi.Trim(),
+            EPosta = email,
+            KullaniciTip_ID = request.KullaniciTip_ID.Value,
+            KullaniciTip = userType,
+            Sifre = hasher.Hash(request.Sifre),
+            Aktif = false, // Admin onayı bekliyor
+            EmailConfirmed = false,
+            EmailConfirmationToken = confirmationCode, // Hash'lemeden düz kod olarak sakla
+            EmailConfirmationTokenExpiry = DateTime.UtcNow.AddMinutes(10), // 10 dakika geçerli
+            CreUser = 0,
+            CreDate = DateTime.UtcNow
+        };
 
-    db.Kullanicilar.Add(user);
+        db.Kullanicilar.Add(user);
+    }
     await db.SaveChangesAsync(); // Önce kullanıcıyı kaydet ki ID'si oluşsun
 
     // Kullanıcı tipine göre öğrenci veya öğretmen kaydı oluştur
@@ -343,7 +362,7 @@ authGroup.MapPost("/login", async (LoginRequest request, EduTakipDBContext db, I
     var email = request.EPosta.Trim().ToLowerInvariant();
     var user = await db.Kullanicilar
         .Include(x => x.KullaniciTip)
-        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.EPosta == email && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (user is null || !hasher.Verify(user.Sifre, request.Sifre))
     {
@@ -500,7 +519,7 @@ authGroup.MapPost("/reset-password", async (ResetPasswordRequest request, EduTak
                                   x.SifreSifirlamaTokenExpiry.HasValue &&
                                   x.SifreSifirlamaTokenExpiry.Value > DateTime.UtcNow &&
                                   x.Aktif &&
-                                  x.DelDate == null);
+                                  (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (user == null)
     {
@@ -540,7 +559,7 @@ authGroup.MapPost("/send-confirmation-code", async (SendConfirmationCodeRequest 
 
     // Kullanıcıyı bul
     var user = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.EPosta == email && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (user == null)
     {
@@ -592,7 +611,7 @@ authGroup.MapPost("/verify-confirmation-code", async (VerifyConfirmationCodeRequ
 
     // Kullanıcıyı bul
     var user = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.EPosta == email && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (user == null)
     {
@@ -689,7 +708,7 @@ authGroup.MapPost("/approve-account/{userId}", async (int userId, EduTakipDBCont
     }
 
     var targetUser = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.ID == userId && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (targetUser == null)
     {
@@ -737,7 +756,7 @@ authGroup.MapPost("/send-activation-link", async (SendActivationLinkRequest requ
 
     var email = request.Email.Trim().ToLowerInvariant();
     var targetUser = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.EPosta == email && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (targetUser == null)
     {
@@ -789,7 +808,7 @@ authGroup.MapGet("/activate-account", async (string? token, EduTakipDBContext db
         .FirstOrDefaultAsync(x => x.EmailConfirmationToken == hashedToken
             && x.EmailConfirmationTokenExpiry.HasValue
             && x.EmailConfirmationTokenExpiry.Value > DateTime.UtcNow
-            && x.DelDate == null);
+            && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (user == null)
     {
@@ -840,7 +859,7 @@ authGroup.MapPost("/activate-account-with-password", async (ActivateAccountWithP
 
     var email = request.Email.Trim().ToLowerInvariant();
     var targetUser = await db.Kullanicilar
-        .FirstOrDefaultAsync(x => x.EPosta == email && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.EPosta == email && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (targetUser == null)
     {
@@ -898,7 +917,7 @@ authGroup.MapGet("/pending-accounts", async (EduTakipDBContext db, HttpContext h
 
     var pendingAccounts = await db.Kullanicilar
         .Include(x => x.KullaniciTip)
-        .Where(x => x.DelDate == null
+        .Where(x => (x.DelDate == null || x.DelDate == default(DateTime))
             && x.EmailConfirmed
             && !x.Aktif)
         .Select(x => new
@@ -926,7 +945,7 @@ authGroup.MapGet("/profile", async (EduTakipDBContext db, HttpContext httpContex
 
     var user = await db.Kullanicilar
         .Include(x => x.KullaniciTip)
-        .FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+        .FirstOrDefaultAsync(x => x.ID == userId && (x.DelDate == null || x.DelDate == default(DateTime)));
 
     if (user == null)
     {
@@ -965,7 +984,7 @@ authGroup.MapPut("/update-profile", async (UpdateProfileRequest request, EduTaki
         return Results.BadRequest(new { success = false, message = "Ad ve Soyad zorunludur." });
     }
 
-    var user = await db.Kullanicilar.FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+    var user = await db.Kullanicilar.FirstOrDefaultAsync(x => x.ID == userId && (x.DelDate == null || x.DelDate == default(DateTime)));
     if (user == null)
     {
         return Results.NotFound(new { success = false, message = "Kullanıcı bulunamadı." });
@@ -1001,7 +1020,7 @@ authGroup.MapPost("/change-password", async (ChangePasswordRequest request, EduT
         return Results.BadRequest(new { success = false, message = "Yeni şifre en az 6 karakter olmalıdır." });
     }
 
-    var user = await db.Kullanicilar.FirstOrDefaultAsync(x => x.ID == userId && x.DelDate == null);
+    var user = await db.Kullanicilar.FirstOrDefaultAsync(x => x.ID == userId && (x.DelDate == null || x.DelDate == default(DateTime)));
     if (user == null)
     {
         return Results.NotFound(new { success = false, message = "Kullanıcı bulunamadı." });

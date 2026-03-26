@@ -1,31 +1,49 @@
-﻿@page "/admin/kullanici-tipleri"
+@page "/admin/kullanici-tipleri"
 @attribute [Authorize(Roles ="Admin")]
 
-<RadzenButton Text="Yeni Kullanici Tipi Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Style="margin-bottom:15px; border-radius:10px;" Click="@YeniTip" />
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Kullanici Tipleri</h3>
-	<RadzenDataGrid TItem="ItemKullaniciTip" Data="@tipler" AllowPaging="true" PageSize="10">
-		<Columns>
-			<RadzenDataGridColumn TItem="ItemKullaniciTip" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemKullaniciTip" Property="Adi" Title="Adi" />
-			<RadzenDataGridColumn TItem="ItemKullaniciTip" Title="Aktif">
-				<Template Context="model">
-					<span class="status-badge @(model.Aktif ? "status-active" : "status-inactive")"
-						  @onclick="@(() => ToggleAktif(model))">
-						@(model.Aktif ? "Aktif" : "Pasif")
-					</span>
-				</Template>
-			</RadzenDataGridColumn>
-
-			<RadzenDataGridColumn TItem="ItemKullaniciTip" Title="Islemler">
-				<Template Context="item">
-					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditKullaniciTip(item))" Style="margin-right: 10px;" />
-					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteKullaniciTip(item))" />
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
-</RadzenCard>
+<button class="btn btn-success btn-sm" style="margin-bottom:15px; border-radius:10px;" @onclick="YeniTip">
+	<span class="material-icons">add</span> Yeni Kullanici Tipi Ekle
+</button>
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Kullanici Tipleri</h3>
+		<div class="data-table-wrapper">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th style="width:80px;">ID</th>
+						<th>Adi</th>
+						<th>Aktif</th>
+						<th>Islemler</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var model in tipler)
+					{
+						<tr>
+							<td>@model.ID</td>
+							<td>@model.Adi</td>
+							<td>
+								<span class="status-badge @(model.Aktif ? "status-active" : "status-inactive")"
+									  @onclick="@(() => ToggleAktif(model))">
+									@(model.Aktif ? "Aktif" : "Pasif")
+								</span>
+							</td>
+							<td>
+								<button class="btn btn-primary btn-sm" @onclick="@(() => EditKullaniciTip(model))" style="margin-right: 10px;">
+									<span class="material-icons">edit</span>
+								</button>
+								<button class="btn btn-danger btn-sm" @onclick="@(() => DeleteKullaniciTip(model))">
+									<span class="material-icons">delete</span>
+								</button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 
 @code {
 	List<ItemKullaniciTip> tipler = new();
@@ -37,16 +55,18 @@
 	async Task Listele()
 	{
 		tipler = await DbContext.KullaniciTipleri
+			.Where(x => x.DelDate == null || x.DelDate == default(DateTime))
 			.OrderBy(x => x.Adi)
 			.ToListAsync();
 	}
+
 	async Task YeniTip()
 	{
-		var result = await DialogService.OpenAsync<KullaniciTipTnm>("Yeni Kullanici Tipi Ekle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<KullaniciTipTnm>("Yeni Kullanici Tipi Ekle", new Dictionary<string, object>()
 		{
-			
-		}, new DialogOptions() { Width = "600px" });
-		if (result == true)
+
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -55,11 +75,11 @@
 
 	async Task EditKullaniciTip(ItemKullaniciTip item)
 	{
-		var result = await DialogService.OpenAsync<KullaniciTipTnm>("Kullanici Tip Düzenle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<KullaniciTipTnm>("Kullanici Tip Düzenle", new Dictionary<string, object>()
 		{
 			{ "KullaniciTipId", item.ID }
-		}, new DialogOptions() { Width = "600px" });
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -71,26 +91,26 @@
 		var yeniDurum = !item.Aktif;
 		item.Aktif = yeniDurum;
 		item.UpdDate = DateTime.UtcNow;
-		item.UpdUser = 1; // TODO: Gerçek kullanici ID'si kullanilacak
+		item.UpdUser = AuthStateService.CurrentUser?.ID;
 		DbContext.KullaniciTipleri.Update(item);
 		await DbContext.SaveChangesAsync();
 		await Listele();
-		NotificationService.Notify(NotificationSeverity.Success,"Başarılı", $"Birim {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
+		ToastService.Notify(ToastSeverity.Success, "Başarılı", $"Birim {(yeniDurum ? "aktif" : "pasif")} yapıldı.");
 		StateHasChanged();
 	}
 
 	async Task DeleteKullaniciTip(ItemKullaniciTip item)
 	{
-		bool? result = await DialogService.Confirm($"'{item.Adi}' birimini silmek istediginize emin misiniz?", "Birim Silme Onayi", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
-		if (result == true)
+		var result = await JSRuntime.InvokeAsync<bool>("confirm", $"'{item.Adi}' birimini silmek istediginize emin misiniz?");
+		if (result)
 		{
-			item.DelUser = 1; // TODO: Gerçek kullanici ID'si kullanilacak
+			item.DelUser = AuthStateService.CurrentUser?.ID;
 			item.DelDate = DateTime.UtcNow;
 			item.Aktif = false;
 			DbContext.KullaniciTipleri.Update(item);
 			await DbContext.SaveChangesAsync();
 			await Listele();
-			NotificationService.Notify(NotificationSeverity.Success,"Başarılı", "Birim silindi.");
+			ToastService.Notify(ToastSeverity.Success, "Başarılı", "Birim silindi.");
 			StateHasChanged();
 		}
 	}

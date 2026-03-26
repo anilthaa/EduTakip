@@ -1,48 +1,45 @@
 @page "/admin/ders-programlari"
 @attribute [Authorize(Roles = "Admin")]
-	
-	<RadzenButton Text="Yeni Ders Programi" Icon="add" Style="margin-bottom:15px; border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@Yeni" />
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Ders Programlari</h3>
-	<RadzenDataGrid TItem="ItemDersProgrami" Data="@list">
-		<Columns>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Ders Adi">
-				<Template Context="item">
-					@item.Ders?.Adi
-				</Template>
-			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
-				<Template Context="item">
-					@GetGunAdi(item.Gun)
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Baslangiç Saati">
-				<Template Context="item">
-					@item.BaslangicSaati.ToString("hh\\:mm")
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Bitis Saati">
-				<Template Context="item">
-					@item.BitisSaati.ToString("hh\\:mm")
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Sinif">
-				<Template Context="item">
-					@item.Sinif?.Adi
-				</Template>
-			</RadzenDataGridColumn>
+<button class="btn btn-success btn-sm" style="margin-bottom:15px; border-radius:10px;" @onclick="Yeni"><span class="material-icons">add</span> Yeni Ders Programi</button>
 
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Islemler">
-				<Template Context="item">
-					<RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditDersProg(item.ID))" Style="margin-right: 10px;" />
-					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteDersProg(item))" />
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
-</RadzenCard>
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Ders Programlari</h3>
+		<div class="data-table-wrapper">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th style="width:80px">ID</th>
+						<th>Ders Adi</th>
+						<th>Gün</th>
+						<th>Baslangiç Saati</th>
+						<th>Bitis Saati</th>
+						<th>Sinif</th>
+						<th>Islemler</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var item in list)
+					{
+						<tr>
+							<td>@item.ID</td>
+							<td>@item.Ders?.Adi</td>
+							<td>@GetGunAdi(item.Gun)</td>
+							<td>@item.BaslangicSaati.ToString("hh\\:mm")</td>
+							<td>@item.BitisSaati.ToString("hh\\:mm")</td>
+							<td>@item.Sinif?.Adi</td>
+							<td>
+								<button class="btn btn-sm" style="margin-right: 10px;" @onclick="@(() => EditDersProg(item.ID))"><span class="material-icons">edit</span></button>
+								<button class="btn btn-danger btn-sm" @onclick="@(() => DeleteDersProg(item))"><span class="material-icons">delete</span></button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 
 @code {
 	List<ItemDersProgrami> list = new();
@@ -82,7 +79,7 @@
 		var dersVarMi = await DbContext.Dersler.AnyAsync(d => d.DelDate == null || d.DelDate == default(DateTime));
 		if (!dersVarMi)
 		{
-			NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Henüz tanımlı ders yok. Lütfen önce bir ders ekleyin.");
+			ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Henüz tanımlı ders yok. Lütfen önce bir ders ekleyin.");
 			return;
 		}
 
@@ -90,16 +87,16 @@
 		var sinifVarMi = await DbContext.Siniflar.AnyAsync(s => (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif);
 		if (!sinifVarMi)
 		{
-			NotificationService.Notify(NotificationSeverity.Warning, "Uyarı", "Henüz tanımlı aktif sınıf yok. Lütfen önce bir sınıf ekleyin.");
+			ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Henüz tanımlı aktif sınıf yok. Lütfen önce bir sınıf ekleyin.");
 			return;
 		}
 
-		var result = await DialogService.OpenAsync<DersProgramiTnm>(
+		var result = await ModalService.OpenAsync<DersProgramiTnm>(
 			"Ders Programi",
 			null,
-			new DialogOptions() { Width = "600px" });
+			new ModalOptions { CssClass = "modal-md" });
 		
-		if (result == true)
+		if (result is true)
 		{
 			await Listele();
 		}
@@ -107,11 +104,11 @@
 
 	async Task EditDersProg(int id)
 	{
-		var result = await DialogService.OpenAsync<DersProgramiTnm>("Ders Programi Düzenle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<DersProgramiTnm>("Ders Programi Düzenle", new Dictionary<string, object>()
 		{
 			{ "Id", id }
-		}, new DialogOptions() { Width = "600px"});
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 		}
@@ -119,21 +116,21 @@
 
 	async Task DeleteDersProg(ItemDersProgrami item)
 	{
-		bool? result = await DialogService.Confirm("Seçili ders programini silmek istediginize emin misiniz?", "Ders Programi Sil", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
-		if (result == true)
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Seçili ders programini silmek istediginize emin misiniz?");
+		if (confirmed)
 		{
 			try
 			{
 				item.DelDate = DateTime.UtcNow;
-				item.DelUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
+				item.DelUser = 0;
 				DbContext.DersProgramlari.Update(item);
 				await DbContext.SaveChangesAsync();
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Ders programı başarıyla silindi.");
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Ders programı başarıyla silindi.");
 				await Listele();
 			}
 			catch (Exception ex)
 			{
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Ders programı silinirken bir hata oluştu: {ex.Message}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Ders programı silinirken bir hata oluştu: {ex.Message}");
 			}
 		}
 	}

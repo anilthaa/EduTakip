@@ -1,10 +1,9 @@
-﻿@page "/email-confirm-failed"
+@page "/email-confirm-failed"
 
-<h3>✅ E-posta Onaylanmadı</h3>
+<h3>❌ E-posta Onaylanmadı</h3>
 <p>Hata</p>
 
-<RadzenButton Text="Giriş Yap" Click="@(() => NavigationManager.NavigateTo("/login"))" />
+<button class="btn btn-primary" @onclick='() => NavigationManager.NavigateTo("/login")'>Giriş Yap</button>
 
 @code {
-
 }

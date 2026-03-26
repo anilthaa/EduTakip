@@ -3,22 +3,29 @@
 
 <h3>Sınıftaki Öğrenciler</h3>
 
-<RadzenDataGrid Data="@ogrenciler" TItem="SinifOgrenciDto" PageSize="10">
-	<Columns>
-		<RadzenDataGridColumn Title="Ad Soyad">
-			<Template Context="item">
-				@item.Ad @item.Soyad
-			</Template>
-		</RadzenDataGridColumn>
-		<RadzenDataGridColumn Title="Öğrenci No" Property="OgrenciNo"></RadzenDataGridColumn>
-
-		<RadzenDataGridColumn Title="İşlem">
-			<Template Context="item">
-				<RadzenButton Icon="logout" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger" Click="@(args => OgrenciCikar(item.SinifKullaniciId))" />
-			</Template>
-		</RadzenDataGridColumn>
-	</Columns>
-</RadzenDataGrid>
+<div class="data-table-wrapper">
+	<table class="data-table">
+		<thead>
+			<tr>
+				<th>Ad Soyad</th>
+				<th>Öğrenci No</th>
+				<th>İşlem</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var item in ogrenciler)
+			{
+				<tr>
+					<td>@item.Ad @item.Soyad</td>
+					<td>@item.OgrenciNo</td>
+					<td>
+						<button class="btn btn-danger btn-sm" @onclick="@(() => OgrenciCikar(item.SinifKullaniciId))"><span class="material-icons">logout</span></button>
+					</td>
+				</tr>
+			}
+		</tbody>
+	</table>
+</div>
 @code {
 	[Parameter] public int sinifId { get; set; }
 	List<SinifOgrenciDto> ogrenciler = new();
@@ -30,7 +37,7 @@
 	async Task Yukle()
 	{
 		ogrenciler = await DbContext.SinifKullanicilar
-			.Where(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Where(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Join(
 				DbContext.Ogrenciler.Include(o => o.Kullanici),
 				sk => sk.Kullanici_ID,
@@ -54,7 +61,7 @@
 			{
 				// Öğrencinin ItemOgrenci kaydını bul
 				var ogrenci = await DbContext.Ogrenciler
-					.Where(x => x.Kullanici_ID == sinifKullanici.Kullanici_ID && x.DelDate == null)
+					.Where(x => x.Kullanici_ID == sinifKullanici.Kullanici_ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 					.FirstOrDefaultAsync();
 
 				// Eğer bu öğrencinin ana sınıfı bu sınıfsa, Sinif_ID'yi null yap
@@ -78,7 +85,7 @@
 						.IgnoreQueryFilters()
 						.Where(x => x.Sinif_ID == sinifKullanici.Sinif_ID && 
 								   x.Ogrenci_ID == ogrenci.ID && 
-								   x.DelDate == null)
+								   (x.DelDate == null || x.DelDate == default(DateTime)))
 						.ToListAsync();
 
 					foreach (var so in sinifOgrenciKayitlari)
@@ -90,13 +97,7 @@
 				}
 
 				await DbContext.SaveChangesAsync();
-			NotificationService.Notify(new NotificationMessage
-			{
-				Severity = NotificationSeverity.Success,
-				Summary = "Başarılı",
-				Detail = "Öğrenci sınıftan çıkarıldı.",
-				Duration = 4000
-			});
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Öğrenci sınıftan çıkarıldı.", 4000);
 				await Yukle();
 				StateHasChanged();
 			}
@@ -111,5 +112,5 @@
 		public string Ad { get; set; }
 		public string Soyad { get; set; }
 		public string OgrenciNo { get; set; }
-							}
+	}
 }

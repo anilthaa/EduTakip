@@ -57,7 +57,7 @@ namespace EduTakip.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Birimler");
+                    b.ToTable("Birimler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemDers", b =>
@@ -101,7 +101,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Ogretmen_ID");
 
-                    b.ToTable("Dersler");
+                    b.ToTable("Dersler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemDersKatilim", b =>
@@ -148,7 +148,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Ogrenci_ID");
 
-                    b.ToTable("DersKatilimlar");
+                    b.ToTable("DersKatilimlar", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemDersKatilimci", b =>
@@ -189,7 +189,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Ogrenci_ID");
 
-                    b.ToTable("DersKatilimcilar");
+                    b.ToTable("DersKatilimcilar", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemDersProgrami", b =>
@@ -246,7 +246,7 @@ namespace EduTakip.Migrations
                     b.HasIndex("Ders_ID", "Gun", "BaslangicSaati", "BitisSaati")
                         .IsUnique();
 
-                    b.ToTable("DersProgramlari");
+                    b.ToTable("DersProgramlari", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemKullanici", b =>
@@ -322,7 +322,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("KullaniciTip_ID");
 
-                    b.ToTable("Kullanicilar");
+                    b.ToTable("Kullanicilar", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemKullaniciTip", b =>
@@ -360,7 +360,7 @@ namespace EduTakip.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("KullaniciTipleri");
+                    b.ToTable("KullaniciTipleri", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemOdev", b =>
@@ -410,7 +410,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Ders_ID");
 
-                    b.ToTable("Odevler");
+                    b.ToTable("Odevler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemOdevTeslim", b =>
@@ -465,7 +465,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Ogrenci_ID");
 
-                    b.ToTable("OdevTeslimler");
+                    b.ToTable("OdevTeslimler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemOgrenci", b =>
@@ -513,7 +513,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Sinif_ID");
 
-                    b.ToTable("Ogrenciler");
+                    b.ToTable("Ogrenciler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemOgretmen", b =>
@@ -554,7 +554,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Kullanici_ID");
 
-                    b.ToTable("Ogretmenler");
+                    b.ToTable("Ogretmenler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemSinif", b =>
@@ -592,7 +592,7 @@ namespace EduTakip.Migrations
 
                     b.HasKey("ID");
 
-                    b.ToTable("Siniflar");
+                    b.ToTable("Siniflar", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemSinifKullanici", b =>
@@ -637,7 +637,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("Sinif_ID");
 
-                    b.ToTable("SinifKullanicilar");
+                    b.ToTable("SinifKullanicilar", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemSinifOgrenci", b =>
@@ -687,7 +687,7 @@ namespace EduTakip.Migrations
 
                     b.HasIndex("SinifID");
 
-                    b.ToTable("SinifOgrenciler");
+                    b.ToTable("SinifOgrenciler", (string)null);
                 });
 
             modelBuilder.Entity("EduTakip.Models.ItemDers", b =>

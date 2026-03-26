@@ -5,69 +5,78 @@
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <RadzenCard>
-                @if (isSuccess)
-                {
-                    <div style="text-align: center; padding: 20px;">
-                        <RadzenIcon Icon="check_circle" Style="font-size: 48px; color: green; margin-bottom: 20px;" />
-                        <h3>E-posta Başarıyla Onaylandı!</h3>
-                        <p>Hesabınızın e-postası onaylandı. Hesabınızın admin tarafından onaylanması gerekmektedir.</p>
-                        <p>Onaylandıktan sonra giriş yapabilirsiniz.</p>
-                        <RadzenButton Text="Giriş Sayfasına Git" ButtonStyle="ButtonStyle.Primary" Click="@(() => NavigationManager.NavigateTo("/login"))" Style="margin-top: 20px;" />
-                    </div>
-                }
-                else
-                {
-                    <div style="padding: 20px;">
-                        <h3 style="text-align: center; margin-bottom: 20px;">E-posta Doğrulama</h3>
-                        <p style="text-align: center; margin-bottom: 30px;">
-                            @if (!string.IsNullOrWhiteSpace(userEmail))
-                            {
-                                <span>@userEmail adresine gönderilen 6 haneli doğrulama kodunu girin.</span>
-                            }
-                            else
-                            {
-                                <span>E-postanıza gönderilen 6 haneli doğrulama kodunu girin.</span>
-                            }
-                        </p>
-
-                        <RadzenTemplateForm Data="@verificationModel" TItem="VerificationModel" Submit="@OnVerifyCode">
-                            <RadzenStack Gap="1rem">
-                                <RadzenFormField Text="E-posta" class="w-100">
-                                    <RadzenTextBox @bind-Value="verificationModel.Email" Placeholder="E-posta adresinizi girin" class="w-100" Disabled="@(!string.IsNullOrWhiteSpace(userEmail))" />
-                                    <RadzenFormFieldValidator />
-                                </RadzenFormField>
-
-                                <RadzenFormField Text="Doğrulama Kodu" class="w-100">
-                                    <RadzenTextBox @bind-Value="verificationModel.Code" Placeholder="6 haneli kodu girin" class="w-100" MaxLength="6" Style="text-align: center; font-size: 24px; letter-spacing: 5px;" />
-                                    <RadzenFormFieldValidator />
-                                </RadzenFormField>
-
-                                @if (hasError)
+            <div class="card confirm-card">
+                <div class="card-body">
+                    @if (isSuccess)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <span class="material-icons" style="font-size: 48px; color: green; margin-bottom: 20px;">check_circle</span>
+                            <h3>E-posta Başarıyla Onaylandı!</h3>
+                            <p>Hesabınızın e-postası onaylandı. Hesabınızın admin tarafından onaylanması gerekmektedir.</p>
+                            <p>Onaylandıktan sonra giriş yapabilirsiniz.</p>
+                            <button type="button" class="btn btn-primary" @onclick='() => NavigationManager.NavigateTo("/login")' style="margin-top: 20px;">Giriş Sayfasına Git</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="confirm-content">
+                            <h3 class="confirm-title">E-posta Doğrulama</h3>
+                            <p class="confirm-subtitle">
+                                @if (!string.IsNullOrWhiteSpace(userEmail))
                                 {
-                                    <RadzenAlert AlertStyle="AlertStyle.Danger" Title="Hata" Text="@errorMessage" />
+                                    <span>@userEmail adresine gönderilen 6 haneli doğrulama kodunu girin.</span>
                                 }
+                                else
+                                {
+                                    <span>E-postanıza gönderilen 6 haneli doğrulama kodunu girin.</span>
+                                }
+                            </p>
 
-                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem" Style="margin-top: 10px;">
-                                    <RadzenButton Text="Kodu Doğrula" ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Primary" 
-                                        Disabled="@(isVerifying || string.IsNullOrWhiteSpace(verificationModel.Code) || verificationModel.Code.Length != 6)" 
-                                        class="flex-grow-1" />
-                                    <RadzenButton Text="Kodu Tekrar Gönder" ButtonStyle="ButtonStyle.Secondary" 
-                                        Disabled="@(isResending || string.IsNullOrWhiteSpace(verificationModel.Email))" 
-                                        Click="@OnResendCode" />
-                                </RadzenStack>
+                            <form @onsubmit="() => OnVerifyCode(verificationModel)" @onsubmit:preventDefault class="confirm-form">
+                                <div class="code-inputs">
+                                    @for (var i = 0; i < codeDigits.Length; i++)
+                                    {
+                                        <input type="text"
+                                               maxlength="1"
+                                               class="code-input"
+                                               value="@codeDigits[i]"
+                                               @ref="codeInputs[i]"
+                                               @oninput="e => OnDigitChanged(i, e)" />
+                                    }
+                                </div>
+
+                                    @if (hasError)
+                                    {
+                                        <div class="alert alert-danger confirm-error">
+                                            <strong>Hata</strong> @errorMessage
+                                        </div>
+                                    }
+
+                                    <div class="confirm-actions">
+                                        <button type="submit"
+                                                class="btn btn-gradient btn-auth-primary confirm-primary"
+                                                disabled="@(isVerifying || string.IsNullOrWhiteSpace(verificationModel.Code) || verificationModel.Code.Length != 6)">
+                                            Kodu Doğrula
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-outline confirm-secondary"
+                                            disabled="@(isResending || string.IsNullOrWhiteSpace(verificationModel.Email))"
+                                            @onclick="OnResendCode">
+                                            Kodu Tekrar Gönder
+                                        </button>
+                                    </div>
 
                                 @if (isVerifying || isResending)
                                 {
-                                    <div style="text-align: center; padding: 10px;">
-                                        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                                    <div class="confirm-spinner">
+                                        <div class="spinner"></div>
                                     </div>
                                 }
-                            </RadzenStack>
-                        </RadzenTemplateForm>
-                    </div>
-                }
-            </RadzenCard>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -87,6 +96,8 @@
     }
 
     VerificationModel verificationModel = new();
+    string[] codeDigits = new string[6];
+    ElementReference[] codeInputs = new ElementReference[6];
 
     class VerifyResponse
     {
@@ -111,8 +122,55 @@
             userEmail = emailValues[0];
             verificationModel.Email = userEmail ?? string.Empty;
         }
+
+        SyncDigitsFromCode();
         
         return Task.CompletedTask;
+    }
+
+    private void SyncDigitsFromCode()
+    {
+        Array.Clear(codeDigits, 0, codeDigits.Length);
+        var code = verificationModel.Code ?? string.Empty;
+        var len = Math.Min(code.Length, codeDigits.Length);
+        for (var i = 0; i < len; i++)
+        {
+            codeDigits[i] = code[i].ToString();
+        }
+    }
+
+    private void SyncCodeFromDigits()
+    {
+        verificationModel.Code = string.Concat(codeDigits);
+    }
+
+    private async Task OnDigitChanged(int index, ChangeEventArgs e)
+    {
+        if (index < 0 || index >= codeDigits.Length) return;
+
+        var value = e.Value?.ToString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            codeDigits[index] = string.Empty;
+        }
+        else
+        {
+            var c = value[0];
+            if (!char.IsDigit(c))
+            {
+                return;
+            }
+            codeDigits[index] = c.ToString();
+        }
+
+        SyncCodeFromDigits();
+
+        // Eğer bir rakam girildiyse otomatik olarak bir sonraki inputa geç
+        if (!string.IsNullOrWhiteSpace(codeDigits[index]) && index < codeInputs.Length - 1)
+        {
+            await codeInputs[index + 1].FocusAsync();
+        }
     }
 
     private async Task OnVerifyCode(VerificationModel model)
@@ -157,7 +215,7 @@
                 {
                     isSuccess = true;
                     hasError = false;
-                    NotificationService.Notify(NotificationSeverity.Success, "Başarılı", result.Message ?? "E-posta başarıyla onaylandı.");
+                    ToastService.Notify(ToastSeverity.Success, "Başarılı", result.Message ?? "E-posta başarıyla onaylandı.");
                 }
                 else
                 {
@@ -215,8 +273,9 @@
                 var result = await response.Content.ReadFromJsonAsync<VerifyResponse>();
                 if (result != null && result.Success)
                 {
-                    NotificationService.Notify(NotificationSeverity.Success, "Başarılı", result.Message ?? "Doğrulama kodu e-postanıza gönderildi.");
+                    ToastService.Notify(ToastSeverity.Success, "Başarılı", result.Message ?? "Doğrulama kodu e-postanıza gönderildi.");
                     verificationModel.Code = string.Empty; // Kodu temizle
+                    Array.Clear(codeDigits, 0, codeDigits.Length);
                 }
                 else
                 {

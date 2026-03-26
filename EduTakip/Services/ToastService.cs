@@ -1,92 +1,39 @@
 namespace EduTakip.Services
 {
+    public enum ToastSeverity { Success, Error, Warning, Info }
+
     public class ToastItem
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string Type { get; set; } = "info"; // success, error, warning, info
-        public string Title { get; set; } = string.Empty;
-        public string Message { get; set; } = string.Empty;
-        public int Duration { get; set; } = 3000; // milliseconds, 0 = no auto dismiss
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public ToastSeverity Severity { get; set; }
+        public string Summary { get; set; } = "";
+        public string Detail { get; set; } = "";
+        public int Duration { get; set; } = 4000;
+        public bool IsExiting { get; set; }
     }
 
-    public interface IToastService
+    public class ToastService
     {
-        void ShowSuccess(string title, string? message = null, int duration = 3000);
-        void ShowError(string title, string? message = null, int duration = 4000);
-        void ShowWarning(string title, string? message = null, int duration = 4000);
-        void ShowInfo(string title, string? message = null, int duration = 3000);
-        event Action<ToastItem>? OnShow;
-    }
+        public event Action? OnChange;
+        public List<ToastItem> Toasts { get; } = new();
 
-    public class ToastService : IToastService
-    {
-        private readonly List<Action<ToastItem>> _subscribers = new();
-        private readonly object _lock = new();
-
-        public event Action<ToastItem>? OnShow
+        public void Notify(ToastSeverity severity, string summary, string detail, int duration = 4000)
         {
-            add
+            var toast = new ToastItem
             {
-                lock (_lock)
-                {
-                    if (value != null)
-                    {
-                        _subscribers.Add(value);
-                    }
-                }
-            }
-            remove
-            {
-                lock (_lock)
-                {
-                    if (value != null)
-                    {
-                        _subscribers.Remove(value);
-                    }
-                }
-            }
+                Severity = severity,
+                Summary = summary,
+                Detail = detail,
+                Duration = duration
+            };
+            Toasts.Add(toast);
+            OnChange?.Invoke();
         }
 
-        public void ShowSuccess(string title, string? message = null, int duration = 3000)
+        public void Remove(string id)
         {
-            Show(new ToastItem { Type = "success", Title = title, Message = message ?? string.Empty, Duration = duration });
-        }
-
-        public void ShowError(string title, string? message = null, int duration = 4000)
-        {
-            Show(new ToastItem { Type = "error", Title = title, Message = message ?? string.Empty, Duration = duration });
-        }
-
-        public void ShowWarning(string title, string? message = null, int duration = 4000)
-        {
-            Show(new ToastItem { Type = "warning", Title = title, Message = message ?? string.Empty, Duration = duration });
-        }
-
-        public void ShowInfo(string title, string? message = null, int duration = 3000)
-        {
-            Show(new ToastItem { Type = "info", Title = title, Message = message ?? string.Empty, Duration = duration });
-        }
-
-        private void Show(ToastItem toast)
-        {
-            Action<ToastItem>[] subscribers;
-            lock (_lock)
-            {
-                subscribers = _subscribers.ToArray();
-            }
-
-            foreach (var subscriber in subscribers)
-            {
-                try
-                {
-                    subscriber?.Invoke(toast);
-                }
-                catch
-                {
-                    // Ignore errors from individual subscribers
-                }
-            }
+            Toasts.RemoveAll(t => t.Id == id);
+            OnChange?.Invoke();
         }
     }
 }
-

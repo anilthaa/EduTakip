@@ -1,4 +1,4 @@
-﻿@page "/ogrenci/derslerim"
+@page "/ogrenci/derslerim"
 <h3>Dersler</h3>
 @attribute [Authorize(Roles = "Öğrenci")]
 
@@ -6,32 +6,36 @@
 
 @if (dersler.Any())
 {
-	<RadzenRow Gap="1rem">
+	<div class="flex-row gap-sm" style="flex-wrap:wrap;">
 		@foreach (var ders in dersler)
 		{
-			<RadzenColumn Size="12" SizeMD="6" SizeLG="4">
-				<RadzenCard>
-					<h5 class="mb-3">@ders.DersAdi</h5>
+			<div style="flex:0 0 auto; width:100%; max-width:33.333%;">
+				<div class="card">
+					<div class="card-body">
+						<h5 class="mb-3">@ders.DersAdi</h5>
 
-					<p>
-						<b>Öğretmen:</b>
-						<p style="display:inline-block">@ders.OgretmenAdSoyad</p> <br />
-						<b>Sınıflar:</b> <p style="display:inline-block">@string.Join(",", ders.Siniflar)</p>
-					</p>
+						<p>
+							<b>Öğretmen:</b>
+							<p style="display:inline-block">@ders.OgretmenAdSoyad</p> <br />
+							<b>Sınıflar:</b> <p style="display:inline-block">@string.Join(",", ders.Siniflar)</p>
+						</p>
 
-					<RadzenButton Icon="Assignment" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => OdevlereGit(ders.DersId))"></RadzenButton>
-				</RadzenCard>
-			</RadzenColumn>
+						<button class="btn btn-primary btn-sm" @onclick="@(() => OdevlereGit(ders.DersId))"><span class="material-icons">Assignment</span></button>
+					</div>
+				</div>
+			</div>
 		}
-	</RadzenRow>
+	</div>
 }
 else
 {
-	<RadzenCard>
-		<p class="text-muted">
-			Henuz Herhangi bir derse katilmadiniz.
-		</p>
-	</RadzenCard>
+	<div class="card">
+		<div class="card-body">
+			<p class="text-muted">
+				Henuz Herhangi bir derse katilmadiniz.
+			</p>
+		</div>
+	</div>
 }
 @code {
 	List<OgrenciDersDto> dersler = new();
@@ -47,7 +51,7 @@ else
 			.Where(x =>
 				x.Kullanici_ID == kullaniciId &&
 				x.Tip == "Öğrenci" &&
-				x.DelDate == null)
+				(x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.Sinif_ID)
 			.ToListAsync();
 
@@ -58,7 +62,7 @@ else
 		dersler = await DbContext.DersProgramlari
 			.Where(x =>
 				sinifIdler.Contains(x.Sinif_ID) &&
-				x.DelDate == null &&
+				(x.DelDate == null || x.DelDate == default(DateTime)) &&
 				x.Aktif)
 			.GroupBy(x => x.Ders_ID)
 			.Select(g => new OgrenciDersDto

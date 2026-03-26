@@ -12,39 +12,35 @@
             <p>Hesabınıza giriş yapın</p>
         </div>
 
-        <RadzenTemplateForm Data="@loginModel" TItem="LoginModel" Submit="@OnLogin" class="auth-form">
+        <form @onsubmit="OnLogin" @onsubmit:preventDefault class="auth-form">
             <div class="auth-form-inner">
-                <RadzenFormField Text="E-Posta" Style="width:100%;">
-                    <ChildContent>
-                        <RadzenTextBox @bind-Value="loginModel.EPosta" Placeholder="ornek@email.com" Style="width:100%;" />
-                    </ChildContent>
-                </RadzenFormField>
+                <div class="form-group">
+                    <label class="form-label">E-Posta</label>
+                    <input type="text" class="form-control" @bind="loginModel.EPosta" placeholder="ornek@email.com" />
+                </div>
 
-                <RadzenFormField Text="Şifre" Style="width:100%;">
-                    <ChildContent>
-                        <RadzenPassword @bind-Value="loginModel.Sifre" Placeholder="Şifrenizi girin" Style="width:100%;" />
-                    </ChildContent>
-                </RadzenFormField>
+                <div class="form-group">
+                    <label class="form-label">Şifre</label>
+                    <input type="password" class="form-control" @bind="loginModel.Sifre" placeholder="Şifrenizi girin" />
+                </div>
 
                 <div class="auth-forgot">
-                    <RadzenLink Path="/forgot-password" Text="Şifremi Unuttum" />
+                    <a href="/forgot-password">Şifremi Unuttum</a>
                 </div>
 
                 <div class="auth-actions">
-                    <RadzenButton ButtonType="ButtonType.Submit"
-                                  Text="Giriş Yap"
-                                  Icon="login"
-                                  IsBusy="@isLoading"
-                                  ButtonStyle="ButtonStyle.Primary"
-                                  class="w-100"
-                                  Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" />
+                    <button type="submit"
+                            class="btn btn-gradient btn-auth-primary @(isLoading ? "btn-loading" : "")"
+                            disabled="@isLoading">
+                        Giriş Yap
+                    </button>
                 </div>
             </div>
-        </RadzenTemplateForm>
+        </form>
 
         <div class="auth-footer">
             <span>Hesabınız yok mu? </span>
-            <RadzenLink Path="/register" Text="Kayıt Ol" />
+            <a href="/register">Kayıt Ol</a>
         </div>
     </div>
 </div>
@@ -65,26 +61,18 @@
         if (firstRender)
         {
             await AuthStateService.InitializeAsync();
-            // Otomatik giriş yapılmıyor, kullanıcı manuel olarak giriş yapmalı
             isInitialized = true;
             StateHasChanged();
         }
     }
 
-    private async Task OnLogin(LoginModel model)
+    private async Task OnLogin()
     {
         if (isLoading) return;
 
-        // Temel validasyon
-        if (string.IsNullOrWhiteSpace(model.EPosta) || string.IsNullOrWhiteSpace(model.Sifre))
+        if (string.IsNullOrWhiteSpace(loginModel.EPosta) || string.IsNullOrWhiteSpace(loginModel.Sifre))
         {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Warning,
-                Summary = "Uyarı",
-                Detail = "Lütfen e-posta ve şifre alanlarını doldurun.",
-                Duration = 4000
-            });
+            ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Lütfen e-posta ve şifre alanlarını doldurun.", 4000);
             return;
         }
 
@@ -93,7 +81,7 @@
 
         try
         {
-            var loginRequest = new LoginRequest(model.EPosta, model.Sifre);
+            var loginRequest = new LoginRequest(loginModel.EPosta, loginModel.Sifre);
             var response = await AuthService.LoginAsync(loginRequest);
 
             if (response != null && !string.IsNullOrEmpty(response.Token))
@@ -102,58 +90,28 @@
 
                 if (success)
                 {
-                    NotificationService.Notify(new NotificationMessage
-                    {
-                        Severity = NotificationSeverity.Success,
-                        Summary = "Başarılı",
-                        Detail = "Giriş yapıldı",
-                        Duration = 2000
-                    });
+                    ToastService.Notify(ToastSeverity.Success, "Başarılı", "Giriş yapıldı", 2000);
 
                     await Task.Delay(500);
                     NavigationManager.NavigateTo("/dashboard");
                 }
                 else
                 {
-                    NotificationService.Notify(new NotificationMessage
-                    {
-                        Severity = NotificationSeverity.Error,
-                        Summary = "Hata",
-                        Detail = "Giriş yapılamadı",
-                        Duration = 4000
-                    });
+                    ToastService.Notify(ToastSeverity.Error, "Hata", "Giriş yapılamadı", 4000);
                 }
             }
             else
             {
-                NotificationService.Notify(new NotificationMessage
-                {
-                    Severity = NotificationSeverity.Error,
-                    Summary = "Hata",
-                    Detail = "E-posta veya şifre hatalı",
-                    Duration = 4000
-                });
+                ToastService.Notify(ToastSeverity.Error, "Hata", "E-posta veya şifre hatalı", 4000);
             }
         }
         catch (HttpRequestException ex)
         {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Hata",
-                Detail = ex.Message,
-                Duration = 5000
-            });
+            ToastService.Notify(ToastSeverity.Error, "Hata", ex.Message, 5000);
         }
         catch (Exception ex)
         {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Hata",
-                Detail = $"Bir hata oluştu: {ex.Message}",
-                Duration = 5000
-            });
+            ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}", 5000);
         }
         finally
         {
@@ -162,4 +120,3 @@
         }
     }
 }
-

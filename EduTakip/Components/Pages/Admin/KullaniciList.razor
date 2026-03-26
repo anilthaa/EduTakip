@@ -2,53 +2,61 @@
 
 @attribute [Authorize(Roles = "Admin")]
 
-<RadzenButton Text="Yeni Kullanici Ekle" Icon="add" ButtonStyle="ButtonStyle.Success" Click="@yeniKullanici" Style="margin-bottom:15px; border-radius:10px"></RadzenButton>
+<button class="btn btn-success btn-sm" style="margin-bottom:15px; border-radius:10px" @onclick="yeniKullanici"><span class="material-icons">add</span> Yeni Kullanici Ekle</button>
 
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Kullanici Listesi</h3>
-	<RadzenDataGrid Data="@kullanicilar" TItem="ItemKullanici" AllowPaging="true" PageSize="10">
-		<Columns>
-			<RadzenDataGridColumn Property="Adi" Title="Ad"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="Soyadi" Title="Soyad"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="EPosta" Title="E-Posta"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Title="Tip">
-				<Template Context="item">
-					@(item.KullaniciTip?.Adi ?? "")
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn Title="Durum">
-				<Template Context="item">
-					@{
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Kullanici Listesi</h3>
+		<div class="data-table-wrapper">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Ad</th>
+						<th>Soyad</th>
+						<th>E-Posta</th>
+						<th>Tip</th>
+						<th>Durum</th>
+						<th>Islemler</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var item in kullanicilar)
+					{
 						var durum = GetDurum(item);
 						var durumRenk = GetDurumRenk(item);
+						<tr>
+							<td>@item.Adi</td>
+							<td>@item.Soyadi</td>
+							<td>@item.EPosta</td>
+							<td>@(item.KullaniciTip?.Adi ?? "")</td>
+							<td>
+								<span class="badge" style="background:@durumRenk">@durum</span>
+							</td>
+							<td>
+								<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+									<button class="btn btn-primary btn-sm" @onclick="@(() => duzenleKullanici(item))"><span class="material-icons">edit</span></button>
+									@if (!item.Aktif)
+									{
+										<button class="btn btn-success btn-sm" @onclick="@(() => HesapAktiflestir(item))"><span class="material-icons">check_circle</span></button>
+									}
+									@if (item.Aktif && item.EmailConfirmed)
+									{
+										<button class="btn btn-warning btn-sm" @onclick="@(() => OnayiGeriAl(item))"><span class="material-icons">undo</span></button>
+									}
+									@if (item.Reddedildi)
+									{
+										<button class="btn btn-info btn-sm" @onclick="@(() => ReddiGeriAl(item))"><span class="material-icons">undo</span></button>
+									}
+									<button class="btn btn-danger btn-sm" @onclick="@(() => silKullanici(item))"><span class="material-icons">delete</span></button>
+								</div>
+							</td>
+						</tr>
 					}
-					<RadzenBadge Text="@durum" Style="@($"background:{durumRenk}")"></RadzenBadge>
-				</Template>
-			</RadzenDataGridColumn>
-
-			<RadzenDataGridColumn Title="Islemler">
-				<Template Context="item">
-					<div style="display: flex; gap: 8px; flex-wrap: wrap;">
-						<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => duzenleKullanici(item))"></RadzenButton>
-						@if (!item.Aktif)
-						{
-							<RadzenButton Icon="check_circle" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Click="@(() => HesapAktiflestir(item))"></RadzenButton>
-						}
-						@if (item.Aktif && item.EmailConfirmed)
-						{
-							<RadzenButton Icon="undo" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small" Click="@(() => OnayiGeriAl(item))"></RadzenButton>
-						}
-						@if (item.Reddedildi)
-						{
-							<RadzenButton Icon="undo" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" Click="@(() => ReddiGeriAl(item))"></RadzenButton>
-						}
-						<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => silKullanici(item))"></RadzenButton>
-					</div>
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
-</RadzenCard>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 @code {
 	List<ItemKullanici> kullanicilar = new();
 
@@ -66,11 +74,11 @@
 	}
 	async Task yeniKullanici()
 	{
-		var result=await DialogService.OpenAsync<KullaniciTnm>("Yeni Kullanici",
+		var result = await ModalService.OpenAsync<KullaniciTnm>("Yeni Kullanici",
 			new Dictionary<string, object>(),
-			new DialogOptions() { Width = "600px", Height = "400px" });
+			new ModalOptions { CssClass = "modal-md" });
 
-		if (result == true)
+		if (result is true)
 		{
 			await Listele();
 		}
@@ -78,10 +86,10 @@
 
 	async Task duzenleKullanici(ItemKullanici kullanici)
 	{
-		var result = await DialogService.OpenAsync<KullaniciTnm>("Kullanici Düzenle",
+		var result = await ModalService.OpenAsync<KullaniciTnm>("Kullanici Düzenle",
 			new Dictionary<string, object>() { { "KullaniciId", kullanici.ID } },
-			new DialogOptions() { Width = "600px", Height = "400px" });
-		if (result == true)
+			new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 		}
@@ -89,9 +97,8 @@
 
 	async Task silKullanici(ItemKullanici kullanici)
 	{
-		bool? result = await DialogService.Confirm("Kullaniciyi silmek istediginize emin misiniz?", "Onay",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
-		if (result == true)
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Kullaniciyi silmek istediginize emin misiniz?");
+		if (confirmed)
 		{
 			try
 			{
@@ -107,7 +114,7 @@
 					// Ögrenci ID'sini bul
 					var ogrenci = await DbContext.Ogrenciler
 						.IgnoreQueryFilters()
-						.Where(x => x.Kullanici_ID == kullanici.ID && x.DelDate == null)
+						.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 						.FirstOrDefaultAsync();
 
 					if (ogrenci != null)
@@ -120,7 +127,7 @@
 						// SinifKullanicilar tablosundaki kayitlari soft delete yap
 						var sinifKullanicilar = await DbContext.SinifKullanicilar
 							.IgnoreQueryFilters()
-							.Where(x => x.Kullanici_ID == kullanici.ID && x.DelDate == null)
+							.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 							.ToListAsync();
 
 						foreach (var sk in sinifKullanicilar)
@@ -133,7 +140,7 @@
 						// SinifOgrenciler tablosundaki kayitlari soft delete yap
 						var sinifOgrenciler = await DbContext.SinifOgrenciler
 							.IgnoreQueryFilters()
-							.Where(x => x.Ogrenci_ID == ogrenci.ID && x.DelDate == null)
+							.Where(x => x.Ogrenci_ID == ogrenci.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 							.ToListAsync();
 
 						foreach (var so in sinifOgrenciler)
@@ -146,7 +153,7 @@
 						// DersKatilimcilar tablosundaki kayitlari soft delete yap (Ogrenci_ID aslinda Kullanici_ID)
 						var dersKatilimcilar = await DbContext.DersKatilimcilar
 							.IgnoreQueryFilters()
-							.Where(x => x.Ogrenci_ID == kullanici.ID && x.DelDate == null)
+							.Where(x => x.Ogrenci_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 							.ToListAsync();
 
 						foreach (var dk in dersKatilimcilar)
@@ -159,12 +166,12 @@
 				}
 
 				await DbContext.SaveChangesAsync();
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Kullanıcı ve ilgili kayıtlar başarıyla silindi.");
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Kullanıcı ve ilgili kayıtlar başarıyla silindi.");
 				await Listele();
 			}
 			catch (Exception ex)
 			{
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Kullanıcı silinirken bir hata oluştu: {ex.Message}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Kullanıcı silinirken bir hata oluştu: {ex.Message}");
 			}
 		}
 	}
@@ -205,17 +212,16 @@
 
 	async Task OnayiGeriAl(ItemKullanici kullanici)
 	{
-		bool? result = await DialogService.Confirm("Bu hesabın onayını geri almak istediğinize emin misiniz? Kullanıcı tekrar bekleyen duruma dönecek ve giriş yapamayacaktır.", "Onayı Geri Al",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bu hesabın onayını geri almak istediğinize emin misiniz? Kullanıcı tekrar bekleyen duruma dönecek ve giriş yapamayacaktır.");
 		
-		if (result == true)
+		if (confirmed)
 		{
 			try
 			{
 				// Hesap zaten aktif değilse
 				if (!kullanici.Aktif)
 				{
-					NotificationService.Notify(NotificationSeverity.Info, "Bilgi", "Hesap zaten aktif değil.");
+					ToastService.Notify(ToastSeverity.Info, "Bilgi", "Hesap zaten aktif değil.");
 					await Listele();
 					return;
 				}
@@ -228,29 +234,28 @@
 				DbContext.Kullanicilar.Update(kullanici);
 				await DbContext.SaveChangesAsync();
 
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap onayı başarıyla geri alındı. Kullanıcı tekrar bekleyen duruma döndü.");
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Hesap onayı başarıyla geri alındı. Kullanıcı tekrar bekleyen duruma döndü.");
 				await Listele();
 			}
 			catch (Exception ex)
 			{
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
 			}
 		}
 	}
 
 	async Task ReddiGeriAl(ItemKullanici kullanici)
 	{
-		bool? result = await DialogService.Confirm("Bu hesabın reddini geri almak istediğinize emin misiniz? Kullanıcı tekrar bekleyen duruma dönecek ve onay bekleyecektir.", "Reddi Geri Al",
-			new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayır" });
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Bu hesabın reddini geri almak istediğinize emin misiniz? Kullanıcı tekrar bekleyen duruma dönecek ve onay bekleyecektir.");
 		
-		if (result == true)
+		if (confirmed)
 		{
 			try
 			{
 				// Hesap zaten reddedilmemişse
 				if (!kullanici.Reddedildi)
 				{
-					NotificationService.Notify(NotificationSeverity.Info, "Bilgi", "Hesap zaten reddedilmemiş.");
+					ToastService.Notify(ToastSeverity.Info, "Bilgi", "Hesap zaten reddedilmemiş.");
 					await Listele();
 					return;
 				}
@@ -264,23 +269,23 @@
 				DbContext.Kullanicilar.Update(kullanici);
 				await DbContext.SaveChangesAsync();
 
-				NotificationService.Notify(NotificationSeverity.Success, "Başarılı", "Hesap reddi başarıyla geri alındı. Kullanıcı tekrar bekleyen duruma döndü.");
+				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Hesap reddi başarıyla geri alındı. Kullanıcı tekrar bekleyen duruma döndü.");
 				await Listele();
 			}
 			catch (Exception ex)
 			{
-				NotificationService.Notify(NotificationSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
+				ToastService.Notify(ToastSeverity.Error, "Hata", $"Bir hata oluştu: {ex.Message}");
 			}
 		}
 	}
 
 	async Task HesapAktiflestir(ItemKullanici kullanici)
 	{
-		var result = await DialogService.OpenAsync<AccountActivationDialog>("Hesap Aktifleştirme",
+		var result = await ModalService.OpenAsync<AccountActivationDialog>("Hesap Aktifleştirme",
 			new Dictionary<string, object>() { { "Kullanici", kullanici } },
-			new DialogOptions() { Width = "500px", Height = "400px" });
+			new ModalOptions { CssClass = "modal-md" });
 		
-		if (result == true)
+		if (result is true)
 		{
 			await Listele();
 		}

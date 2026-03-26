@@ -2,32 +2,40 @@
 @attribute [Authorize(Roles ="Öğrenci")]
 <h3>Ders Programım</h3>
 
-<RadzenCard>
-	@if (list.Any())
-	{
-		<RadzenDataGrid Data="@list" TItem="ItemDersProgrami" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-			<Columns>
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Gün">
-					<Template Context="item">
-						@GetGunAdi(item.Gun)
-					</Template>
-				</RadzenDataGridColumn>
-				<RadzenDataGridColumn TItem="ItemDersProgrami" Title="Saat">
-					<Template Context="x">
-						@x.BaslangicSaati - @x.BitisSaati
-					</Template>
-				</RadzenDataGridColumn>
-
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Ders.Adi" Title="Ders"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDersProgrami" Property="Sinif.Adi" Title="Sınıf"></RadzenDataGridColumn>
-			</Columns>
-		</RadzenDataGrid>
-	}
-	else
-	{
-		<p class="text-muted">Henüz ders programınız bulunmamaktadır. Bir sınıfa katıldıktan sonra ders programınız burada görünecektir.</p>
-	}
-</RadzenCard>
+<div class="card">
+	<div class="card-body">
+		@if (list.Any())
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Gün</th>
+							<th>Saat</th>
+							<th>Ders</th>
+							<th>Sınıf</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in list)
+						{
+							<tr>
+								<td>@GetGunAdi(item.Gun)</td>
+								<td>@item.BaslangicSaati - @item.BitisSaati</td>
+								<td>@item.Ders.Adi</td>
+								<td>@item.Sinif.Adi</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		else
+		{
+			<p class="text-muted">Henüz ders programınız bulunmamaktadır. Bir sınıfa katıldıktan sonra ders programınız burada görünecektir.</p>
+		}
+	</div>
+</div>
 
 @code {
 	List<ItemDersProgrami> list = new();
@@ -57,7 +65,7 @@
 
 		// Öğrenci ID'sini bul
 		ogrenciId = await DbContext.Ogrenciler
-			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.DelDate == null)
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.ID)
 			.FirstOrDefaultAsync();
 
@@ -69,21 +77,21 @@
 		// Öğrencinin kayıtlı olduğu sınıfların adlarını bul
 		// Ana sınıf
 		var anaSinifAdi = await DbContext.Ogrenciler
-			.Where(x => x.ID == ogrenciId.Value && x.DelDate == null)
+			.Where(x => x.ID == ogrenciId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Include(x => x.Sinif)
 			.Select(x => x.Sinif.Adi)
 			.FirstOrDefaultAsync();
 
 		// Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
 		var katildigiSinifAdlari = await DbContext.SinifKullanicilar
-			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Include(x => x.Sinif)
 			.Select(x => x.Sinif.Adi)
 			.ToListAsync();
 
 		// SinifOgrenciler tablosundan katıldığı sınıflar
 		var sinifOgrenciSinifAdlari = await DbContext.SinifOgrenciler
-			.Where(x => x.Ogrenci_ID == ogrenciId.Value && x.DelDate == null)
+			.Where(x => x.Ogrenci_ID == ogrenciId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Include(x => x.Sinif)
 			.Select(x => x.Sinif.Adi)
 			.ToListAsync();
@@ -105,7 +113,7 @@
 
 		// Öğrencinin kayıtlı olduğu sınıfların ID'lerini bul
 		var tumSinifIdleri = await DbContext.Siniflar
-			.Where(s => tumSinifAdlari.Contains(s.Adi) && s.DelDate == null)
+			.Where(s => tumSinifAdlari.Contains(s.Adi) && (s.DelDate == null || s.DelDate == default(DateTime)))
 			.Select(s => s.ID)
 			.ToListAsync();
 
@@ -120,11 +128,10 @@
 			.Include(x => x.Ders)
 			.Include(x => x.Sinif)
 			.Where(x => tumSinifIdleri.Contains(x.Sinif_ID) 
-				&& x.DelDate == null 
+				&& (x.DelDate == null || x.DelDate == default(DateTime)) 
 				&& x.Aktif)
 			.OrderBy(x => x.Gun)
 			.ThenBy(x => x.BaslangicSaati)
 			.ToListAsync();
 	}
 }
-

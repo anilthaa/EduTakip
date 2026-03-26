@@ -1,43 +1,49 @@
 @page "/activate-account"
-@using System.Net.Http.Json
-@using Microsoft.AspNetCore.WebUtilities
-@using System.Text.Json.Serialization
-@inject HttpClient Http
-@inject NavigationManager NavigationManager
-@inject NotificationService NotificationService
 
 <PageTitle>Hesap Aktifleştirme</PageTitle>
 
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-6">
-            <RadzenCard>
-                @if (isProcessing)
-                {
-                    <div style="text-align: center; padding: 20px;">
-                        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-                        <p style="margin-top: 10px;">Hesap aktifleştiriliyor...</p>
-                    </div>
-                }
-                else if (isSuccess)
-                {
-                    <div style="text-align: center; padding: 20px;">
-                        <RadzenIcon Icon="check_circle" Style="font-size: 48px; color: green; margin-bottom: 20px;" />
-                        <h3>Hesap Başarıyla Aktifleştirildi!</h3>
-                        <p>Hesabınız aktifleştirildi. Artık giriş yapabilirsiniz.</p>
-                        <RadzenButton Text="Giriş Sayfasına Git" ButtonStyle="ButtonStyle.Primary" Click="@(() => NavigationManager.NavigateTo("/login"))" Style="margin-top: 20px;" />
-                    </div>
-                }
-                else if (hasError)
-                {
-                    <div style="text-align: center; padding: 20px;">
-                        <RadzenIcon Icon="error" Style="font-size: 48px; color: red; margin-bottom: 20px;" />
-                        <h3>Aktifleştirme Başarısız</h3>
-                        <p>@errorMessage</p>
-                        <RadzenButton Text="Giriş Sayfasına Git" ButtonStyle="ButtonStyle.Primary" Click="@(() => NavigationManager.NavigateTo("/login"))" Style="margin-top: 20px;" />
-                    </div>
-                }
-            </RadzenCard>
+            <div class="card">
+                <div class="card-body">
+                    @if (isProcessing)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <div class="spinner"></div>
+                            <p style="margin-top: 10px;">Hesap aktifleştiriliyor...</p>
+                        </div>
+                    }
+                    else if (isSuccess)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <span class="material-icons" style="font-size: 48px; color: green; margin-bottom: 20px;">check_circle</span>
+                            <h3>Hesap Başarıyla Aktifleştirildi!</h3>
+                            <p>Hesabınız aktifleştirildi. Artık giriş yapabilirsiniz.</p>
+                            <button type="button"
+                                    class="btn btn-gradient btn-auth-primary"
+                                    @onclick='() => NavigationManager.NavigateTo("/login")'
+                                    style="margin-top: 20px;">
+                                Giriş Sayfasına Git
+                            </button>
+                        </div>
+                    }
+                    else if (hasError)
+                    {
+                        <div style="text-align: center; padding: 20px;">
+                            <span class="material-icons" style="font-size: 48px; color: red; margin-bottom: 20px;">error</span>
+                            <h3>Aktifleştirme Başarısız</h3>
+                            <p>@errorMessage</p>
+                            <button type="button"
+                                    class="btn btn-gradient btn-auth-primary"
+                                    @onclick='() => NavigationManager.NavigateTo("/login")'
+                                    style="margin-top: 20px;">
+                                Giriş Sayfasına Git
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -87,7 +93,7 @@
                 {
                     isSuccess = true;
                     hasError = false;
-                    NotificationService.Notify(NotificationSeverity.Success, "Başarılı", result.Message ?? "Hesap başarıyla aktifleştirildi.");
+                    ToastService.Notify(ToastSeverity.Success, "Başarılı", result.Message ?? "Hesap başarıyla aktifleştirildi.");
                 }
                 else
                 {

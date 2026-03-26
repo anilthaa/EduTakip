@@ -1,49 +1,54 @@
-﻿@page "/ogrenci/odevlerim"
+@page "/ogrenci/odevlerim"
 @attribute [Authorize(Roles ="Öğrenci")]
 
-<RadzenCard>
+<div class="card">
+	<div class="card-body">
 		<h4>Ödevlerim</h4>
-	<RadzenDataGrid Data="@odevlerim" TItem="ItemOdev" ColumnWidth="200px" AllowPaging="true" PageSize="10">
-		<Columns>
-			<RadzenDataGridColumn Title="Ders">
-				<Template Context="item">
-					@item.Ders.Adi
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn Property="Baslik" Title="Başlık"></RadzenDataGridColumn>
-			<RadzenDataGridColumn Title="Son Teslim Tarihi">
-				<Template Context="item">
-					@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")
-				</Template>
-			</RadzenDataGridColumn>
-			<RadzenDataGridColumn Title="Durum">
-				<Template Context="item">
-					@if (TeslimEdildi(item.ID))
+		<div class="data-table-wrapper">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Ders</th>
+						<th>Başlık</th>
+						<th>Son Teslim Tarihi</th>
+						<th>Durum</th>
+						<th>İşlem</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var item in odevlerim)
 					{
-						<span style="color:green;">Teslim Edildi</span>
+						<tr>
+							<td>@item.Ders.Adi</td>
+							<td>@item.Baslik</td>
+							<td>@item.SonTeslimTarihi.ToString("dd.MM.yyyy HH:mm")</td>
+							<td>
+								@if (TeslimEdildi(item.ID))
+								{
+									<span style="color:green;">Teslim Edildi</span>
+								}
+								else
+								{
+									<span style="color:red;">Teslim Edilmedi</span>
+								}
+							</td>
+							<td>
+								@if (!TeslimEdildi(item.ID))
+								{
+									<button class="btn btn-success btn-sm" @onclick="@(() => OdevTeslimEt(item.ID))"><span class="material-icons">upload_file</span></button>
+								}
+								else
+								{
+									<button class="btn btn-outline btn-sm" @onclick="@(() => TeslimDetay(item.ID))"><span class="material-icons">description</span></button>
+								}
+							</td>
+						</tr>
 					}
-					else
-					{
-						<span style="color:red;">Teslim Edilmedi</span>
-					}
-				</Template>
-			</RadzenDataGridColumn>
-
-			<RadzenDataGridColumn Title="İşlem">
-				<Template Context="item">
-					@if (!TeslimEdildi(item.ID))
-					{
-						<RadzenButton Icon="upload_file" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Success" Click="@(() => OdevTeslimEt(item.ID))"></RadzenButton>
-					}
-					else
-					{
-						<RadzenButton Icon="description" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(()=>TeslimDetay(item.ID))"></RadzenButton>
-					}
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
-</RadzenCard>
+				</tbody>
+			</table>
+		</div>
+	</div>
+</div>
 
 @code {
 	int? kullaniciId;
@@ -72,7 +77,7 @@
 
 		// Öğrenci ID'sini bul
 		var ogrenciId = await DbContext.Ogrenciler
-			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.DelDate == null)
+			.Where(x => x.Kullanici_ID == kullaniciId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.ID)
 			.FirstOrDefaultAsync();
 
@@ -86,19 +91,19 @@
 		// Öğrencinin kayıtlı olduğu sınıfların ID'lerini bul
 		// Ana sınıf (nullable olabilir)
 		var anaSinifId = await DbContext.Ogrenciler
-			.Where(x => x.ID == ogrenciId && x.DelDate == null)
+			.Where(x => x.ID == ogrenciId && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.Sinif_ID)
 			.FirstOrDefaultAsync();
 
 		// Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
 		var katildigiSinifIdleri = await DbContext.SinifKullanicilar
-			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.Tip == "Öğrenci" && x.DelDate == null)
+			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.Sinif_ID)
 			.ToListAsync();
 
 		// SinifOgrenciler tablosundan katıldığı sınıflar
 		var sinifOgrenciSinifIdleri = await DbContext.SinifOgrenciler
-			.Where(x => x.Ogrenci_ID == ogrenciId && x.DelDate == null)
+			.Where(x => x.Ogrenci_ID == ogrenciId && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.Sinif_ID)
 			.ToListAsync();
 
@@ -125,7 +130,7 @@
 		if (tumSinifIdleri.Any())
 		{
 			ogrenciDersIdleri = await DbContext.DersProgramlari
-				.Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && x.DelDate == null && x.Aktif)
+				.Where(x => tumSinifIdleri.Contains(x.Sinif_ID) && (x.DelDate == null || x.DelDate == default(DateTime)) && x.Aktif)
 				.Select(x => x.Ders_ID)
 				.Distinct()
 				.ToListAsync();
@@ -142,13 +147,13 @@
 		// Öğrenci, sadece kendi katıldığı sınıflardaki derslerin ödevlerini görmeli
 		odevlerim = await DbContext.Odevler
 			.Include(x => x.Ders)
-			.Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && x.DelDate == null)
+			.Where(x => ogrenciDersIdleri.Contains(x.Ders_ID) && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.OrderByDescending(x => x.SonTeslimTarihi)
 			.ToListAsync();
 		
 		// ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
 		odevTeslimler = await DbContext.OdevTeslimler
-			.Where(x => x.Ogrenci_ID == kullaniciId.Value && x.DelDate == null)
+			.Where(x => x.Ogrenci_ID == kullaniciId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.ToListAsync();
 	}
 
@@ -159,13 +164,13 @@
 
 	async Task OdevTeslimEt(int odevId)
 	{
-		var result = await DialogService.OpenAsync<OdevTeslimTnm>("Ödevi Teslim Et",
+		var result = await ModalService.OpenAsync<OdevTeslimTnm>("Ödevi Teslim Et",
 			new Dictionary<string, object>()
 			{
 				{ "OdevId", odevId },
 			},
-			new DialogOptions() { Width = "600px"});
-		if (result == true)
+			new ModalOptions() { CssClass = "modal-md" });
+		if (result is true)
 		{
 			await Listele();
 			StateHasChanged();
@@ -173,11 +178,11 @@
 	}
 	async Task TeslimDetay(int odevId)
 	{
-		await DialogService.OpenAsync<OdevTeslimDetay>("Teslim Detayı",
+		await ModalService.OpenAsync<OdevTeslimDetay>("Teslim Detayı",
 			new Dictionary<string, object>()
 			{
 				{ "OdevId", odevId },
 			},
-			new DialogOptions() { Width = "600px", Height = "auto" });
+			new ModalOptions() { CssClass = "modal-md" });
 	}
 }

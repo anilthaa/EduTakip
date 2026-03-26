@@ -1,35 +1,41 @@
-﻿@page "/ogretmen/sinif/{sinifId:int}"
+@page "/ogretmen/sinif/{sinifId:int}"
 
 @attribute [Authorize(Roles ="Öğretmen")]
 
 <h3>@detay?.SinifAdi</h3>
 
-<RadzenRow Gap="1rem" class="mb-3">
-	<RadzenColumn Size="12" SizeMD="4">
-		<RadzenCard>
-			<h6>Öğrenci Sayısı</h6>
-			<h2>@detay?.OgrenciSayisi</h2>
+<div class="grid grid-3 mb-3" style="gap:1rem">
+	<div>
+		<div class="card">
+			<div class="card-body">
+				<h6>Öğrenci Sayısı</h6>
+				<h2>@detay?.OgrenciSayisi</h2>
 
-			<RadzenButton Text="Öğrencileri Gör" Icon="group" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" Click="@(()=>Ogrenciler())"></RadzenButton>
-		</RadzenCard>
-	</RadzenColumn>
+				<button class="btn btn-info btn-sm" @onclick="@(()=>Ogrenciler())"><span class="material-icons">group</span> Öğrencileri Gör</button>
+			</div>
+		</div>
+	</div>
 
-	<RadzenColumn Size="12" SizeMD="4">
-		<RadzenCard>
-			<h6>Ödevler</h6>
-			<h2>@detay?.OdevSayisi</h2>
+	<div>
+		<div class="card">
+			<div class="card-body">
+				<h6>Ödevler</h6>
+				<h2>@detay?.OdevSayisi</h2>
 
-			<RadzenButton Text="Ödev Ver" Icon="assignment" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(()=>OdevVer())"></RadzenButton>
-		</RadzenCard>
-	</RadzenColumn>
+				<button class="btn btn-primary btn-sm" @onclick="@(()=>OdevVer())"><span class="material-icons">assignment</span> Ödev Ver</button>
+			</div>
+		</div>
+	</div>
 
-	<RadzenColumn Size="12" SizeMD="4">
-		<RadzenCard>
-			<h6>Duyurular</h6>
-			<p class="text-muted">Henüz Yok</p>
-		</RadzenCard>
-	</RadzenColumn>
-</RadzenRow>
+	<div>
+		<div class="card">
+			<div class="card-body">
+				<h6>Duyurular</h6>
+				<p class="text-muted">Henüz Yok</p>
+			</div>
+		</div>
+	</div>
+</div>
 @code {
 	[Parameter] public int sinifId { get; set; }
 	SinifDashboardOgretmenDto detay;
@@ -43,21 +49,21 @@
 	{
 		// Bu sınıfta programlanmış derslerin ID'lerini bul
 		var sinifDersleri = await DbContext.DersProgramlari
-			.Where(dp => dp.Sinif_ID == sinifId && dp.DelDate == null && dp.Aktif)
+			.Where(dp => dp.Sinif_ID == sinifId && (dp.DelDate == null || dp.DelDate == default(DateTime)) && dp.Aktif)
 			.Select(dp => dp.Ders_ID)
 			.Distinct()
 			.ToListAsync();
 
 		detay = await DbContext.Siniflar
-			.Where(s => s.ID == sinifId && s.DelDate == null)
+			.Where(s => s.ID == sinifId && (s.DelDate == null || s.DelDate == default(DateTime)))
 			.Select(s => new SinifDashboardOgretmenDto
 				{
 					SinifId = s.ID,
 					SinifAdi = s.Adi,
 					OgrenciSayisi = DbContext.SinifKullanicilar
-						.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && o.DelDate == null),
+						.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && (o.DelDate == null || o.DelDate == default(DateTime))),
 					OdevSayisi = DbContext.Odevler
-						.Count(o => sinifDersleri.Contains(o.Ders_ID) && o.DelDate == null)
+						.Count(o => sinifDersleri.Contains(o.Ders_ID) && (o.DelDate == null || o.DelDate == default(DateTime)))
 				}).FirstOrDefaultAsync();
 
 	}
@@ -67,17 +73,17 @@
 	}
 	async Task OdevVer()
 	{
-		var result = await DialogService.OpenAsync<OdevTnm>("Yeni Ödev Ver",
+		var result = await ModalService.OpenAsync<OdevTnm>("Yeni Ödev Ver",
 		new Dictionary<string, object>
 			{
 			{"SinifId", sinifId }
 			},
-		new DialogOptions
+		new ModalOptions
 			{
-				Width = "600px",
+				CssClass = "modal-md",
 			});
 
-		if (result == true)
+		if (result is true)
 		{
 			await Yukle();
 			StateHasChanged();

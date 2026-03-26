@@ -1,33 +1,48 @@
 @page "/admin/dersler"
 @attribute [Authorize(Roles = "Admin")]
-	
-	<RadzenButton Text="Yeni Ders Ekle" Icon="add" Style="margin-bottom:15px;border-radius:10px;" ButtonStyle="ButtonStyle.Success" Click="@YeniDers" />
-<RadzenCard Style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
-	<h3 style="text-align:center;">Dersler</h3>
-	<RadzenDataGrid TItem="ItemDers" Data="@dersler" AllowPaging="true" PageSize="10">
-		<Columns>
-			@if (dersler == null || !dersler.Any())
-			{
-				<p>Henüz ders eklenmemis.</p>
-			}
-			<RadzenDataGridColumn TItem="ItemDers" Property="ID" Title="ID" Width="80px"></RadzenDataGridColumn>
-			<RadzenDataGridColumn TItem="ItemDers" Property="Adi" Title="Ders Adi" />
-			<RadzenDataGridColumn TItem="ItemDers" Property="Aciklama" Title="Açiklama" />
-			<RadzenDataGridColumn TItem="ItemDers" Title="Ögretmen">
-				<Template Context="item">
-					@item.Ogretmen?.Kullanici?.Adi @item.Ogretmen?.Kullanici?.Soyadi
-				</Template>
-			</RadzenDataGridColumn>
 
-			<RadzenDataGridColumn TItem="ItemDers" Title="Islemler">
-				<Template Context="item">
-					<RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small" Click="@(() => EditDers(item))" Style="margin-right: 10px;" />
-					<RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" Click="@(() => DeleteBirim(item))" />
-				</Template>
-			</RadzenDataGridColumn>
-		</Columns>
-	</RadzenDataGrid>
-</RadzenCard>
+<button class="btn btn-success btn-sm" style="margin-bottom:15px; border-radius:10px;" @onclick="YeniDers"><span class="material-icons">add</span> Yeni Ders Ekle</button>
+
+<div class="card" style="margin:0; margin-left:0; padding:20px; width:100%; max-width:none; box-sizing:border-box">
+	<div class="card-body">
+		<h3 style="text-align:center;">Dersler</h3>
+		@if (dersler == null || !dersler.Any())
+		{
+			<p>Henüz ders eklenmemis.</p>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th style="width:80px">ID</th>
+							<th>Ders Adi</th>
+							<th>Açiklama</th>
+							<th>Ögretmen</th>
+							<th>Islemler</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var item in dersler)
+						{
+							<tr>
+								<td>@item.ID</td>
+								<td>@item.Adi</td>
+								<td>@item.Aciklama</td>
+								<td>@item.Ogretmen?.Kullanici?.Adi @item.Ogretmen?.Kullanici?.Soyadi</td>
+								<td>
+									<button class="btn btn-primary btn-sm" style="margin-right: 10px;" @onclick="@(() => EditDers(item))"><span class="material-icons">edit</span></button>
+									<button class="btn btn-danger btn-sm" @onclick="@(() => DeleteBirim(item))"><span class="material-icons">delete</span></button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
 
 @code {
 	List<ItemDers> dersler = new();
@@ -49,32 +64,31 @@
 
 	async Task YeniDers()
 	{
-		var result = await DialogService.OpenAsync<DersTnm>("Yeni Ders", new Dictionary<string, object>(),
-
-			new DialogOptions() { Width = "600px"});
-		if (result == true)
+		var result = await ModalService.OpenAsync<DersTnm>("Yeni Ders", new Dictionary<string, object>(),
+			new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 			await Listele();
 	}
 
 	async Task EditDers(ItemDers ders)
 	{
-		var result = await DialogService.OpenAsync<DersTnm>("Ders Düzenle", new Dictionary<string, object>()
+		var result = await ModalService.OpenAsync<DersTnm>("Ders Düzenle", new Dictionary<string, object>()
 		{
 			{ "DersId", ders.ID }
-		}, new DialogOptions() { Width = "600px" });
-		if (result == true)
+		}, new ModalOptions { CssClass = "modal-md" });
+		if (result is true)
 			await Listele();
 	}
 
 	async Task DeleteBirim(ItemDers item)
 	{
-		bool? result = await DialogService.Confirm($"'{item.Adi}' birimini silmek istediginize emin misiniz?", "Birim Silme Onayi", new ConfirmOptions() { OkButtonText = "Evet", CancelButtonText = "Hayir" });
-		if (result == true)
+		bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"'{item.Adi}' birimini silmek istediginize emin misiniz?");
+		if (confirmed)
 		{
-			item.DelUser = 0; // TODO: Gerçek kullanici ID'si kullanilacak
+			item.DelUser = 0;
 			item.DelDate = DateTime.UtcNow;
 			DbContext.Dersler.Update(item);
-			NotificationService.Notify(NotificationSeverity.Success, "Ba?ar?l?", "Birim ba?ar?yla silindi.");
+			ToastService.Notify(ToastSeverity.Success, "Ba?ar?l?", "Birim ba?ar?yla silindi.");
 			await DbContext.SaveChangesAsync();
 			await Listele();
 			StateHasChanged();
