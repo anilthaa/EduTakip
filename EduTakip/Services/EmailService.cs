@@ -29,7 +29,7 @@ namespace EduTakip.Services
                 var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
                 var smtpPort = _configuration.GetValue<int>("Email:SmtpPort", 587);
                 var smtpUsername = _configuration["Email:SmtpUsername"];
-                var smtpPassword = _configuration["Email:SmtpPassword"];
+                var smtpPassword = _configuration["Email:SmtpPassword"]?.Replace(" ", "");
                 var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
                 var fromName = _configuration["Email:FromName"] ?? "EduTakip";
 
@@ -87,7 +87,7 @@ namespace EduTakip.Services
                 var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
                 var smtpPort = _configuration.GetValue<int>("Email:SmtpPort", 587);
                 var smtpUsername = _configuration["Email:SmtpUsername"];
-                var smtpPassword = _configuration["Email:SmtpPassword"];
+                var smtpPassword = _configuration["Email:SmtpPassword"]?.Replace(" ", "");
                 var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
                 var fromName = _configuration["Email:FromName"] ?? "EduTakip";
 
@@ -146,7 +146,8 @@ namespace EduTakip.Services
                 var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
                 var smtpPort = _configuration.GetValue<int>("Email:SmtpPort", 587);
                 var smtpUsername = _configuration["Email:SmtpUsername"];
-                var smtpPassword = _configuration["Email:SmtpPassword"];
+                // Gmail app password boşluksuz kullanılmalı (appsettings'te boşlukla yazılmış olabilir)
+                var smtpPassword = _configuration["Email:SmtpPassword"]?.Replace(" ", "");
                 var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
                 var fromName = _configuration["Email:FromName"] ?? "EduTakip";
 
@@ -206,7 +207,7 @@ namespace EduTakip.Services
                 var smtpHost = _configuration["Email:SmtpHost"] ?? "smtp.gmail.com";
                 var smtpPort = _configuration.GetValue<int>("Email:SmtpPort", 587);
                 var smtpUsername = _configuration["Email:SmtpUsername"];
-                var smtpPassword = _configuration["Email:SmtpPassword"];
+                var smtpPassword = _configuration["Email:SmtpPassword"]?.Replace(" ", "");
                 var fromEmail = _configuration["Email:FromEmail"] ?? smtpUsername;
                 var fromName = _configuration["Email:FromName"] ?? "EduTakip";
 

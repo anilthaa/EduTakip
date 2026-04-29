@@ -347,14 +347,25 @@ authGroup.MapPost("/register", async (RegisterRequest request, EduTakipDBContext
     // E-posta onay kodu gönder
     var emailSent = await emailService.SendConfirmationCodeEmailAsync(email, confirmationCode);
 
+    var dto = new AuthUserDto(user.ID, user.Adi, user.Soyadi, user.EPosta, user.KullaniciTip.Adi, user.KullaniciTip_ID);
+    
     if (!emailSent)
     {
-        // E-posta gönderilemediyse log'a yaz ama kullanıcıyı silme (kullanıcı admin onayı bekleyebilir)
-        // Logger kullanılamıyor, bu yüzden sadece devam ediyoruz
+        // Email gönderilemediyse kullanıcıya bildir — kodu "Kodu Tekrar Gönder" butonuyla yeniden isteyebilir
+        return Results.Created($"/api/auth/users/{user.ID}", new 
+        { 
+            message = "Kayıt başarılı fakat doğrulama e-postası gönderilemedi. Lütfen doğrulama sayfasındaki 'Kodu Tekrar Gönder' butonunu kullanın.", 
+            user = dto,
+            emailSent = false
+        });
     }
 
-    var dto = new AuthUserDto(user.ID, user.Adi, user.Soyadi, user.EPosta, user.KullaniciTip.Adi);
-    return Results.Created($"/api/auth/users/{user.ID}", new { message = "Kayıt başarılı. E-postanıza gönderilen doğrulama kodunu girin. Ayrıca hesabınızın admin tarafından onaylanması gerekmektedir.", user = dto });
+    return Results.Created($"/api/auth/users/{user.ID}", new 
+    { 
+        message = "Kayıt başarılı. E-postanıza gönderilen doğrulama kodunu girin. Ayrıca hesabınızın admin tarafından onaylanması gerekmektedir.", 
+        user = dto,
+        emailSent = true
+    });
 });
 
 authGroup.MapPost("/login", async (LoginRequest request, EduTakipDBContext db, IPasswordHasher hasher, IJwtService jwtService) =>
@@ -388,7 +399,7 @@ authGroup.MapPost("/login", async (LoginRequest request, EduTakipDBContext db, I
     }
 
     var token = jwtService.CreateToken(user);
-    var dto = new AuthUserDto(user.ID, user.Adi, user.Soyadi, user.EPosta, user.KullaniciTip?.Adi ?? string.Empty);
+    var dto = new AuthUserDto(user.ID, user.Adi, user.Soyadi, user.EPosta, user.KullaniciTip?.Adi ?? string.Empty, user.KullaniciTip_ID);
 
     return Results.Ok(new AuthResponse(token, dto));
 });

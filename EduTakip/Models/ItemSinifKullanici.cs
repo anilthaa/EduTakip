@@ -6,6 +6,6 @@
         public ItemSinif Sinif { get; set; }
         public int Kullanici_ID { get; set; }
         public ItemKullanici Kullanici { get; set; }
-        public string Tip { get; set; }
+        public SinifKullaniciTip Tip { get; set; }
     }
 }

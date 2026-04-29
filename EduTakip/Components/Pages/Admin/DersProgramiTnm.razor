@@ -22,17 +22,17 @@
 					}
 				</select>
 			</div>
-			<div class="col-6 mb-3">
-				<label class="form-label">Başlangıç Saati</label>
-				<input type="time" class="form-control" @bind="baslangicSaati" @bind:format="HH:mm" />
-			</div>
-			<div class="col-6 mb-3">
-				<label class="form-label">Bitiş Saati</label>
-				<input type="time" class="form-control" @bind="bitisSaati" @bind:format="HH:mm" />
-			</div>
+		<div class="col-6 mb-3">
+			<label class="form-label">Başlangıç Saati</label>
+			<input type="time" class="form-control" @bind="baslangicSaatiOnly" />
+		</div>
+		<div class="col-6 mb-3">
+			<label class="form-label">Bitiş Saati</label>
+			<input type="time" class="form-control" @bind="bitisSaatiOnly" />
+		</div>
 			<div class="col-12 mb-3">
 				<label class="form-label">Sınıf</label>
-				<select class="form-select" @bind="model.SinifID">
+				<select class="form-select" @bind="model.Sinif_ID">
 					<option value="">Sınıf Seçin</option>
 					@foreach (var s in siniflar)
 					{
@@ -61,8 +61,8 @@
 	List<ItemDers> dersler = new();
 	List<ItemSinif> siniflar = new();
 	List<GunItem> gunler = new();
-	DateTime baslangicSaati;
-	DateTime bitisSaati;
+	TimeOnly baslangicSaatiOnly = new TimeOnly(9, 0);
+	TimeOnly bitisSaatiOnly = new TimeOnly(10, 0);
 
 	public class GunItem
 	{
@@ -103,6 +103,9 @@
 				return;
 			}
 
+			// Mevcut kayıttaki değerleri TimeOnly binding değişkenlerine aktar
+			baslangicSaatiOnly = TimeOnly.FromTimeSpan(model.BaslangicSaati);
+			bitisSaatiOnly = TimeOnly.FromTimeSpan(model.BitisSaati);
 		}
 		else
 		{
@@ -121,7 +124,7 @@
 				return;
 			}
 
-			if (model.SinifID == 0)
+			if (model.Sinif_ID == 0)
 			{
 				ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Lütfen bir sınıf seçin.");
 				return;
@@ -134,22 +137,20 @@
 				return;
 			}
 
-			var sinifVarMi = await DbContext.Siniflar.AnyAsync(s => s.ID == model.SinifID && (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif);
+			var sinifVarMi = await DbContext.Siniflar.AnyAsync(s => s.ID == model.Sinif_ID && (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif);
 			if (!sinifVarMi)
 			{
 				ToastService.Notify(ToastSeverity.Error, "Hata", "Seçilen sınıf bulunamadı veya pasif durumda. Lütfen geçerli bir sınıf seçin.");
 				return;
 			}
 
-			if (baslangicSaati >= bitisSaati)
+			if (baslangicSaatiOnly >= bitisSaatiOnly)
 			{
 				ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Başlangıç saati bitiş saatinden büyük veya eşit olamaz.");
 				return;
 			}
-			model.BaslangicSaati = baslangicSaati.TimeOfDay;
-			model.BitisSaati = bitisSaati.TimeOfDay;
-
-			model.Sinif_ID = model.SinifID;
+			model.BaslangicSaati = baslangicSaatiOnly.ToTimeSpan();
+			model.BitisSaati = bitisSaatiOnly.ToTimeSpan();
 
 			int ogretmenId=await DbContext.Dersler.Where(x => x.ID == model.Ders_ID).Select(x => x.Ogretmen_ID).FirstOrDefaultAsync();
 

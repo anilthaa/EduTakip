@@ -16,7 +16,7 @@ namespace EduTakip.Models
         [property: Required, EmailAddress] string EPosta,
         [property: Required] string Sifre);
 
-    public record AuthUserDto(int ID, string Adi, string Soyadi, string EPosta, string KullaniciTip);
+    public record AuthUserDto(int ID, string Adi, string Soyadi, string EPosta, string KullaniciTip, int KullaniciTipId = 0);
 
     public record AuthResponse(string Token, AuthUserDto Kullanici);
 

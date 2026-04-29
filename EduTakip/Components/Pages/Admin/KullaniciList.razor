@@ -107,63 +107,70 @@
 				kullanici.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
 				DbContext.Kullanicilar.Update(kullanici);
 
-				// Ögrenci ise, ilgili tablolardaki kayitlari da soft delete yap
-				var kullaniciTip = kullanici.KullaniciTip?.Adi?.ToLower() ?? "";
-				if (kullaniciTip.Contains("ögrenci") || kullaniciTip.Contains("ogrenci") || kullaniciTip.Contains("student"))
+			// Öğrenci kaydını soft delete yap (tip adına bakmaksızın kontrol et)
+			var ogrenci = await DbContext.Ogrenciler
+				.IgnoreQueryFilters()
+				.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+				.FirstOrDefaultAsync();
+
+			if (ogrenci != null)
+			{
+				ogrenci.DelDate = DateTime.UtcNow;
+				ogrenci.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+				DbContext.Ogrenciler.Update(ogrenci);
+
+				// SinifOgrenciler tablosundaki kayitlari soft delete yap
+				var sinifOgrenciler = await DbContext.SinifOgrenciler
+					.IgnoreQueryFilters()
+					.Where(x => x.Ogrenci_ID == ogrenci.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+					.ToListAsync();
+
+				foreach (var so in sinifOgrenciler)
 				{
-					// Ögrenci ID'sini bul
-					var ogrenci = await DbContext.Ogrenciler
-						.IgnoreQueryFilters()
-						.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
-						.FirstOrDefaultAsync();
-
-					if (ogrenci != null)
-					{
-						// ItemOgrenci'yi soft delete yap
-						ogrenci.DelDate = DateTime.UtcNow;
-						ogrenci.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
-						DbContext.Ogrenciler.Update(ogrenci);
-
-						// SinifKullanicilar tablosundaki kayitlari soft delete yap
-						var sinifKullanicilar = await DbContext.SinifKullanicilar
-							.IgnoreQueryFilters()
-							.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
-							.ToListAsync();
-
-						foreach (var sk in sinifKullanicilar)
-						{
-							sk.DelDate = DateTime.UtcNow;
-							sk.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
-							DbContext.SinifKullanicilar.Update(sk);
-						}
-
-						// SinifOgrenciler tablosundaki kayitlari soft delete yap
-						var sinifOgrenciler = await DbContext.SinifOgrenciler
-							.IgnoreQueryFilters()
-							.Where(x => x.Ogrenci_ID == ogrenci.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
-							.ToListAsync();
-
-						foreach (var so in sinifOgrenciler)
-						{
-							so.DelDate = DateTime.UtcNow;
-							so.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
-							DbContext.SinifOgrenciler.Update(so);
-						}
-
-						// DersKatilimcilar tablosundaki kayitlari soft delete yap (Ogrenci_ID aslinda Kullanici_ID)
-						var dersKatilimcilar = await DbContext.DersKatilimcilar
-							.IgnoreQueryFilters()
-							.Where(x => x.Ogrenci_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
-							.ToListAsync();
-
-						foreach (var dk in dersKatilimcilar)
-						{
-							dk.DelDate = DateTime.UtcNow;
-							dk.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
-							DbContext.DersKatilimcilar.Update(dk);
-						}
-					}
+					so.DelDate = DateTime.UtcNow;
+					so.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+					DbContext.SinifOgrenciler.Update(so);
 				}
+
+				// DersKatilimcilar tablosundaki kayitlari soft delete yap
+				var dersKatilimcilar = await DbContext.DersKatilimcilar
+					.IgnoreQueryFilters()
+					.Where(x => x.Ogrenci_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+					.ToListAsync();
+
+				foreach (var dk in dersKatilimcilar)
+				{
+					dk.DelDate = DateTime.UtcNow;
+					dk.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+					DbContext.DersKatilimcilar.Update(dk);
+				}
+			}
+
+			// Öğretmen kaydını soft delete yap (tip adına bakmaksızın kontrol et)
+			var ogretmen = await DbContext.Ogretmenler
+				.IgnoreQueryFilters()
+				.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+				.FirstOrDefaultAsync();
+
+			if (ogretmen != null)
+			{
+				ogretmen.DelDate = DateTime.UtcNow;
+				ogretmen.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+				DbContext.Ogretmenler.Update(ogretmen);
+			}
+
+			// SinifKullanicilar tablosundaki kayitlari soft delete yap (her iki tip için)
+			var sinifKullanicilar = await DbContext.SinifKullanicilar
+				.IgnoreQueryFilters()
+				.Where(x => x.Kullanici_ID == kullanici.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+				.ToListAsync();
+
+			foreach (var sk in sinifKullanicilar)
+			{
+				sk.DelDate = DateTime.UtcNow;
+				sk.DelUser = AuthStateService.CurrentUser?.ID ?? 1;
+				DbContext.SinifKullanicilar.Update(sk);
+			}
 
 				await DbContext.SaveChangesAsync();
 				ToastService.Notify(ToastSeverity.Success, "Başarılı", "Kullanıcı ve ilgili kayıtlar başarıyla silindi.");

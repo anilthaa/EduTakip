@@ -37,20 +37,28 @@
 
 	async Task Yukle()
 	{
-		detay = await DbContext.Siniflar
+		var sinif = await DbContext.Siniflar
 			.Where(s => s.ID == sinifId && (s.DelDate == null || s.DelDate == default(DateTime)))
-			.Select(s => new SinifDetayDto
-				{
-					SinifId = s.ID,
-					SinifAdi = s.Adi,
+			.FirstOrDefaultAsync();
 
-					OgretmenAdSoyad = DbContext.SinifKullanicilar
-					.Where(o => o.Sinif_ID == s.ID && o.Tip == "Öğretmen" && (o.DelDate == null || o.DelDate == default(DateTime)))
-					.Select(o => o.Kullanici.Adi + " " + o.Kullanici.Soyadi)
-					.FirstOrDefault() ?? "-",
+		if (sinif == null) return;
 
-					OgrenciSayisi = DbContext.SinifKullanicilar
-					.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && (o.DelDate == null || o.DelDate == default(DateTime)))
-				}).FirstOrDefaultAsync();
+		// Öğretmen adını ayrı sorgu ile al
+		var ogretmenAdSoyad = await DbContext.SinifKullanicilar
+			.Where(o => o.Sinif_ID == sinifId && o.Tip == SinifKullaniciTip.Ogretmen && (o.DelDate == null || o.DelDate == default(DateTime)))
+			.Select(o => o.Kullanici.Adi + " " + o.Kullanici.Soyadi)
+			.FirstOrDefaultAsync() ?? "-";
+
+		// Öğrenci sayısını ayrı sorgu ile al
+		var ogrenciSayisi = await DbContext.SinifKullanicilar
+			.CountAsync(o => o.Sinif_ID == sinifId && o.Tip == SinifKullaniciTip.Ogrenci && (o.DelDate == null || o.DelDate == default(DateTime)));
+
+		detay = new SinifDetayDto
+		{
+			SinifId = sinif.ID,
+			SinifAdi = sinif.Adi,
+			OgretmenAdSoyad = ogretmenAdSoyad,
+			OgrenciSayisi = ogrenciSayisi
+		};
 	}
 }

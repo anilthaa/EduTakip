@@ -5,6 +5,6 @@
         public int Ders_ID { get; set; }
         public ItemDers Ders { get; set; }
         public int Ogrenci_ID { get; set; }
-        public ItemKullanici Ogrenci { get; set; }
+        public ItemOgrenci Ogrenci { get; set; } = null!;
     }
 }

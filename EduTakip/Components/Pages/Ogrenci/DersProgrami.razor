@@ -84,7 +84,7 @@
 
 		// Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
 		var katildigiSinifAdlari = await DbContext.SinifKullanicilar
-			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && x.Tip == SinifKullaniciTip.Ogrenci && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Include(x => x.Sinif)
 			.Select(x => x.Sinif.Adi)
 			.ToListAsync();

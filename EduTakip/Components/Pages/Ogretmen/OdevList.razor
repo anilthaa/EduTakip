@@ -57,17 +57,29 @@
 
 @code {
 
-	List<ItemOdev> list;
-
-	int ogretmenId = 1; //Simdilik
+	List<ItemOdev> list = new();
+	int ogretmenId;
 
 	protected override async Task OnInitializedAsync()
 	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			NavigationManager.NavigateTo("/login");
+			return;
+		}
+
+		ogretmenId = await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
 		await Listele();
 	}
 
 	async Task Listele()
 	{
+		if (ogretmenId == 0) return;
+
 		list = await DbContext.Odevler
 			.Include(x => x.Ders)
 			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && (x.DelDate == null || x.DelDate == default(DateTime)))

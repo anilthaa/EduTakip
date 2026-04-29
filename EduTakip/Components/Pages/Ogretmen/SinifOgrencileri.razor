@@ -36,20 +36,30 @@
 
 	async Task Yukle()
 	{
-		ogrenciler = await DbContext.SinifKullanicilar
-			.Where(x => x.Sinif_ID == sinifId && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)))
-			.Join(
-				DbContext.Ogrenciler.Include(o => o.Kullanici),
-				sk => sk.Kullanici_ID,
-				o => o.Kullanici_ID,
-				(sk, o) => new SinifOgrenciDto
-					{
-						SinifKullaniciId = sk.ID,
-						Ad = o.Kullanici.Adi,
-						Soyad = o.Kullanici.Soyadi,
-						OgrenciNo = o.OgrenciNo
-					})
-				.ToListAsync();
+		// SinifKullanicilar üzerinden Include ile Kullanici bilgisini al
+		var sinifKullanicilar = await DbContext.SinifKullanicilar
+			.Include(x => x.Kullanici)
+			.Where(x => x.Sinif_ID == sinifId
+				&& x.Tip == SinifKullaniciTip.Ogrenci
+				&& (x.DelDate == null || x.DelDate == default(DateTime)))
+			.ToListAsync();
+
+		// Kullanici_ID listesini çıkar
+		var kullaniciIds = sinifKullanicilar.Select(x => x.Kullanici_ID).ToList();
+
+		// OgrenciNo bilgisini ayrı sorgu ile al
+		var ogrenciNolar = await DbContext.Ogrenciler
+			.IgnoreQueryFilters()
+			.Where(o => kullaniciIds.Contains(o.Kullanici_ID) && (o.DelDate == null || o.DelDate == default(DateTime)))
+			.ToDictionaryAsync(o => o.Kullanici_ID, o => o.OgrenciNo);
+
+		ogrenciler = sinifKullanicilar.Select(sk => new SinifOgrenciDto
+		{
+			SinifKullaniciId = sk.ID,
+			Ad = sk.Kullanici?.Adi ?? "",
+			Soyad = sk.Kullanici?.Soyadi ?? "",
+			OgrenciNo = ogrenciNolar.TryGetValue(sk.Kullanici_ID, out var no) ? no : "-"
+		}).ToList();
 	}
 
 	async Task OgrenciCikar(int sinifOgrenciId)

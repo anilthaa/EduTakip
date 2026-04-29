@@ -97,7 +97,7 @@
 
 		// Katıldığı diğer sınıflar (SinifKullanicilar tablosundan)
 		var katildigiSinifIdleri = await DbContext.SinifKullanicilar
-			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.Tip == "Öğrenci" && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Where(x => x.Kullanici_ID == kullaniciId.Value && x.Tip == SinifKullaniciTip.Ogrenci && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.Sinif_ID)
 			.ToListAsync();
 
@@ -151,9 +151,9 @@
 			.OrderByDescending(x => x.SonTeslimTarihi)
 			.ToListAsync();
 		
-		// ItemOdevTeslim'de Ogrenci_ID aslında Kullanici_ID olarak kullanılıyor
+		// Ogrenci_ID artık Ogrenciler.ID FK'sına bağlı
 		odevTeslimler = await DbContext.OdevTeslimler
-			.Where(x => x.Ogrenci_ID == kullaniciId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Where(x => x.Ogrenci_ID == ogrenciId && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.ToListAsync();
 	}
 

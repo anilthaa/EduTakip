@@ -19,7 +19,7 @@
 	</div>
 	<div class="form-group" style="margin-top:10px">
 		<label class="form-label">Son Teslim Tarihi</label>
-		<input type="datetime-local" class="form-control" @bind="model.SonTeslimTarihi" />
+		<input type="datetime-local" class="form-control" @bind="sonTeslimTarihi" @bind:format="yyyy-MM-ddTHH:mm" />
 	</div>
 	<div class="mt-3 text-center">
 		<button type="submit" class="btn btn-success btn-sm" style="margin-right:10px;">Kaydet</button>
@@ -34,6 +34,7 @@
 	[Parameter] public int? OdevId { get; set; }
 	[Parameter] public int SinifId { get; set; }
 	int ogretmenId;
+	DateTime sonTeslimTarihi = DateTime.Now.AddDays(7);
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -52,37 +53,28 @@
 			.Select(x => x.ID)
 			.FirstAsync();
 
+			// Önce ders programından sınıfa atanmış dersleri dene
 			if (SinifId > 0)
 			{
-				var sinifAdi = await DbContext.Siniflar
-					.Where(s => s.ID == SinifId && (s.DelDate == null || s.DelDate == default(DateTime)))
-					.Select(s => s.Adi)
-					.FirstOrDefaultAsync();
+				var sinifDersleri = await DbContext.DersProgramlari
+					.Where(dp => dp.Sinif_ID == SinifId && (dp.DelDate == null || dp.DelDate == default(DateTime)) && dp.Aktif)
+					.Select(dp => dp.Ders_ID)
+					.Distinct()
+					.ToListAsync();
 
-				if (!string.IsNullOrEmpty(sinifAdi))
+				if (sinifDersleri.Any())
 				{
-					var sinifDersleri = await DbContext.DersProgramlari
-						.Where(dp => dp.Sinif_ID == SinifId && (dp.DelDate == null || dp.DelDate == default(DateTime)) && dp.Aktif)
-						.Select(dp => dp.Ders_ID)
-						.Distinct()
-						.ToListAsync();
-
 					dersler = await DbContext.Dersler
-						.Where(x => x.Ogretmen_ID == ogretmenId && 
-								   (x.DelDate == null || x.DelDate == default(DateTime)) && 
+						.Where(x => x.Ogretmen_ID == ogretmenId &&
+								   (x.DelDate == null || x.DelDate == default(DateTime)) &&
 								   sinifDersleri.Contains(x.ID))
 						.OrderBy(x => x.Adi)
 						.ToListAsync();
 				}
-				else
-				{
-					dersler = await DbContext.Dersler
-						.Where(x => x.Ogretmen_ID == ogretmenId && (x.DelDate == null || x.DelDate == default(DateTime)))
-						.OrderBy(x => x.Adi)
-						.ToListAsync();
-				}
 			}
-			else
+
+			// Ders programından ders bulunamadıysa öğretmenin tüm derslerini göster
+			if (!dersler.Any())
 			{
 				dersler = await DbContext.Dersler
 					.Where(x => x.Ogretmen_ID == ogretmenId && (x.DelDate == null || x.DelDate == default(DateTime)))
@@ -101,10 +93,12 @@
 					return;
 				}
 				model = odev;
+				sonTeslimTarihi = model.SonTeslimTarihi == default ? DateTime.Now.AddDays(7) : model.SonTeslimTarihi;
 			}
 			else
 			{
 				model.VerilisTarihi = DateTime.UtcNow;
+				sonTeslimTarihi = DateTime.Now.AddDays(7);
 			}
 
 		}
@@ -119,12 +113,13 @@
 	{
 		try
 		{
-			if (model.Ders_ID==0)
-			{
-				ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Lütfen bir ders seçiniz.");
-				return;
-			}
-			if(OdevId==null)
+		if (model.Ders_ID==0)
+		{
+			ToastService.Notify(ToastSeverity.Warning, "Uyarı", "Lütfen bir ders seçiniz.");
+			return;
+		}
+		model.SonTeslimTarihi = sonTeslimTarihi;
+		if(OdevId==null)
 			{
 				DbContext.Odevler.Add(model);
 			}

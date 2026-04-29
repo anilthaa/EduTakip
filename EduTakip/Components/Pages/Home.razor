@@ -11,8 +11,9 @@
 else
 {
     var kullaniciTip = AuthStateService.CurrentUser.KullaniciTip?.ToLower() ?? "";
+    var kullaniciTipId = AuthStateService.CurrentUser.KullaniciTipId;
     
-    @if (kullaniciTip.Contains("admin"))
+    @if (kullaniciTipId == 1 || kullaniciTip.Contains("admin"))
     {
         @* Admin Dashboard *@
         <h3 style="margin-bottom: 1rem; font-weight: 700; color: #1f2937;">Admin Dashboard</h3>
@@ -498,7 +499,7 @@ else
                                 @foreach (var item in bekleyenTeslimler)
                                 {
                                     <tr>
-                                        <td>@item.Ogrenci.Adi @item.Ogrenci.Soyadi</td>
+                                        <td>@item.Ogrenci.Kullanici.Adi @item.Ogrenci.Kullanici.Soyadi</td>
                                         <td>@item.Odev.Baslik</td>
                                         <td>
                                             <button class="btn btn-primary" @onclick="@(() => GitTeslimlere(item.Odev_ID))">Not Ver</button>
@@ -576,8 +577,9 @@ else
         if (AuthStateService.CurrentUser == null) return;
 
         var kullaniciTip = AuthStateService.CurrentUser.KullaniciTip?.ToLower() ?? "";
+        var kullaniciTipId = AuthStateService.CurrentUser.KullaniciTipId;
 
-        if (kullaniciTip.Contains("admin"))
+        if (kullaniciTipId == 1 || kullaniciTip.Contains("admin"))
         {
             await YukleAdmin();
         }
@@ -597,8 +599,14 @@ else
     async Task YukleAdmin()
     {
         toplamSinif = await DbContext.Siniflar.CountAsync(x => x.DelDate == null || x.DelDate == default(DateTime));
-        toplamOgretmen = await DbContext.Ogretmenler.CountAsync(x => x.DelDate == null || x.DelDate == default(DateTime));
-        toplamOgrenci = await DbContext.Ogrenciler.CountAsync(x => x.DelDate == null || x.DelDate == default(DateTime));
+        // Hem Ogretmenler hem de ilgili Kullanici silinmemiş olmalı
+        toplamOgretmen = await DbContext.Ogretmenler
+            .CountAsync(x => (x.DelDate == null || x.DelDate == default(DateTime))
+                          && (x.Kullanici.DelDate == null || x.Kullanici.DelDate == default(DateTime)));
+        // Hem Ogrenciler hem de ilgili Kullanici silinmemiş olmalı
+        toplamOgrenci = await DbContext.Ogrenciler
+            .CountAsync(x => (x.DelDate == null || x.DelDate == default(DateTime))
+                          && (x.Kullanici.DelDate == null || x.Kullanici.DelDate == default(DateTime)));
         
         // Onay bekleyen hesaplar (EmailConfirmed = true ama Aktif = false ve Reddedildi = false)
         onayBekleyenHesapSayisi = await DbContext.Kullanicilar
@@ -881,7 +889,7 @@ else
         // Katıldığı diğer sınıflar (SinifKullanicilar tablosundan) - sadece aktif ve silinmemiş olanlar
         var katildigiSinifIdleri = await DbContext.SinifKullanicilar
             .Where(x => x.Kullanici_ID == kullaniciId && 
-                       x.Tip == "Öğrenci" && 
+                       x.Tip == SinifKullaniciTip.Ogrenci && 
                        (x.DelDate == null || x.DelDate == default(DateTime)) &&
                        aktifSinifIdleri.Contains(x.Sinif_ID))
             .Select(x => x.Sinif_ID)
@@ -1002,18 +1010,30 @@ else
         dersSayisi = await DbContext.Dersler.CountAsync(x => x.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)));
         odevSayisi = await DbContext.Odevler.CountAsync(x => x.Ders.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)));
         bekleyenTeslim = await DbContext.OdevTeslimler.CountAsync(x => x.Odev.Ders.Ogretmen_ID == ogretmenId.Value && x.Not == null && (x.DelDate == null || x.DelDate == default(DateTime)));
-        // Öğretmenin ders programlarındaki sınıf ID'lerini bul
-        var ogretmenSinifIdleri = await DbContext.DersProgramlari
+        // Öğretmenin sınıflarını SinifKullanicilar üzerinden bul
+        var ogretmenKullaniciId = AuthStateService.CurrentUser!.ID;
+        var ogretmenSinifIdleri = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == ogretmenKullaniciId
+                && x.Tip == SinifKullaniciTip.Ogretmen
+                && (x.DelDate == null || x.DelDate == default(DateTime)))
+            .Select(x => x.Sinif_ID)
+            .Distinct()
+            .ToListAsync();
+
+        // Ders programlarından gelen sınıfları da ekle
+        var dpSiniflar = await DbContext.DersProgramlari
             .Include(x => x.Ders)
             .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.Sinif_ID)
             .Distinct()
             .ToListAsync();
+        ogretmenSinifIdleri = ogretmenSinifIdleri.Union(dpSiniflar).Distinct().ToList();
 
-        // Bu sınıflardaki öğrencileri say
-        ogrenciSayisi = await DbContext.Ogrenciler
-            .Where(x => (x.DelDate == null || x.DelDate == default(DateTime)) && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
-            .CountAsync();
+        // Bu sınıflardaki öğrencileri SinifKullanicilar üzerinden say
+        ogrenciSayisi = await DbContext.SinifKullanicilar
+            .CountAsync(x => ogretmenSinifIdleri.Contains(x.Sinif_ID)
+                && x.Tip == SinifKullaniciTip.Ogrenci
+                && (x.DelDate == null || x.DelDate == default(DateTime)));
 
         var bugun = DateTime.Today.DayOfWeek;
         bugunkuDerslerOgretmen = await DbContext.DersProgramlari
@@ -1028,6 +1048,7 @@ else
 
         bekleyenTeslimler = await DbContext.OdevTeslimler
             .Include(x => x.Ogrenci)
+                .ThenInclude(o => o.Kullanici)
             .Include(x => x.Odev)
                 .ThenInclude(o => o.Ders)
             .Where(x => x.Odev.Ders.Ogretmen_ID == ogretmenId.Value && x.Not == null && (x.DelDate == null || x.DelDate == default(DateTime)))

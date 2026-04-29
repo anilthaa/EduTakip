@@ -30,7 +30,7 @@
 						@foreach (var item in teslimler)
 						{
 							<tr>
-								<td>@item.Ogrenci.Adi @item.Ogrenci.Soyadi</td>
+								<td>@item.Ogrenci.Kullanici.Adi @item.Ogrenci.Kullanici.Soyadi</td>
 								<td>@item.Odev.Baslik</td>
 								<td>@item.TeslimTarihi</td>
 								<td>
@@ -89,6 +89,8 @@
 	{
 		teslimler = await DbContext.OdevTeslimler
 			.Include(x => x.Ogrenci)
+				.ThenInclude(o => o.Kullanici)
+			.Include(x => x.Odev)
 			.Where(x => x.Odev_ID == OdevId && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.ToListAsync();
 	}

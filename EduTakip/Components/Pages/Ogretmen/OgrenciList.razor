@@ -88,40 +88,110 @@
 
     async Task YukleOgrenciler()
     {
-        // Öğretmenin ders programlarındaki sınıf ID'lerini bul
-        var ogretmenSinifIdleri = await DbContext.DersProgramlari
-            .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
+        // Öğretmenin sınıflarını SinifKullanicilar üzerinden bul
+        var ogretmenKullaniciId = AuthStateService.CurrentUser!.ID;
+        var ogretmenSinifIdleri = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == ogretmenKullaniciId
+                && x.Tip == SinifKullaniciTip.Ogretmen
+                && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.Sinif_ID)
             .Distinct()
             .ToListAsync();
 
-        // Bu sınıflardaki öğrencileri getir
-        ogrenciler = await DbContext.Ogrenciler
+        // Ders programlarından gelen sınıfları da ekle
+        if (ogretmenId.HasValue)
+        {
+            var dpSiniflar = await DbContext.DersProgramlari
+                .Include(x => x.Ders)
+                .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value
+                    && (x.DelDate == null || x.DelDate == default(DateTime)))
+                .Select(x => x.Sinif_ID)
+                .Distinct()
+                .ToListAsync();
+            ogretmenSinifIdleri = ogretmenSinifIdleri.Union(dpSiniflar).Distinct().ToList();
+        }
+
+        if (!ogretmenSinifIdleri.Any())
+        {
+            ogrenciler = new();
+            Filtrele();
+            return;
+        }
+
+        // SinifKullanicilar üzerinden bu sınıflardaki öğrencileri bul
+        var sinifOgrKullanicilari = await DbContext.SinifKullanicilar
             .Include(x => x.Kullanici)
-            .Include(x => x.Sinif)
-            .Where(x => (x.DelDate == null || x.DelDate == default(DateTime)) && x.Sinif_ID.HasValue && ogretmenSinifIdleri.Contains(x.Sinif_ID.Value))
-            .OrderBy(x => x.Sinif != null ? x.Sinif.Adi : "")
-            .ThenBy(x => x.Kullanici.Adi)
-            .ThenBy(x => x.Kullanici.Soyadi)
+            .Where(x => ogretmenSinifIdleri.Contains(x.Sinif_ID)
+                && x.Tip == SinifKullaniciTip.Ogrenci
+                && (x.DelDate == null || x.DelDate == default(DateTime)))
             .ToListAsync();
+
+        var kullaniciIds = sinifOgrKullanicilari.Select(x => x.Kullanici_ID).Distinct().ToList();
+
+        var ogrenciDetaylar = await DbContext.Ogrenciler
+            .IgnoreQueryFilters()
+            .Include(x => x.Sinif)
+            .Where(o => kullaniciIds.Contains(o.Kullanici_ID)
+                && (o.DelDate == null || o.DelDate == default(DateTime)))
+            .ToDictionaryAsync(o => o.Kullanici_ID);
+
+        var sinifDict = await DbContext.Siniflar
+            .Where(s => ogretmenSinifIdleri.Contains(s.ID) && (s.DelDate == null || s.DelDate == default(DateTime)))
+            .ToDictionaryAsync(s => s.ID);
+
+        ogrenciler = sinifOgrKullanicilari
+            .GroupBy(x => x.Kullanici_ID)
+            .Select(g =>
+            {
+                var sk = g.First();
+                ogrenciDetaylar.TryGetValue(sk.Kullanici_ID, out var ogrenci);
+                var sinifId = g.Select(x => x.Sinif_ID).FirstOrDefault();
+                sinifDict.TryGetValue(sinifId, out var sinif);
+                return new ItemOgrenci
+                {
+                    ID = ogrenci?.ID ?? 0,
+                    Kullanici_ID = sk.Kullanici_ID,
+                    OgrenciNo = ogrenci?.OgrenciNo ?? "-",
+                    Sinif_ID = sinifId,
+                    Sinif = sinif,
+                    Kullanici = sk.Kullanici
+                };
+            })
+            .OrderBy(x => x.Sinif?.Adi ?? "")
+            .ThenBy(x => x.Kullanici?.Adi ?? "")
+            .ThenBy(x => x.Kullanici?.Soyadi ?? "")
+            .ToList();
 
         Filtrele();
     }
 
     async Task YukleSiniflar()
     {
-        // Öğretmenin ders programlarındaki sınıf ID'lerini bul
-        var ogretmenSinifIdleri = await DbContext.DersProgramlari
-            .Include(x => x.Ders)
-            .Where(x => x.Ders.Ogretmen_ID == ogretmenId!.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
+        var ogretmenKullaniciId = AuthStateService.CurrentUser!.ID;
+        var ogretmenSinifIdleri = await DbContext.SinifKullanicilar
+            .Where(x => x.Kullanici_ID == ogretmenKullaniciId
+                && x.Tip == SinifKullaniciTip.Ogretmen
+                && (x.DelDate == null || x.DelDate == default(DateTime)))
             .Select(x => x.Sinif_ID)
             .Distinct()
             .ToListAsync();
 
-        // Bu sınıfları getir
+        if (ogretmenId.HasValue)
+        {
+            var dpSiniflar = await DbContext.DersProgramlari
+                .Include(x => x.Ders)
+                .Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value
+                    && (x.DelDate == null || x.DelDate == default(DateTime)))
+                .Select(x => x.Sinif_ID)
+                .Distinct()
+                .ToListAsync();
+            ogretmenSinifIdleri = ogretmenSinifIdleri.Union(dpSiniflar).Distinct().ToList();
+        }
+
         siniflar = await DbContext.Siniflar
-            .Where(s => ogretmenSinifIdleri.Contains(s.ID) && (s.DelDate == null || s.DelDate == default(DateTime)) && s.Aktif)
+            .Where(s => ogretmenSinifIdleri.Contains(s.ID)
+                && (s.DelDate == null || s.DelDate == default(DateTime))
+                && s.Aktif)
             .OrderBy(s => s.Adi)
             .ToListAsync();
     }

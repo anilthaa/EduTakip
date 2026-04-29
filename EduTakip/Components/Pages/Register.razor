@@ -354,10 +354,10 @@
             
             if (result != null)
             {
-                ToastService.Notify(ToastSeverity.Success, "Kayıt Başarılı", "Kayıt başarıyla oluşturuldu. E-postanıza gönderilen doğrulama kodunu girin. E-posta onayından sonra admin onayı beklenmektedir.", 5000);
+                ToastService.Notify(ToastSeverity.Success, "Kayıt Başarılı", "Kayıt başarıyla oluşturuldu. E-posta gelmezse doğrulama sayfasındaki 'Kodu Tekrar Gönder' butonunu kullanabilirsiniz.", 7000);
                 
                 // E-posta doğrulama sayfasına yönlendir
-                await Task.Delay(2000);
+                await Task.Delay(2500);
                 NavigationManager.NavigateTo($"/confirm-email?email={Uri.EscapeDataString(model.EPosta)}");
             }
             else

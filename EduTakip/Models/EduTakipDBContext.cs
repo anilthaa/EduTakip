@@ -26,7 +26,7 @@ namespace EduTakip.Models
         {
             base.OnModelCreating(modelBuilder);
 
-            // Soft Delete için global query filter - Tüm ItemBase'den türeyen entity'ler için
+            // Soft Delete için global query filter - DelDate null VEYA default(DateTime) olan kayıtları göster
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 if (typeof(ItemBase).IsAssignableFrom(entityType.ClrType))
@@ -34,20 +34,21 @@ namespace EduTakip.Models
                     var parameter = System.Linq.Expressions.Expression.Parameter(entityType.ClrType, "e");
                     var property = System.Linq.Expressions.Expression.Property(parameter, nameof(ItemBase.DelDate));
                     var nullConstant = System.Linq.Expressions.Expression.Constant(null, typeof(DateTime?));
-                    var condition = System.Linq.Expressions.Expression.Equal(property, nullConstant);
+                    var defaultConstant = System.Linq.Expressions.Expression.Constant((DateTime?)default(DateTime), typeof(DateTime?));
+                    var isNull = System.Linq.Expressions.Expression.Equal(property, nullConstant);
+                    var isDefault = System.Linq.Expressions.Expression.Equal(property, defaultConstant);
+                    var condition = System.Linq.Expressions.Expression.OrElse(isNull, isDefault);
                     var lambda = System.Linq.Expressions.Expression.Lambda(condition, parameter);
                     
                     modelBuilder.Entity(entityType.ClrType).HasQueryFilter(lambda);
                 }
             }
 
+            // Filtered unique index: silinmiş (DelDate dolu) kayıtlar unique kontrolünün dışında
             modelBuilder.Entity<ItemKullanici>()
                 .HasIndex(x => x.EPosta)
-                .IsUnique();
-
-            modelBuilder.Entity<ItemKullanici>()
-                .HasIndex(x => x.EPosta)
-                .IsUnique();
+                .IsUnique()
+                .HasFilter("[DelDate] IS NULL");
 
             modelBuilder.Entity<ItemKullanici>()
                 .HasOne(x => x.KullaniciTip)
@@ -106,12 +107,17 @@ namespace EduTakip.Models
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-
             modelBuilder.Entity<ItemDersKatilim>()
                .HasOne(x => x.Ders)
                .WithMany()
                .HasForeignKey(x => x.Ders_ID)
                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ItemDersKatilim>()
+                .HasOne(x => x.DersProgrami)
+                .WithMany()
+                .HasForeignKey(x => x.DersProgrami_ID)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<ItemDersKatilim>()
                 .HasOne(x => x.Ogrenci)
@@ -127,7 +133,18 @@ namespace EduTakip.Models
                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<ItemDersProgrami>()
+                .HasOne(x => x.Sinif)
+                .WithMany()
+                .HasForeignKey(x => x.Sinif_ID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<ItemDersProgrami>()
                 .HasIndex(x => new { x.Ders_ID, x.Gun, x.BaslangicSaati, x.BitisSaati })
+                .IsUnique();
+
+            // Aynı sınıfın aynı saatte iki farklı ders almasını engeller
+            modelBuilder.Entity<ItemDersProgrami>()
+                .HasIndex(x => new { x.Sinif_ID, x.Gun, x.BaslangicSaati })
                 .IsUnique();
 
 
@@ -138,10 +155,9 @@ namespace EduTakip.Models
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-
             modelBuilder.Entity<ItemOdevTeslim>()
                 .HasOne(x => x.Odev)
-                .WithMany()
+                .WithMany(x => x.Teslimler)
                 .HasForeignKey(x => x.Odev_ID)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -163,6 +179,17 @@ namespace EduTakip.Models
                 .HasForeignKey(x => x.Kullanici_ID)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<ItemSinifOgrenci>()
+                .HasOne(x => x.Sinif)
+                .WithMany()
+                .HasForeignKey(x => x.Sinif_ID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ItemSinifOgrenci>()
+                .HasOne(x => x.Ogrenci)
+                .WithMany()
+                .HasForeignKey(x => x.Ogrenci_ID)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
