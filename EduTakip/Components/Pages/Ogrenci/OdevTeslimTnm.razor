@@ -68,7 +68,7 @@
 		}
 
 		model.Odev_ID = OdevId;
-		model.Ogrenci_ID = AuthStateService.CurrentUser.ID; // ItemOdevTeslim'de Ogrenci_ID aslinda Kullanici_ID
+		model.Ogrenci_ID = ogrenciId.Value; // Ogrenciler.ID FK'sına bağlı
 		model.TeslimTarihi = DateTime.UtcNow;
 		model.DosyaYolu = string.Empty; // Baslangiç degeri
 		model.OgretmenYorumu = string.Empty; // Baslangiç degeri

@@ -39,6 +39,10 @@
 @code {
     [Parameter] public int KullaniciId { get; set; }
     [Parameter] public string KullaniciTip { get; set; } = "";
+    [Parameter] public int KullaniciTipId { get; set; } = 0;
+
+    private SinifKullaniciTip TipEnum =>
+        KullaniciTip.Contains("retmen") ? SinifKullaniciTip.Ogretmen : SinifKullaniciTip.Ogrenci;
 
     private List<ItemSinif> siniflar = new();
 
@@ -93,7 +97,7 @@
                 CreUser = KullaniciId,
                 Sinif_ID = sinif.ID,
                 Kullanici_ID = KullaniciId,
-                Tip = KullaniciTip
+                Tip = TipEnum
             };
 
             DbContext.SinifKullanicilar.Add(yeniKayit);

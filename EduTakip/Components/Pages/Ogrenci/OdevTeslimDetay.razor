@@ -85,10 +85,23 @@
 			return;
 		}
 
+		// Ogrenci_ID artık Ogrenciler.ID FK'sına bağlı, önce ogrenciId'yi bul
+		var ogrenciId = await DbContext.Ogrenciler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
+		if (ogrenciId == 0)
+		{
+			ToastService.Notify(ToastSeverity.Error, "Hata", "Öğrenci bilgisi bulunamadı.");
+			ModalService.Close(false);
+			return;
+		}
+
 		teslim = await DbContext.OdevTeslimler
 			.Include(x => x.Odev)
 				.ThenInclude(o => o.Ders)
-			.Where(x => x.Odev_ID == OdevId && x.Ogrenci_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Where(x => x.Odev_ID == OdevId && x.Ogrenci_ID == ogrenciId && (x.DelDate == null || x.DelDate == default(DateTime)))
 			.FirstOrDefaultAsync();
 
 		if (teslim == null)

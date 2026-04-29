@@ -36,12 +36,13 @@
                                 <div class="code-inputs">
                                     @for (var i = 0; i < codeDigits.Length; i++)
                                     {
+                                        var idx = i;
                                         <input type="text"
                                                maxlength="1"
                                                class="code-input"
-                                               value="@codeDigits[i]"
-                                               @ref="codeInputs[i]"
-                                               @oninput="e => OnDigitChanged(i, e)" />
+                                               value="@codeDigits[idx]"
+                                               @ref="codeInputs[idx]"
+                                               @oninput="e => OnDigitChanged(idx, e)" />
                                     }
                                 </div>
 

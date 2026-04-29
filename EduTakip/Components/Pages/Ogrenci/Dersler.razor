@@ -50,7 +50,7 @@ else
 		var sinifIdler = await DbContext.SinifKullanicilar
 			.Where(x =>
 				x.Kullanici_ID == kullaniciId &&
-				x.Tip == "Öğrenci" &&
+				x.Tip == SinifKullaniciTip.Ogrenci &&
 				(x.DelDate == null || x.DelDate == default(DateTime)))
 			.Select(x => x.Sinif_ID)
 			.ToListAsync();

@@ -47,6 +47,18 @@
 
 	async Task Yukle()
 	{
+		var sinif = await DbContext.Siniflar
+			.Where(s => s.ID == sinifId && (s.DelDate == null || s.DelDate == default(DateTime)))
+			.FirstOrDefaultAsync();
+
+		if (sinif == null) return;
+
+		// Öğrenci sayısını ayrı sorgu ile al (EF Core projeksiyon içi subquery güvenilir değil)
+		var ogrenciSayisi = await DbContext.SinifKullanicilar
+			.CountAsync(o => o.Sinif_ID == sinifId
+				&& o.Tip == SinifKullaniciTip.Ogrenci
+				&& (o.DelDate == null || o.DelDate == default(DateTime)));
+
 		// Bu sınıfta programlanmış derslerin ID'lerini bul
 		var sinifDersleri = await DbContext.DersProgramlari
 			.Where(dp => dp.Sinif_ID == sinifId && (dp.DelDate == null || dp.DelDate == default(DateTime)) && dp.Aktif)
@@ -54,18 +66,16 @@
 			.Distinct()
 			.ToListAsync();
 
-		detay = await DbContext.Siniflar
-			.Where(s => s.ID == sinifId && (s.DelDate == null || s.DelDate == default(DateTime)))
-			.Select(s => new SinifDashboardOgretmenDto
-				{
-					SinifId = s.ID,
-					SinifAdi = s.Adi,
-					OgrenciSayisi = DbContext.SinifKullanicilar
-						.Count(o => o.Sinif_ID == s.ID && o.Tip == "Öğrenci" && (o.DelDate == null || o.DelDate == default(DateTime))),
-					OdevSayisi = DbContext.Odevler
-						.Count(o => sinifDersleri.Contains(o.Ders_ID) && (o.DelDate == null || o.DelDate == default(DateTime)))
-				}).FirstOrDefaultAsync();
+		var odevSayisi = await DbContext.Odevler
+			.CountAsync(o => sinifDersleri.Contains(o.Ders_ID) && (o.DelDate == null || o.DelDate == default(DateTime)));
 
+		detay = new SinifDashboardOgretmenDto
+		{
+			SinifId = sinif.ID,
+			SinifAdi = sinif.Adi,
+			OgrenciSayisi = ogrenciSayisi,
+			OdevSayisi = odevSayisi
+		};
 	}
 	void Ogrenciler()
 	{

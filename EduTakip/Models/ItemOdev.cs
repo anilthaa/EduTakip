@@ -8,5 +8,6 @@
         public string Aciklama { get; set; }
         public DateTime VerilisTarihi { get; set; }
         public DateTime SonTeslimTarihi { get; set; }
+        public ICollection<ItemOdevTeslim> Teslimler { get; set; }
     }
 }
