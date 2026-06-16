@@ -133,7 +133,10 @@ namespace EduTakip.Migrations
                     b.Property<int>("Ders_ID")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("GirisZamani")
+                    b.Property<byte>("Durum")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime?>("GirisZamani")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Ogrenci_ID")
@@ -145,13 +148,18 @@ namespace EduTakip.Migrations
                     b.Property<int?>("UpdUser")
                         .HasColumnType("int");
 
-                    b.HasKey("ID");
+                    b.Property<DateTime>("YoklamaTarihi")
+                        .HasColumnType("datetime2");
 
-                    b.HasIndex("DersProgrami_ID");
+                    b.HasKey("ID");
 
                     b.HasIndex("Ders_ID");
 
                     b.HasIndex("Ogrenci_ID");
+
+                    b.HasIndex("DersProgrami_ID", "Ogrenci_ID", "YoklamaTarihi")
+                        .IsUnique()
+                        .HasFilter("[DelDate] IS NULL");
 
                     b.ToTable("DersKatilimlar");
                 });

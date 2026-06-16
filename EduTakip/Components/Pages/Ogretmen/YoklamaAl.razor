@@ -1,0 +1,217 @@
+@if (yukleniyor)
+{
+	<div style="text-align:center; padding:30px;">Yükleniyor...</div>
+}
+else if (hataMesaji != null)
+{
+	<div class="alert alert-danger">@hataMesaji</div>
+	<div class="text-center mt-3">
+		<button type="button" class="btn btn-danger btn-sm" @onclick="@(() => ModalService.Close(false))">Kapat</button>
+	</div>
+}
+else
+{
+	<div class="mb-3">
+		<strong>@dersAdi</strong> — @sinifAdi<br />
+		<small class="text-muted">@yoklamaTarihi.ToString("dd.MM.yyyy") | @baslangicSaati.ToString(@"hh\:mm") - @bitisSaati.ToString(@"hh\:mm")</small>
+	</div>
+
+	<div class="data-table-wrapper" style="max-height:400px; overflow-y:auto;">
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Öğrenci No</th>
+					<th>Ad Soyad</th>
+					<th>Durum</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var ogrenci in ogrenciler)
+				{
+					<tr>
+						<td>@ogrenci.OgrenciNo</td>
+						<td>@ogrenci.Ad @ogrenci.Soyad</td>
+						<td>
+							<div class="btn-group btn-group-sm" role="group">
+								<button type="button"
+										class="btn @(ogrenci.Durum == YoklamaDurumu.Geldi ? "btn-success" : "btn-outline-success")"
+										@onclick="@(() => ogrenci.Durum = YoklamaDurumu.Geldi)">
+									Geldi
+								</button>
+								<button type="button"
+										class="btn @(ogrenci.Durum == YoklamaDurumu.Gelmedi ? "btn-danger" : "btn-outline-danger")"
+										@onclick="@(() => ogrenci.Durum = YoklamaDurumu.Gelmedi)">
+									Gelmedi
+								</button>
+								<button type="button"
+										class="btn @(ogrenci.Durum == YoklamaDurumu.GecKaldi ? "btn-warning" : "btn-outline-warning")"
+										@onclick="@(() => ogrenci.Durum = YoklamaDurumu.GecKaldi)">
+									Geç Kaldı
+								</button>
+							</div>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+
+	@if (!ogrenciler.Any())
+	{
+		<p style="color:#7f8c8d; font-style:italic; text-align:center;">Bu sınıfta kayıtlı öğrenci bulunmuyor.</p>
+	}
+
+	<div class="mt-3 text-center">
+		<button type="button" class="btn btn-success btn-sm" style="margin-right:10px;" @onclick="Kaydet" disabled="@(!ogrenciler.Any() || kaydediliyor)">
+			@(kaydediliyor ? "Kaydediliyor..." : "Kaydet")
+		</button>
+		<button type="button" class="btn btn-danger btn-sm" @onclick="@(() => ModalService.Close(false))">İptal</button>
+	</div>
+}
+
+@code {
+	[Parameter] public int DersProgramiId { get; set; }
+	[Parameter] public DateTime YoklamaTarihi { get; set; }
+
+	List<YoklamaOgrenciSatirDto> ogrenciler = new();
+	string dersAdi = "";
+	string sinifAdi = "";
+	TimeSpan baslangicSaati;
+	TimeSpan bitisSaati;
+	DateTime yoklamaTarihi;
+	int dersId;
+	int sinifId;
+	int ogretmenId;
+	string? hataMesaji;
+	bool yukleniyor = true;
+	bool kaydediliyor;
+
+	protected override async Task OnInitializedAsync()
+	{
+		yoklamaTarihi = YoklamaTarihi.Date;
+
+		if (AuthStateService.CurrentUser == null)
+		{
+			hataMesaji = "Kullanıcı bilgisi bulunamadı.";
+			yukleniyor = false;
+			return;
+		}
+
+		ogretmenId = await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Select(x => x.ID)
+			.FirstOrDefaultAsync();
+
+		if (ogretmenId == 0)
+		{
+			hataMesaji = "Öğretmen profili bulunamadı.";
+			yukleniyor = false;
+			return;
+		}
+
+		var dersProgrami = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.Include(x => x.Sinif)
+			.FirstOrDefaultAsync(x => x.ID == DersProgramiId && (x.DelDate == null || x.DelDate == default(DateTime)));
+
+		if (dersProgrami == null || dersProgrami.Ders?.Ogretmen_ID != ogretmenId)
+		{
+			hataMesaji = "Bu derse yoklama alma yetkiniz yok.";
+			yukleniyor = false;
+			return;
+		}
+
+		dersId = dersProgrami.Ders_ID;
+		sinifId = dersProgrami.Sinif_ID;
+		dersAdi = dersProgrami.Ders?.Adi ?? "";
+		sinifAdi = dersProgrami.Sinif?.Adi ?? "";
+		baslangicSaati = dersProgrami.BaslangicSaati;
+		bitisSaati = dersProgrami.BitisSaati;
+
+		var sinifKullanicilar = await DbContext.SinifKullanicilar
+			.Include(x => x.Kullanici)
+			.Where(x => x.Sinif_ID == sinifId
+				&& x.Tip == SinifKullaniciTip.Ogrenci
+				&& (x.DelDate == null || x.DelDate == default(DateTime)))
+			.ToListAsync();
+
+		var kullaniciIds = sinifKullanicilar.Select(x => x.Kullanici_ID).ToList();
+
+		var ogrenciKayitlari = await DbContext.Ogrenciler
+			.Where(o => kullaniciIds.Contains(o.Kullanici_ID) && (o.DelDate == null || o.DelDate == default(DateTime)))
+			.ToDictionaryAsync(o => o.Kullanici_ID);
+
+		var mevcutYoklamalar = await DbContext.DersKatilimlar
+			.Where(x => x.DersProgrami_ID == DersProgramiId
+				&& x.YoklamaTarihi == yoklamaTarihi
+				&& (x.DelDate == null || x.DelDate == default(DateTime)))
+			.ToDictionaryAsync(x => x.Ogrenci_ID);
+
+		ogrenciler = sinifKullanicilar
+			.Where(sk => ogrenciKayitlari.ContainsKey(sk.Kullanici_ID))
+			.Select(sk =>
+			{
+				var ogrenci = ogrenciKayitlari[sk.Kullanici_ID];
+				mevcutYoklamalar.TryGetValue(ogrenci.ID, out var katilim);
+				return new YoklamaOgrenciSatirDto
+				{
+					OgrenciId = ogrenci.ID,
+					Ad = sk.Kullanici?.Adi ?? "",
+					Soyad = sk.Kullanici?.Soyadi ?? "",
+					OgrenciNo = ogrenci.OgrenciNo ?? "-",
+					Durum = katilim?.Durum ?? YoklamaDurumu.Gelmedi,
+					KatilimId = katilim?.ID
+				};
+			})
+			.OrderBy(x => x.OgrenciNo)
+			.ToList();
+
+		yukleniyor = false;
+	}
+
+	async Task Kaydet()
+	{
+		kaydediliyor = true;
+		var userId = AuthStateService.CurrentUser!.ID;
+		var now = DateTime.UtcNow;
+
+		foreach (var satir in ogrenciler)
+		{
+			DateTime? girisZamani = satir.Durum == YoklamaDurumu.Gelmedi
+				? null
+				: yoklamaTarihi.Add(baslangicSaati);
+
+			if (satir.KatilimId.HasValue)
+			{
+				var mevcut = await DbContext.DersKatilimlar.FindAsync(satir.KatilimId.Value);
+				if (mevcut != null)
+				{
+					mevcut.Durum = satir.Durum;
+					mevcut.GirisZamani = girisZamani;
+					mevcut.UpdUser = userId;
+					mevcut.UpdDate = now;
+					DbContext.DersKatilimlar.Update(mevcut);
+				}
+			}
+			else
+			{
+				var yeni = new ItemDersKatilim
+				{
+					Ders_ID = dersId,
+					DersProgrami_ID = DersProgramiId,
+					Ogrenci_ID = satir.OgrenciId,
+					YoklamaTarihi = yoklamaTarihi,
+					Durum = satir.Durum,
+					GirisZamani = girisZamani,
+					CreUser = userId,
+					CreDate = now
+				};
+				DbContext.DersKatilimlar.Add(yeni);
+			}
+		}
+
+		await DbContext.SaveChangesAsync();
+		ToastService.Notify(ToastSeverity.Success, "Başarılı", "Yoklama kaydedildi.");
+		ModalService.Close(true);
+	}
+}

@@ -8,7 +8,9 @@
         public ItemDersProgrami DersProgrami { get; set; } = null!;
         public int Ogrenci_ID { get; set; }
         public ItemOgrenci Ogrenci { get; set; } = null!;
-        public DateTime GirisZamani { get; set; }
+        public DateTime YoklamaTarihi { get; set; }
+        public YoklamaDurumu Durum { get; set; }
+        public DateTime? GirisZamani { get; set; }
         public DateTime? CikisZamani { get; set; }
     }
 }

@@ -125,6 +125,10 @@ namespace EduTakip.Models
                 .HasForeignKey(x => x.Ogrenci_ID)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<ItemDersKatilim>()
+                .HasIndex(x => new { x.DersProgrami_ID, x.Ogrenci_ID, x.YoklamaTarihi })
+                .IsUnique()
+                .HasFilter("[DelDate] IS NULL");
 
             modelBuilder.Entity<ItemDersProgrami>()
                .HasOne(x => x.Ders)

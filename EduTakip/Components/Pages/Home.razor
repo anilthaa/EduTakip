@@ -628,22 +628,22 @@ else
         
         if (bugunkuDersProgramlari.Any())
         {
-            // Bugünkü ders ID'lerini al
-            var bugunkuDersIdleri = bugunkuDersProgramlari
-                .Select(x => x.Ders_ID)
-                .Distinct()
-                .ToList();
-            
-            // Bugünkü derslerin toplam katılımcı sayısını hesapla
-            var toplamKatilimciSayisi = await DbContext.DersKatilimcilar
-                .Where(x => bugunkuDersIdleri.Contains(x.Ders_ID) && (x.DelDate == null || x.DelDate == default(DateTime)))
+            var bugunkuProgramIds = bugunkuDersProgramlari.Select(x => x.ID).ToList();
+            var bugunkuSinifIds = bugunkuDersProgramlari.Select(x => x.Sinif_ID).Distinct().ToList();
+
+            // Bugünkü program slotlarının sınıflarındaki toplam öğrenci sayısı
+            var toplamKatilimciSayisi = await DbContext.SinifKullanicilar
+                .Where(x => bugunkuSinifIds.Contains(x.Sinif_ID)
+                    && x.Tip == SinifKullaniciTip.Ogrenci
+                    && (x.DelDate == null || x.DelDate == default(DateTime)))
                 .CountAsync();
-            
-            // Bugünkü katılım kayıtlarını say (bugünün tarihinde giriş yapanlar)
+
+            // Bugünkü katılım kayıtları (geldi veya geç kaldı)
             var bugunkuKatilimSayisi = await DbContext.DersKatilimlar
-                .Where(x => bugunkuDersIdleri.Contains(x.Ders_ID) && 
-                           (x.DelDate == null || x.DelDate == default(DateTime)) &&
-                           x.GirisZamani.Date == bugun.Date)
+                .Where(x => bugunkuProgramIds.Contains(x.DersProgrami_ID)
+                           && (x.DelDate == null || x.DelDate == default(DateTime))
+                           && x.YoklamaTarihi == bugun
+                           && (x.Durum == YoklamaDurumu.Geldi || x.Durum == YoklamaDurumu.GecKaldi))
                 .CountAsync();
             
             // Yüzde hesapla
@@ -752,21 +752,20 @@ else
 
             if (oGunDersProgramlari.Any())
             {
-                var oGunDersIdleri = oGunDersProgramlari
-                    .Select(x => x.Ders_ID)
-                    .Distinct()
-                    .ToList();
+                var oGunProgramIds = oGunDersProgramlari.Select(x => x.ID).ToList();
+                var oGunSinifIds = oGunDersProgramlari.Select(x => x.Sinif_ID).Distinct().ToList();
 
-                // Toplam katılımcı sayısı
-                var toplamKatilimciSayisi = await DbContext.DersKatilimcilar
-                    .Where(x => oGunDersIdleri.Contains(x.Ders_ID) && (x.DelDate == null || x.DelDate == default(DateTime)))
+                var toplamKatilimciSayisi = await DbContext.SinifKullanicilar
+                    .Where(x => oGunSinifIds.Contains(x.Sinif_ID)
+                        && x.Tip == SinifKullaniciTip.Ogrenci
+                        && (x.DelDate == null || x.DelDate == default(DateTime)))
                     .CountAsync();
 
-                // O günkü katılım kayıtları
                 var oGunKatilimSayisi = await DbContext.DersKatilimlar
-                    .Where(x => oGunDersIdleri.Contains(x.Ders_ID) &&
-                               (x.DelDate == null || x.DelDate == default(DateTime)) &&
-                               x.GirisZamani.Date == tarih.Date)
+                    .Where(x => oGunProgramIds.Contains(x.DersProgrami_ID)
+                               && (x.DelDate == null || x.DelDate == default(DateTime))
+                               && x.YoklamaTarihi == tarih
+                               && (x.Durum == YoklamaDurumu.Geldi || x.Durum == YoklamaDurumu.GecKaldi))
                     .CountAsync();
 
                 decimal katilimYuzdesi = 0;
