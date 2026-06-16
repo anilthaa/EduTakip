@@ -41,9 +41,8 @@
 
 @code {
 
-	List<ItemDersProgrami> list;
-
-	int ogretmenId = 1; //Simdilik
+	List<ItemDersProgrami> list = new();
+	int? ogretmenId;
 
 	private string GetGunAdi(DayOfWeek gun)
 	{
@@ -62,10 +61,25 @@
 
 	protected override async Task OnInitializedAsync()
 	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			return;
+		}
+
+		ogretmenId = await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Select(x => (int?)x.ID)
+			.FirstOrDefaultAsync();
+
+		if (!ogretmenId.HasValue)
+		{
+			return;
+		}
+
 		list = await DbContext.DersProgramlari
 			.Include(x => x.Ders)
 			.Include(x => x.Sinif)
-			.Where(x => x.Ders.Ogretmen_ID == ogretmenId && (x.DelDate == null || x.DelDate == default(DateTime)) && x.Aktif)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)) && x.Aktif)
 			.OrderBy(x => x.Gun)
 			.ThenBy(x => x.BaslangicSaati)
 			.ToListAsync();

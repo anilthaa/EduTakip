@@ -1,0 +1,194 @@
+@page "/ogretmen/yoklama-gecmisi"
+@attribute [Authorize(Roles = "Öğretmen")]
+
+<div class="card" style="margin-top:20px">
+	<div class="card-body">
+		<h3 style="text-align:center;" class="mb-4">Yoklama Geçmişi</h3>
+
+		<div class="row mb-4 g-3">
+			<div class="col-md-3">
+				<label class="form-label">Başlangıç Tarihi</label>
+				<input type="date" class="form-control" @bind="baslangicTarihi" />
+			</div>
+			<div class="col-md-3">
+				<label class="form-label">Bitiş Tarihi</label>
+				<input type="date" class="form-control" @bind="bitisTarihi" />
+			</div>
+			<div class="col-md-4">
+				<label class="form-label">Ders (opsiyonel)</label>
+				<select class="form-select" @bind="secilenDersId">
+					<option value="0">Tüm Dersler</option>
+					@foreach (var ders in dersler)
+					{
+						<option value="@ders.ID">@ders.Adi</option>
+					}
+				</select>
+			</div>
+			<div class="col-md-2 d-flex align-items-end">
+				<button class="btn btn-primary btn-sm w-100" @onclick="Yukle">Filtrele</button>
+			</div>
+		</div>
+
+		@if (yukleniyor)
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d;">Yükleniyor...</p>
+			</div>
+		}
+		else if (!oturumlar.Any())
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d; font-style:italic">Kayıt bulunamadı.</p>
+			</div>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Tarih</th>
+							<th>Ders</th>
+							<th>Sınıf</th>
+							<th>Saat</th>
+							<th>Geldi</th>
+							<th>Gelmedi</th>
+							<th>Geç Kaldı</th>
+							<th>Alan Öğretmen</th>
+							<th>Kayıt Zamanı</th>
+							<th>İşlem</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var oturum in oturumlar)
+						{
+							<tr>
+								<td>@oturum.YoklamaTarihi.ToString("dd.MM.yyyy")</td>
+								<td>@oturum.DersAdi</td>
+								<td>@oturum.SinifAdi</td>
+								<td>@oturum.BaslangicSaati.ToString(@"hh\:mm") - @oturum.BitisSaati.ToString(@"hh\:mm")</td>
+								<td><span class="badge bg-success">@oturum.GeldiSayisi</span></td>
+								<td><span class="badge bg-danger">@oturum.GelmediSayisi</span></td>
+								<td><span class="badge bg-warning text-dark">@oturum.GecKaldiSayisi</span></td>
+								<td>@oturum.AlanOgretmen</td>
+								<td>@(oturum.KayitTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm") ?? "-")</td>
+								<td>
+									<button class="btn btn-info btn-sm" @onclick="@(() => DetayAc(oturum.DersProgramiId, oturum.YoklamaTarihi))">
+										<span class="material-icons" style="font-size:16px;">visibility</span> Detay
+									</button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
+
+@code {
+	List<YoklamaOturumDto> oturumlar = new();
+	List<ItemDers> dersler = new();
+	DateTime baslangicTarihi = DateTime.Today.AddDays(-30);
+	DateTime bitisTarihi = DateTime.Today;
+	int secilenDersId;
+	int? ogretmenId;
+	bool yukleniyor = true;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			NavigationManager.NavigateTo("/login");
+			return;
+		}
+
+		ogretmenId = await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Select(x => (int?)x.ID)
+			.FirstOrDefaultAsync();
+
+		if (ogretmenId.HasValue)
+		{
+			dersler = await DbContext.Dersler
+				.Where(x => x.Ogretmen_ID == ogretmenId.Value && (x.DelDate == null || x.DelDate == default(DateTime)))
+				.OrderBy(x => x.Adi)
+				.ToListAsync();
+		}
+
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		yukleniyor = true;
+		oturumlar = new List<YoklamaOturumDto>();
+
+		if (!ogretmenId.HasValue)
+		{
+			yukleniyor = false;
+			return;
+		}
+
+		var baslangic = baslangicTarihi.Date;
+		var bitis = bitisTarihi.Date;
+
+		var ogretmenDersIdleri = dersler.Select(d => d.ID).ToList();
+		if (secilenDersId > 0)
+			ogretmenDersIdleri = ogretmenDersIdleri.Where(id => id == secilenDersId).ToList();
+
+		var katilimlar = await DbContext.DersKatilimlar
+			.Include(x => x.DersProgrami)
+				.ThenInclude(dp => dp.Ders)
+			.Include(x => x.DersProgrami)
+				.ThenInclude(dp => dp.Sinif)
+			.Where(x => ogretmenDersIdleri.Contains(x.Ders_ID)
+				&& x.YoklamaTarihi >= baslangic
+				&& x.YoklamaTarihi <= bitis
+				&& (x.DelDate == null || x.DelDate == default(DateTime)))
+			.ToListAsync();
+
+		var creUserIds = katilimlar.Select(x => x.CreUser).Distinct().ToList();
+		var kullanicilar = await DbContext.Kullanicilar
+			.Where(k => creUserIds.Contains(k.ID))
+			.ToDictionaryAsync(k => k.ID, k => $"{k.Adi} {k.Soyadi}");
+
+		var gruplar = katilimlar
+			.GroupBy(x => new { x.DersProgrami_ID, x.YoklamaTarihi })
+			.OrderByDescending(g => g.Key.YoklamaTarihi)
+			.ThenBy(g => g.First().DersProgrami?.BaslangicSaati);
+
+		foreach (var grup in gruplar)
+		{
+			var ilk = grup.First();
+			var dp = ilk.DersProgrami;
+			var creUser = grup.Min(x => x.CreUser);
+
+			oturumlar.Add(new YoklamaOturumDto
+			{
+				DersProgramiId = grup.Key.DersProgrami_ID,
+				YoklamaTarihi = grup.Key.YoklamaTarihi,
+				DersAdi = dp?.Ders?.Adi ?? "",
+				SinifAdi = dp?.Sinif?.Adi ?? "",
+				BaslangicSaati = dp?.BaslangicSaati ?? TimeSpan.Zero,
+				BitisSaati = dp?.BitisSaati ?? TimeSpan.Zero,
+				GeldiSayisi = grup.Count(x => x.Durum == YoklamaDurumu.Geldi),
+				GelmediSayisi = grup.Count(x => x.Durum == YoklamaDurumu.Gelmedi),
+				GecKaldiSayisi = grup.Count(x => x.Durum == YoklamaDurumu.GecKaldi),
+				KayitTarihi = grup.Min(x => x.CreDate),
+				AlanOgretmen = kullanicilar.TryGetValue(creUser, out var ad) ? ad : "-"
+			});
+		}
+
+		yukleniyor = false;
+	}
+
+	async Task DetayAc(int dersProgramiId, DateTime yoklamaTarihi)
+	{
+		await ModalService.OpenAsync<YoklamaDetay>("Yoklama Detayı", new Dictionary<string, object>
+		{
+			{ "DersProgramiId", dersProgramiId },
+			{ "YoklamaTarihi", yoklamaTarihi.Date }
+		}, new ModalOptions { CssClass = "modal-lg" });
+	}
+}

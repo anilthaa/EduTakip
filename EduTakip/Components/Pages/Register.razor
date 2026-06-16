@@ -38,7 +38,7 @@
 
                 <div class="form-group">
                     <label class="form-label">Şifre</label>
-                    <input type="password" class="form-control" @bind="registerModel.Sifre" placeholder="En az 6 karakter" />
+                    <PasswordInput @bind-Value="registerModel.Sifre" Placeholder="En az 6 karakter" />
                 </div>
 
                 @if (selectedUserType == "ogrenci")

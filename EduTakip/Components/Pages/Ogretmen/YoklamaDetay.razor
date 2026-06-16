@@ -1,0 +1,112 @@
+@if (yukleniyor)
+{
+	<div style="text-align:center; padding:30px;">Yükleniyor...</div>
+}
+else
+{
+	<div class="mb-3">
+		<strong>@dersAdi</strong> — @sinifAdi<br />
+		<small class="text-muted">@yoklamaTarihi.ToString("dd.MM.yyyy") | @baslangicSaati.ToString(@"hh\:mm") - @bitisSaati.ToString(@"hh\:mm")</small><br />
+		<small class="text-muted">Kaydeden: @alanOgretmen | @kayitTarihi?.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</small>
+	</div>
+
+	<div class="data-table-wrapper">
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Öğrenci No</th>
+					<th>Ad Soyad</th>
+					<th>Durum</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var kayit in kayitlar)
+				{
+					<tr>
+						<td>@kayit.OgrenciNo</td>
+						<td>@kayit.Ad @kayit.Soyad</td>
+						<td>
+							@switch (kayit.Durum)
+							{
+								case YoklamaDurumu.Geldi:
+									<span class="badge bg-success">Geldi</span>
+									break;
+								case YoklamaDurumu.Gelmedi:
+									<span class="badge bg-danger">Gelmedi</span>
+									break;
+								case YoklamaDurumu.GecKaldi:
+									<span class="badge bg-warning text-dark">Geç Kaldı</span>
+									break;
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+
+	<div class="mt-3 text-center">
+		<button type="button" class="btn btn-secondary btn-sm" @onclick="@(() => ModalService.Close())">Kapat</button>
+	</div>
+}
+
+@code {
+	[Parameter] public int DersProgramiId { get; set; }
+	[Parameter] public DateTime YoklamaTarihi { get; set; }
+
+	List<YoklamaOgrenciSatirDto> kayitlar = new();
+	string dersAdi = "";
+	string sinifAdi = "";
+	string alanOgretmen = "";
+	TimeSpan baslangicSaati;
+	TimeSpan bitisSaati;
+	DateTime yoklamaTarihi;
+	DateTime? kayitTarihi;
+	bool yukleniyor = true;
+
+	protected override async Task OnInitializedAsync()
+	{
+		yoklamaTarihi = YoklamaTarihi.Date;
+
+		var dersProgrami = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.Include(x => x.Sinif)
+			.FirstOrDefaultAsync(x => x.ID == DersProgramiId);
+
+		if (dersProgrami != null)
+		{
+			dersAdi = dersProgrami.Ders?.Adi ?? "";
+			sinifAdi = dersProgrami.Sinif?.Adi ?? "";
+			baslangicSaati = dersProgrami.BaslangicSaati;
+			bitisSaati = dersProgrami.BitisSaati;
+		}
+
+		var katilimlar = await DbContext.DersKatilimlar
+			.Include(x => x.Ogrenci)
+				.ThenInclude(o => o.Kullanici)
+			.Where(x => x.DersProgrami_ID == DersProgramiId
+				&& x.YoklamaTarihi == yoklamaTarihi
+				&& (x.DelDate == null || x.DelDate == default(DateTime)))
+			.OrderBy(x => x.Ogrenci.OgrenciNo)
+			.ToListAsync();
+
+		if (katilimlar.Any())
+		{
+			kayitTarihi = katilimlar.Min(x => x.CreDate);
+			var creUserId = katilimlar.First().CreUser;
+			var kullanici = await DbContext.Kullanicilar.FindAsync(creUserId);
+			alanOgretmen = kullanici != null ? $"{kullanici.Adi} {kullanici.Soyadi}" : "-";
+		}
+
+		kayitlar = katilimlar.Select(k => new YoklamaOgrenciSatirDto
+		{
+			OgrenciId = k.Ogrenci_ID,
+			Ad = k.Ogrenci?.Kullanici?.Adi ?? "",
+			Soyad = k.Ogrenci?.Kullanici?.Soyadi ?? "",
+			OgrenciNo = k.Ogrenci?.OgrenciNo ?? "-",
+			Durum = k.Durum
+		}).ToList();
+
+		yukleniyor = false;
+	}
+}

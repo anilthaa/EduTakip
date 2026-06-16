@@ -1,0 +1,160 @@
+@page "/ogretmen/yoklama"
+@attribute [Authorize(Roles = "Öğretmen")]
+
+<div class="card" style="margin-top:20px">
+	<div class="card-body">
+		<h3 style="text-align:center;" class="mb-4">Yoklama Al</h3>
+
+		<div class="form-group mb-4" style="max-width:300px;">
+			<label class="form-label">Tarih</label>
+			<input type="date" class="form-control" @bind="secilenTarih" @bind:after="Yukle" />
+		</div>
+
+		@if (yukleniyor)
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d;">Yükleniyor...</p>
+			</div>
+		}
+		else if (!ogretmenId.HasValue)
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#e74c3c;">Öğretmen profili bulunamadı.</p>
+			</div>
+		}
+		else if (slotlar == null || !slotlar.Any())
+		{
+			<div style="text-align:center; padding:50px">
+				<p style="color:#7f8c8d; font-style:italic">Bu tarihte ders programınız bulunmuyor.</p>
+			</div>
+		}
+		else
+		{
+			<div class="data-table-wrapper">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Saat</th>
+							<th>Ders</th>
+							<th>Sınıf</th>
+							<th>Yoklama Durumu</th>
+							<th>İşlem</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var slot in slotlar)
+						{
+							<tr>
+								<td>@slot.BaslangicSaati.ToString(@"hh\:mm") - @slot.BitisSaati.ToString(@"hh\:mm")</td>
+								<td>@slot.DersAdi</td>
+								<td>@slot.SinifAdi</td>
+								<td>
+									@if (slot.YoklamaAlindi)
+									{
+										<span class="badge bg-success">@slot.AlinanYoklama / @slot.ToplamOgrenci alındı</span>
+									}
+									else
+									{
+										<span class="badge bg-secondary">Alınmadı (@slot.ToplamOgrenci öğrenci)</span>
+									}
+								</td>
+								<td>
+									<button class="btn btn-primary btn-sm" @onclick="@(() => YoklamaAc(slot.DersProgramiId))">
+										<span class="material-icons" style="font-size:16px; vertical-align:middle;">how_to_reg</span>
+										@(slot.YoklamaAlindi ? "Düzenle" : "Yoklama Al")
+									</button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+</div>
+
+@code {
+	List<YoklamaSlotDto> slotlar = new();
+	DateTime secilenTarih = DateTime.Today;
+	int? ogretmenId;
+	bool yukleniyor = true;
+
+	protected override async Task OnInitializedAsync()
+	{
+		if (AuthStateService.CurrentUser == null)
+		{
+			NavigationManager.NavigateTo("/login");
+			return;
+		}
+
+		ogretmenId = await DbContext.Ogretmenler
+			.Where(x => x.Kullanici_ID == AuthStateService.CurrentUser.ID && (x.DelDate == null || x.DelDate == default(DateTime)))
+			.Select(x => (int?)x.ID)
+			.FirstOrDefaultAsync();
+
+		await Yukle();
+	}
+
+	async Task Yukle()
+	{
+		yukleniyor = true;
+		slotlar = new List<YoklamaSlotDto>();
+
+		if (!ogretmenId.HasValue)
+		{
+			yukleniyor = false;
+			return;
+		}
+
+		var gun = secilenTarih.DayOfWeek;
+		var tarih = secilenTarih.Date;
+
+		var programlar = await DbContext.DersProgramlari
+			.Include(x => x.Ders)
+			.Include(x => x.Sinif)
+			.Where(x => x.Ders.Ogretmen_ID == ogretmenId.Value
+				&& x.Gun == gun
+				&& x.Aktif
+				&& (x.DelDate == null || x.DelDate == default(DateTime)))
+			.OrderBy(x => x.BaslangicSaati)
+			.ToListAsync();
+
+		foreach (var dp in programlar)
+		{
+			var ogrenciSayisi = await DbContext.SinifKullanicilar
+				.CountAsync(x => x.Sinif_ID == dp.Sinif_ID
+					&& x.Tip == SinifKullaniciTip.Ogrenci
+					&& (x.DelDate == null || x.DelDate == default(DateTime)));
+
+			var alinanYoklama = await DbContext.DersKatilimlar
+				.CountAsync(x => x.DersProgrami_ID == dp.ID
+					&& x.YoklamaTarihi == tarih
+					&& (x.DelDate == null || x.DelDate == default(DateTime)));
+
+			slotlar.Add(new YoklamaSlotDto
+			{
+				DersProgramiId = dp.ID,
+				DersAdi = dp.Ders?.Adi ?? "",
+				SinifAdi = dp.Sinif?.Adi ?? "",
+				BaslangicSaati = dp.BaslangicSaati,
+				BitisSaati = dp.BitisSaati,
+				ToplamOgrenci = ogrenciSayisi,
+				AlinanYoklama = alinanYoklama
+			});
+		}
+
+		yukleniyor = false;
+	}
+
+	async Task YoklamaAc(int dersProgramiId)
+	{
+		var result = await ModalService.OpenAsync<YoklamaAl>("Yoklama Al", new Dictionary<string, object>
+		{
+			{ "DersProgramiId", dersProgramiId },
+			{ "YoklamaTarihi", secilenTarih.Date }
+		}, new ModalOptions { CssClass = "modal-lg" });
+
+		if (result is true)
+			await Yukle();
+	}
+}

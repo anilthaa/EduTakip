@@ -87,17 +87,17 @@
                     <div class="flex-stack gap-md">
                         <div class="form-group">
                             <label class="form-label">Mevcut Şifre</label>
-                            <input type="password" class="form-control" @bind="sifreModel.MevcutSifre" required />
+                            <PasswordInput @bind-Value="sifreModel.MevcutSifre" Required="true" />
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Yeni Şifre</label>
-                            <input type="password" class="form-control" @bind="sifreModel.YeniSifre" required />
+                            <PasswordInput @bind-Value="sifreModel.YeniSifre" Required="true" />
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Yeni Şifre (Tekrar)</label>
-                            <input type="password" class="form-control" @bind="sifreModel.YeniSifreTekrar" required />
+                            <PasswordInput @bind-Value="sifreModel.YeniSifreTekrar" Required="true" />
                         </div>
 
                         <div style="text-align: right; margin-top: 8px;">
